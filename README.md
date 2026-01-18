@@ -1,4 +1,4 @@
-# Qutrit Engine
+# Qutrit Engine - Reality B
 
 <p align="center">
   <strong>A Standalone Quantum Computing Engine with Topological Entanglement Braiding</strong>
