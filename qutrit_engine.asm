@@ -121,6 +121,7 @@ section .data
     msg_hadamard:       db "  [H] Hadamard on qutrit ", 0
     msg_grover:         db "  [GROV] Diffusion on chunk ", 0
     msg_braid:          db "  [BRAID] Linking chunks ", 0
+    msg_unbraid:        db "  [UNBRAID] Unlinking chunks ", 0
     msg_measure:        db "  [MEAS] Measuring chunk ", 0
     msg_result:         db " -> ", 0
     msg_halt:           db 10, "  [HALT] Execution complete.", 10, 0
@@ -139,6 +140,9 @@ section .data
     msg_bell_pass:      db "  ✓ BELL TEST PASSED - Entanglement verified!", 10, 0
     msg_bell_fail:      db "  ✗ BELL TEST FAILED - No entanglement detected", 10, 0
     msg_percent:        db "%", 10, 0
+    
+    ; Oracle names
+    oracle_knot_name: db "Yang-Baxter Knot Oracle", 0
 
 ; ─────────────────────────────────────────────────────────────────────────────
 ; Section: Uninitialized Data (BSS)
@@ -208,6 +212,9 @@ _start:
     ; Initialize engine state
     call engine_init
 
+    ; Register built-in add-ons
+    call register_builtins
+
     ; Check for program file argument
     mov rax, [rsp]              ; argc
     cmp rax, 2
@@ -260,6 +267,140 @@ engine_init:
     dec rcx
     jnz .clear_chunks
 
+    pop r12
+    pop rbx
+    ret
+
+; register_builtins - Register built-in add-on oracles
+register_builtins:
+    push rdi
+    push rsi
+    push rdx
+
+    ; Register knot crossing oracle as opcode 0x80
+    lea rdi, [oracle_knot_name]
+    lea rsi, [knot_crossing_oracle]
+    mov rdx, 0x80
+    call register_addon
+
+    pop rdx
+    pop rsi
+    pop rdi
+    ret
+
+; ═══════════════════════════════════════════════════════════════════════════════
+; BUILT-IN ORACLES
+; ═══════════════════════════════════════════════════════════════════════════════
+
+; knot_crossing_oracle - Topological Yang-Baxter crossing for qutrits
+; Simulates over-under crossings for calculating knot invariants
+; Input: rdi = state_vector pointer, rsi = num_states
+; Applies braiding phase when qutrit pairs match crossing patterns
+knot_crossing_oracle:
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+    push rbp
+    mov rbp, rsp
+    
+    mov r12, rdi                ; state_vector pointer
+    mov r13, rsi                ; num_states
+    xor r14, r14                ; Loop counter (state index)
+
+.loop:
+    cmp r14, r13
+    jge .done
+    
+    ; Decode first two qutrits from ternary index
+    ; For Yang-Baxter crossing: check qutrits 0 and 1
+    mov rax, r14
+    xor rdx, rdx
+    mov rcx, 3
+    div rcx                     ; rax = remaining, rdx = qutrit0
+    mov r8, rdx                 ; Qutrit 0 state
+    
+    xor rdx, rdx
+    div rcx                     ; rax = remaining, rdx = qutrit1
+    mov r9, rdx                 ; Qutrit 1 state
+
+    ; Yang-Baxter crossing pattern:
+    ; If qutrit0 = Triangle (|0⟩) AND qutrit1 = Square (|2⟩):
+    ;   Apply over-crossing phase: exp(i × 2π/3)
+    ; If qutrit0 = Square (|2⟩) AND qutrit1 = Triangle (|0⟩):
+    ;   Apply under-crossing phase: exp(-i × 2π/3)
+    
+    cmp r8, 0
+    jne .check_under
+    cmp r9, 2
+    jne .next
+    ; Over-crossing detected
+    mov r15, 1                  ; Phase direction = +1
+    jmp .apply_phase
+    
+.check_under:
+    cmp r8, 2
+    jne .next
+    cmp r9, 0
+    jne .next
+    ; Under-crossing detected
+    mov r15, -1                 ; Phase direction = -1
+    
+.apply_phase:
+    ; Apply Yang-Baxter phase: exp(i × r15 × 2π/3)
+    ; Using ω = exp(2πi/3), ω^(-1) = exp(-2πi/3)
+    mov rax, r14
+    shl rax, 4                  ; index * 16
+    lea rbx, [r12 + rax]
+    
+    ; Load current amplitude
+    movsd xmm0, [rbx]           ; real
+    movsd xmm1, [rbx + 8]       ; imag
+    
+    ; Multiply by ω or ω^(-1)
+    cmp r15, 1
+    je .apply_omega
+    
+    ; ω^(-1) = (-0.5 - 0.866i) = conjugate of ω
+    movsd xmm2, [omega2_real]   ; -0.5
+    movsd xmm3, [omega2_imag]   ; 0.866 (will negate)
+    movsd xmm4, [minus_one]
+    mulsd xmm3, xmm4            ; -0.866
+    jmp .multiply
+    
+.apply_omega:
+    ; ω = (-0.5 + 0.866i)
+    movsd xmm2, [omega_real]    ; -0.5
+    movsd xmm3, [omega_imag]    ; 0.866
+    
+.multiply:
+    ; Complex multiplication: (a + bi)(c + di) = (ac - bd) + (ad + bc)i
+    movsd xmm4, xmm0
+    movsd xmm5, xmm1
+    
+    mulsd xmm4, xmm2            ; a*c
+    movsd xmm6, xmm1
+    mulsd xmm6, xmm3            ; b*d
+    subsd xmm4, xmm6            ; new_real = a*c - b*d
+    
+    mulsd xmm0, xmm3            ; a*d
+    mulsd xmm5, xmm2            ; b*c
+    addsd xmm0, xmm5            ; new_imag = a*d + b*c
+    
+    ; Store result
+    movsd [rbx], xmm4
+    movsd [rbx + 8], xmm0
+
+.next:
+    inc r14
+    jmp .loop
+
+.done:
+    pop rbp
+    pop r15
+    pop r14
+    pop r13
     pop r12
     pop rbx
     ret
@@ -634,30 +775,27 @@ apply_braid_phases:
     push r8
     push rcx
 
-    ; Get cos and sin for phase
+    ; Calculate phase: θ = π/3 × t_a
     cvtsi2sd xmm0, rdx          ; t_a
-    mulsd xmm0, [pi_over_3]     ; t_a * π/3
+    mulsd xmm0, [pi_over_3]     ; θ
 
-    ; Approximate cos/sin
-    movsd xmm5, xmm0            ; angle
-    ; cos ≈ 1 - x²/2
-    movsd xmm1, xmm0
-    mulsd xmm1, xmm0
-    mulsd xmm1, [half]
-    movsd xmm2, [one]
-    subsd xmm2, xmm1            ; cos
-
-    ; sin ≈ x - x³/6
-    movsd xmm3, xmm0
-    movsd xmm4, xmm0
-    mulsd xmm4, xmm0
-    mulsd xmm4, xmm0
-    movsd xmm6, [one]
-    addsd xmm6, xmm6
-    addsd xmm6, xmm6
-    addsd xmm6, [two]           ; 6.0
-    divsd xmm4, xmm6
-    subsd xmm3, xmm4            ; sin
+    ; Use x87 FPU for exact trigonometry
+    sub rsp, 16
+    movsd [rsp], xmm0           ; Store angle on stack
+    
+    ; Calculate sin(θ)
+    fld qword [rsp]             ; Load angle to FPU
+    fsin                        ; ST(0) = sin(θ)
+    fstp qword [rsp + 8]        ; Store sin at offset 8
+    
+    ; Calculate cos(θ)
+    fld qword [rsp]             ; Reload angle
+    fcos                        ; ST(0) = cos(θ)
+    fstp qword [rsp]            ; Store cos at offset 0
+    
+    movsd xmm2, [rsp]           ; xmm2 = cos(θ)
+    movsd xmm3, [rsp + 8]       ; xmm3 = sin(θ)
+    add rsp, 16
 
     ; Apply phase to amplitude
     pop rcx
@@ -686,6 +824,127 @@ apply_braid_phases:
     jmp .braid_outer
 
 .braid_done:
+    mov rsp, rbp
+    pop rbp
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+; unbraid_chunks - Remove/reverse entanglement link between chunks
+; Input: rdi = chunk_a, rsi = chunk_b, rdx = qutrit_a, rcx = qutrit_b
+; Applies inverse braid phases to restore original correlation
+unbraid_chunks:
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+    push rbp
+    mov rbp, rsp
+
+    mov r12, rdi                ; chunk_a
+    mov r13, rsi                ; chunk_b
+    mov r14, rdx                ; qutrit position in a
+    mov r15, rcx                ; qutrit position in b
+
+    ; Apply inverse braid phases (conjugate of braid operation)
+    ; This is exp(-i × π/3 × t_a) instead of exp(i × π/3 × t_a)
+    
+    mov rbx, [state_vectors + r12*8]
+    mov rcx, [chunk_states + r12*8]
+
+    xor r8, r8                  ; state index
+.unbraid_outer:
+    cmp r8, rcx
+    jge .unbraid_done
+
+    ; Extract qutrit value at position r14 from ternary index r8
+    mov rax, r8
+    mov r9, r14
+.extract_unbraid:
+    test r9, r9
+    jz .got_ta_unbraid
+    xor rdx, rdx
+    push rcx
+    mov rcx, 3
+    div rcx
+    pop rcx
+    dec r9
+    jmp .extract_unbraid
+.got_ta_unbraid:
+    xor rdx, rdx
+    push rcx
+    mov rcx, 3
+    div rcx
+    pop rcx
+    ; rdx = t_a (qutrit value 0,1,2)
+
+    ; Calculate phase angle: θ = π/3 × t_a
+    push r8
+    push rcx
+
+    cvtsi2sd xmm0, rdx          ; t_a (0, 1, or 2)
+    mulsd xmm0, [pi_over_3]     ; θ = t_a * π/3
+
+    ; Use x87 FPU for exact trigonometry
+    sub rsp, 16
+    movsd [rsp], xmm0           ; Store angle
+    
+    ; Calculate sin(θ)
+    fld qword [rsp]
+    fsin
+    fstp qword [rsp + 8]        ; Store sin at offset 8
+    
+    ; Calculate cos(θ)
+    fld qword [rsp]             ; Reload angle
+    fcos
+    fstp qword [rsp]            ; Store cos at offset 0
+    
+    movsd xmm2, [rsp]           ; xmm2 = cos(θ)
+    movsd xmm3, [rsp + 8]       ; xmm3 = sin(θ)
+    add rsp, 16
+    
+    ; Now we have: xmm2 = cos(θ), xmm3 = sin(θ)
+    ; For unbraid we want (a + bi) × (cos(θ) - i*sin(θ))
+
+    ; Apply phase to amplitude
+    pop rcx
+    pop r8
+    mov rax, r8
+    shl rax, 4
+
+    movsd xmm4, [rbx + rax]     ; a (real part)
+    movsd xmm5, [rbx + rax + 8] ; b (imaginary part)
+
+    ; (a + bi) × (cos(θ) - i*sin(θ))
+    ; = a*cos + a*(-i*sin) + bi*cos + bi*(-i*sin)
+    ; = a*cos - ai*sin + bi*cos + b*sin
+    ; = (a*cos + b*sin) + i*(b*cos - a*sin)
+    
+    ; Real part: a*cos + b*sin
+    movsd xmm6, xmm4
+    mulsd xmm6, xmm2            ; a * cos
+    movsd xmm7, xmm5
+    mulsd xmm7, xmm3            ; b * sin
+    addsd xmm6, xmm7            ; new_real = a*cos + b*sin
+    
+    ; Imaginary part: b*cos - a*sin
+    movsd xmm7, xmm5
+    mulsd xmm7, xmm2            ; b * cos
+    movsd xmm8, xmm4
+    mulsd xmm8, xmm3            ; a * sin
+    subsd xmm7, xmm8            ; new_imag = b*cos - a*sin
+
+    movsd [rbx + rax], xmm6
+    movsd [rbx + rax + 8], xmm7
+
+    inc r8
+    jmp .unbraid_outer
+
+.unbraid_done:
     mov rsp, rbp
     pop rbp
     pop r15
@@ -972,6 +1231,8 @@ execute_instruction:
     je .op_measure
     cmp r13, OP_BRAID
     je .op_braid
+    cmp r13, OP_UNBRAID
+    je .op_unbraid
     cmp r13, OP_PRINT_STATE
     je .op_print_state
     cmp r13, OP_BELL_TEST
@@ -1072,6 +1333,27 @@ execute_instruction:
     xor rdx, rdx                ; qutrit 0
     xor rcx, rcx
     call braid_chunks
+    xor rax, rax
+    jmp .exec_ret
+
+.op_unbraid:
+    lea rsi, [msg_unbraid]
+    call print_string
+    mov rdi, r14
+    call print_number
+    lea rsi, [msg_arrow]
+    call print_string
+    mov rdi, rbx
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+
+    mov rdi, r14                ; chunk_a
+    mov rsi, rbx                ; chunk_b (operand1)
+    xor rdx, rdx                ; qutrit 0
+    xor rcx, rcx
+    call unbraid_chunks
+    xor rax, rax
     jmp .exec_ret
 
 .op_print_state:
