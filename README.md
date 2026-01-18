@@ -187,8 +187,8 @@ Example run:
 | Stage | Correlation | Entangled? |
 |-------|-------------|------------|
 | Independent chunks | ~33% | ❌ Classical |
-| After BRAID | ~89% | ✅ Quantum |
-| After Grover | ~80% | ✅ Preserved |
+| After BRAID | ~89-100% | ✅ Quantum |
+| After Grover | ~80-100% | ✅ Preserved |
 | After MEASURE | 0% | ❌ Collapsed |
 
 ---
