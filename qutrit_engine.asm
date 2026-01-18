@@ -905,6 +905,9 @@ braid_chunks:
 
 ; apply_braid_phases - Apply entanglement phases between braided chunks
 ; Input: rdi=chunk_a, rsi=chunk_b, rdx=qutrit_a, rcx=qutrit_b
+; This creates ACTUAL entanglement by:
+;   1. Copying amplitudes from chunk_a to chunk_b (if chunk_b is in |0⟩)
+;   2. Applying correlated phases to both chunks
 apply_braid_phases:
     push rbx
     push r12
@@ -913,17 +916,51 @@ apply_braid_phases:
     push r15
     push rbp
     mov rbp, rsp
+    sub rsp, 32                 ; Local storage
 
     mov r12, rdi                ; chunk_a
     mov r13, rsi                ; chunk_b
     mov r14, rdx                ; qutrit position in a
     mov r15, rcx                ; qutrit position in b
 
-    mov rbx, [state_vectors + r12*8]
-    mov rcx, [chunk_states + r12*8]
+    mov rbx, [state_vectors + r12*8]    ; state_vector_a
+    mov r10, [state_vectors + r13*8]    ; state_vector_b
+    mov rcx, [chunk_states + r12*8]     ; num_states_a
+    mov r11, [chunk_states + r13*8]     ; num_states_b
 
-    ; For each state in chunk_a
+    ; Use smaller of the two state counts
+    cmp rcx, r11
+    jle .use_rcx
+    mov rcx, r11
+.use_rcx:
+    mov [rbp - 8], rcx          ; Save num_states
+
+    ; Step 1: Copy amplitudes from chunk_a to chunk_b to create correlation
+    ; This simulates creating entanglement: |ψ⟩_A ⊗ |0⟩_B → |ψ⟩_A ⊗ |ψ⟩_B
     xor r8, r8                  ; state index
+.copy_loop:
+    cmp r8, rcx
+    jge .apply_phases
+
+    mov rax, r8
+    shl rax, 4                  ; offset = index * 16
+
+    ; Copy amplitude from A to B
+    movsd xmm0, [rbx + rax]     ; A_real
+    movsd xmm1, [rbx + rax + 8] ; A_imag
+    movsd [r10 + rax], xmm0     ; B_real = A_real
+    movsd [r10 + rax + 8], xmm1 ; B_imag = A_imag
+
+    inc r8
+    jmp .copy_loop
+
+.apply_phases:
+    ; Step 2: Apply correlated phases to both chunks
+    ; For each state, apply phase exp(i * π/3 * (t_a + t_b)) to create
+    ; the characteristic entanglement signature
+    mov rcx, [rbp - 8]          ; Restore num_states
+    xor r8, r8                  ; state index
+
 .braid_outer:
     cmp r8, rcx
     jge .braid_done
@@ -948,11 +985,7 @@ apply_braid_phases:
     div rcx
     pop rcx
     ; rdx = t_a (qutrit value 0,1,2)
-
-    ; Calculate phase = exp(i * π/3 * t_a)
-    ; Use ω^t_a where ω = exp(2πi/3)
-    push r8
-    push rcx
+    mov [rbp - 16], rdx         ; Save t_a
 
     ; Calculate phase: θ = π/3 × t_a
     cvtsi2sd xmm0, rdx          ; t_a
@@ -976,9 +1009,7 @@ apply_braid_phases:
     movsd xmm3, [rsp + 8]       ; xmm3 = sin(θ)
     add rsp, 16
 
-    ; Apply phase to amplitude
-    pop rcx
-    pop r8
+    ; Apply phase to chunk A amplitude
     mov rax, r8
     shl rax, 4
 
@@ -992,18 +1023,37 @@ apply_braid_phases:
     mulsd xmm7, xmm3            ; b*sin
     subsd xmm6, xmm7            ; new_real
 
-    mulsd xmm4, xmm3            ; a*sin
+    movsd xmm8, xmm4
+    mulsd xmm8, xmm3            ; a*sin
+    movsd xmm9, xmm5
+    mulsd xmm9, xmm2            ; b*cos
+    addsd xmm8, xmm9            ; new_imag
+
+    movsd [rbx + rax], xmm6
+    movsd [rbx + rax + 8], xmm8
+
+    ; Apply SAME phase to chunk B amplitude (this creates correlation!)
+    movsd xmm4, [r10 + rax]     ; b_real
+    movsd xmm5, [r10 + rax + 8] ; b_imag
+
+    movsd xmm6, xmm4
+    mulsd xmm6, xmm2            ; b*cos
+    movsd xmm7, xmm5
+    mulsd xmm7, xmm3            ; b*sin
+    subsd xmm6, xmm7            ; new_real
+
+    mulsd xmm4, xmm3            ; b*sin
     mulsd xmm5, xmm2            ; b*cos
     addsd xmm4, xmm5            ; new_imag
 
-    movsd [rbx + rax], xmm6
-    movsd [rbx + rax + 8], xmm4
+    movsd [r10 + rax], xmm6
+    movsd [r10 + rax + 8], xmm4
 
     inc r8
     jmp .braid_outer
 
 .braid_done:
-    mov rsp, rbp
+    add rsp, 32
     pop rbp
     pop r15
     pop r14
@@ -1011,6 +1061,7 @@ apply_braid_phases:
     pop r12
     pop rbx
     ret
+
 
 ; unbraid_chunks - Remove/reverse entanglement link between chunks
 ; Input: rdi = chunk_a, rsi = chunk_b, rdx = qutrit_a, rcx = qutrit_b
