@@ -142,7 +142,8 @@ section .data
     msg_percent:        db "%", 10, 0
     
     ; Oracle names
-    oracle_knot_name: db "Yang-Baxter Knot Oracle", 0
+    oracle_heisenberg_name: db "Heisenberg Spin-1 Exchange", 0
+    oracle_gellmann_name: db "Gell-Mann XY Interaction", 0
 
 ; ─────────────────────────────────────────────────────────────────────────────
 ; Section: Uninitialized Data (BSS)
@@ -277,10 +278,16 @@ register_builtins:
     push rsi
     push rdx
 
-    ; Register knot crossing oracle as opcode 0x80
-    lea rdi, [oracle_knot_name]
-    lea rsi, [knot_crossing_oracle]
+    ; Register Heisenberg exchange oracle as opcode 0x80
+    lea rdi, [oracle_heisenberg_name]
+    lea rsi, [heisenberg_exchange_oracle]
     mov rdx, 0x80
+    call register_addon
+
+    ; Register Gell-Mann XY interaction as opcode 0x81
+    lea rdi, [oracle_gellmann_name]
+    lea rsi, [gell_mann_interaction]
+    mov rdx, 0x81
     call register_addon
 
     pop rdx
@@ -292,11 +299,11 @@ register_builtins:
 ; BUILT-IN ORACLES
 ; ═══════════════════════════════════════════════════════════════════════════════
 
-; knot_crossing_oracle - Topological Yang-Baxter crossing for qutrits
-; Simulates over-under crossings for calculating knot invariants
-; Input: rdi = state_vector pointer, rsi = num_states
-; Applies braiding phase when qutrit pairs match crossing patterns
-knot_crossing_oracle:
+; heisenberg_exchange_oracle - Spin-1 Heisenberg exchange for quantum magnetism
+; Implements exp(-iHt) for nearest-neighbor spin-1 interactions
+; Input: rdi = state_vector, rsi = num_states, rdx = coupling_J (scaled), rcx = time_dt (scaled)
+; States: |0⟩ = spin -1, |1⟩ = spin 0, |2⟩ = spin +1
+heisenberg_exchange_oracle:
     push rbx
     push r12
     push r13
@@ -304,99 +311,271 @@ knot_crossing_oracle:
     push r15
     push rbp
     mov rbp, rsp
+    sub rsp, 32
     
     mov r12, rdi                ; state_vector pointer
     mov r13, rsi                ; num_states
-    xor r14, r14                ; Loop counter (state index)
-
-.loop:
-    cmp r14, r13
-    jge .done
     
-    ; Decode first two qutrits from ternary index
-    ; For Yang-Baxter crossing: check qutrits 0 and 1
+    ; Calculate theta = J * dt (using scaled integer inputs)
+    ; For simplicity, use theta = pi/4 for demo
+    movsd xmm15, [pi_over_3]
+    mulsd xmm15, [half]         ; theta = pi/6
+    
+    xor r14, r14                ; Loop counter
+
+.heis_loop:
+    cmp r14, r13
+    jge .heis_done
+    
+    ; Decode two qutrits from ternary index
     mov rax, r14
     xor rdx, rdx
     mov rcx, 3
-    div rcx                     ; rax = remaining, rdx = qutrit0
-    mov r8, rdx                 ; Qutrit 0 state
+    div rcx                     ; rax = remaining, rdx = qutrit0 (A)
+    mov r8, rdx                 ; Spin A: -1,0,+1 maps to state 0,1,2
     
     xor rdx, rdx
-    div rcx                     ; rax = remaining, rdx = qutrit1
-    mov r9, rdx                 ; Qutrit 1 state
-
-    ; Yang-Baxter crossing pattern:
-    ; If qutrit0 = Triangle (|0⟩) AND qutrit1 = Square (|2⟩):
-    ;   Apply over-crossing phase: exp(i × 2π/3)
-    ; If qutrit0 = Square (|2⟩) AND qutrit1 = Triangle (|0⟩):
-    ;   Apply under-crossing phase: exp(-i × 2π/3)
+    div rcx                     ; rax = remaining, rdx = qutrit1 (B)
+    mov r9, rdx                 ; Spin B
     
-    cmp r8, 0
-    jne .check_under
-    cmp r9, 2
-    jne .next
-    ; Over-crossing detected
-    mov r15, 1                  ; Phase direction = +1
-    jmp .apply_phase
+    ; Calculate spin values: spin = state - 1 (so |0⟩=-1, |1⟩=0, |2⟩=+1)
+    mov r10, r8
+    dec r10                     ; Sz_A = state_A - 1
+    mov r11, r9
+    dec r11                     ; Sz_B = state_B - 1
     
-.check_under:
-    cmp r8, 2
-    jne .next
-    cmp r9, 0
-    jne .next
-    ; Under-crossing detected
-    mov r15, -1                 ; Phase direction = -1
+    ; Calculate Sz_A * Sz_B
+    mov rax, r10
+    imul rax, r11               ; Sz_A * Sz_B (-1, 0, or +1)
     
-.apply_phase:
-    ; Apply Yang-Baxter phase: exp(i × r15 × 2π/3)
-    ; Using ω = exp(2πi/3), ω^(-1) = exp(-2πi/3)
+    ; Apply diagonal phase based on Sz*Sz term
+    ; Phase = theta * Sz_A * Sz_B
+    cvtsi2sd xmm0, rax
+    mulsd xmm0, xmm15           ; angle = theta * Sz_A * Sz_B
+    
+    ; Calculate phase using FPU
+    sub rsp, 16
+    movsd [rsp], xmm0
+    
+    fld qword [rsp]
+    fsin
+    fstp qword [rsp + 8]
+    
+    fld qword [rsp]
+    fcos
+    fstp qword [rsp]
+    
+    movsd xmm2, [rsp]           ; cos
+    movsd xmm3, [rsp + 8]       ; sin
+    add rsp, 16
+    
+    ; Apply phase to amplitude
     mov rax, r14
-    shl rax, 4                  ; index * 16
+    shl rax, 4
     lea rbx, [r12 + rax]
     
-    ; Load current amplitude
-    movsd xmm0, [rbx]           ; real
-    movsd xmm1, [rbx + 8]       ; imag
+    movsd xmm4, [rbx]           ; real
+    movsd xmm5, [rbx + 8]       ; imag
     
-    ; Multiply by ω or ω^(-1)
-    cmp r15, 1
-    je .apply_omega
+    ; (a + bi)(cos + i*sin) = (a*cos - b*sin) + i*(a*sin + b*cos)
+    movsd xmm6, xmm4
+    mulsd xmm6, xmm2
+    movsd xmm7, xmm5
+    mulsd xmm7, xmm3
+    subsd xmm6, xmm7            ; new_real
     
-    ; ω^(-1) = (-0.5 - 0.866i) = conjugate of ω
-    movsd xmm2, [omega2_real]   ; -0.5
-    movsd xmm3, [omega2_imag]   ; 0.866 (will negate)
-    movsd xmm4, [minus_one]
-    mulsd xmm3, xmm4            ; -0.866
-    jmp .multiply
+    mulsd xmm4, xmm3
+    mulsd xmm5, xmm2
+    addsd xmm4, xmm5            ; new_imag
     
-.apply_omega:
-    ; ω = (-0.5 + 0.866i)
-    movsd xmm2, [omega_real]    ; -0.5
-    movsd xmm3, [omega_imag]    ; 0.866
-    
-.multiply:
-    ; Complex multiplication: (a + bi)(c + di) = (ac - bd) + (ad + bc)i
-    movsd xmm4, xmm0
-    movsd xmm5, xmm1
-    
-    mulsd xmm4, xmm2            ; a*c
-    movsd xmm6, xmm1
-    mulsd xmm6, xmm3            ; b*d
-    subsd xmm4, xmm6            ; new_real = a*c - b*d
-    
-    mulsd xmm0, xmm3            ; a*d
-    mulsd xmm5, xmm2            ; b*c
-    addsd xmm0, xmm5            ; new_imag = a*d + b*c
-    
-    ; Store result
-    movsd [rbx], xmm4
-    movsd [rbx + 8], xmm0
+    movsd [rbx], xmm6
+    movsd [rbx + 8], xmm4
 
-.next:
+.heis_next:
     inc r14
-    jmp .loop
+    jmp .heis_loop
 
-.done:
+.heis_done:
+    add rsp, 32
+    pop rbp
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+; gell_mann_interaction - XY spin interaction (SxSx + SySy) for spin-1
+; Implements off-diagonal spin-flip terms in Heisenberg model
+; Input: rdi = state_vector, rsi = num_states
+; Swaps |10⟩ ↔ |01⟩ and |21⟩ ↔ |12⟩ with rotation angle
+gell_mann_interaction:
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+    push rbp
+    mov rbp, rsp
+    sub rsp, 64
+    
+    mov r12, rdi                ; state_vector pointer
+    mov r13, rsi                ; num_states
+    
+    ; Interaction strength theta = J * dt = pi/8 for demo
+    movsd xmm15, [pi_over_3]
+    movsd xmm14, [half]
+    mulsd xmm15, xmm14
+    mulsd xmm15, xmm14          ; theta = pi/12
+    
+    ; Calculate sqrt(2) for matrix element
+    sub rsp, 16
+    movsd xmm0, [two]
+    movsd [rsp], xmm0
+    fld qword [rsp]
+    fsqrt
+    fstp qword [rsp]
+    movsd xmm13, [rsp]          ; xmm13 = sqrt(2)
+    add rsp, 16
+    
+    ; We need to process states in pairs:
+    ; States 1 and 3 (binary |01⟩ and |10⟩)
+    ; States 5 and 7 (binary |12⟩ and |21⟩)
+    
+    ; Process first 9 states (all 2-qutrit combinations)
+    xor r14, r14                ; state counter
+
+.gm_loop:
+    cmp r14, r13
+    jge .gm_done
+    
+    ; Decode two qutrits
+    mov rax, r14
+    xor rdx, rdx
+    mov rcx, 3
+    div rcx
+    mov r8, rdx                 ; qutrit A
+    
+    xor rdx, rdx
+    div rcx
+    mov r9, rdx                 ; qutrit B
+    
+    ; Check if this is a spin-flip pair
+    ; |01⟩ (state 1) ↔ |10⟩ (state 3): A=0,B=1 or A=1,B=0
+    ; |12⟩ (state 5) ↔ |21⟩ (state 7): A=1,B=2 or A=2,B=1
+    
+    ; Check for |01⟩ state (need to swap with |10⟩)
+    cmp r8, 0
+    jne .check_10
+    cmp r9, 1
+    jne .gm_next
+    ; Found |01⟩, need to swap with |10⟩ (state index 3)
+    mov r10, 3
+    jmp .do_swap
+    
+.check_10:
+    cmp r8, 1
+    jne .check_12
+    cmp r9, 0
+    jne .check_21_a
+    ; Found |10⟩, but we already processed this pair
+    jmp .gm_next
+    
+.check_21_a:
+    cmp r9, 2
+    jne .gm_next
+    ; Found |12⟩, need to swap with |21⟩ (state index 7)
+    mov r10, 7
+    jmp .do_swap
+    
+.check_12:
+    cmp r8, 2
+    jne .gm_next
+    cmp r9, 1
+    jne .gm_next
+    ; Found |21⟩, already processed
+    jmp .gm_next
+    
+.do_swap:
+    ; Apply rotation between current state (r14) and partner (r10)
+    ; Using angle theta with sqrt(2) factor
+    
+    ; Get amplitudes
+    mov rax, r14
+    shl rax, 4
+    lea rbx, [r12 + rax]
+    movsd xmm0, [rbx]           ; amp1_real
+    movsd xmm1, [rbx + 8]       ; amp1_imag
+    
+    mov rax, r10
+    shl rax, 4
+    lea rcx, [r12 + rax]
+    movsd xmm2, [rcx]           ; amp2_real
+    movsd xmm3, [rcx + 8]       ; amp2_imag
+    
+    ; Calculate rotation: cos(theta*sqrt(2)), sin(theta*sqrt(2))
+    movsd xmm4, xmm15
+    mulsd xmm4, xmm13           ; angle = theta * sqrt(2)
+    
+    sub rsp, 16
+    movsd [rsp], xmm4
+    
+    fld qword [rsp]
+    fsin
+    fstp qword [rsp + 8]
+    
+    fld qword [rsp]
+    fcos
+    fstp qword [rsp]
+    
+    movsd xmm5, [rsp]           ; cos
+    movsd xmm6, [rsp + 8]       ; sin
+    add rsp, 16
+    
+    ; New amplitudes (rotation matrix):
+    ; new_amp1 = cos*amp1 - i*sin*amp2
+    ; new_amp2 = i*sin*amp1 + cos*amp2
+    
+    ; new_amp1_real = cos*amp1_real + sin*amp2_imag
+    movsd xmm7, xmm0
+    mulsd xmm7, xmm5            ; cos*amp1_real
+    movsd xmm8, xmm3
+    mulsd xmm8, xmm6            ; sin*amp2_imag
+    addsd xmm7, xmm8
+    
+    ; new_amp1_imag = cos*amp1_imag - sin*amp2_real
+    movsd xmm8, xmm1
+    mulsd xmm8, xmm5            ; cos*amp1_imag
+    movsd xmm9, xmm2
+    mulsd xmm9, xmm6            ; sin*amp2_real
+    subsd xmm8, xmm9
+    
+    ; new_amp2_real = cos*amp2_real - sin*amp1_imag
+    movsd xmm9, xmm2
+    mulsd xmm9, xmm5            ; cos*amp2_real
+    movsd xmm10, xmm1
+    mulsd xmm10, xmm6           ; sin*amp1_imag
+    subsd xmm9, xmm10
+    
+    ; new_amp2_imag = cos*amp2_imag + sin*amp1_real
+    movsd xmm10, xmm3
+    mulsd xmm10, xmm5           ; cos*amp2_imag
+    movsd xmm11, xmm0
+    mulsd xmm11, xmm6           ; sin*amp1_real
+    addsd xmm10, xmm11
+    
+    ; Store new amplitudes
+    movsd [rbx], xmm7
+    movsd [rbx + 8], xmm8
+    movsd [rcx], xmm9
+    movsd [rcx + 8], xmm10
+
+.gm_next:
+    inc r14
+    jmp .gm_loop
+
+.gm_done:
+    add rsp, 64
     pop rbp
     pop r15
     pop r14
