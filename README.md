@@ -117,7 +117,7 @@ In Reality B, the wavefunction is divided into two distinct topological regions 
 When observation occurs, the Summit is solidified into classical reality. The Shadow Realm is not merely ignored; it is **deleted**. The projection operator $\hat{P}$ in Reality B is non-linear and discontinuous:
 $$ \hat{P}|\psi\rangle = |k\rangle \quad \text{where} \quad |\psi(k)| > |\psi(j)| \forall j \neq k $$
 
-This operation is an act of violence against the Hilbert space. It strips the system of all superposition except the victor.
+This operation strips the system of all superposition except the victor.
 - **Standard QM:** Collapse is random. Information is preserved in the *ensemble statistics*.
 - **Reality B:** Collapse is deterministic. Information in the Shadow Realm is **permanently destroyed**.
 
