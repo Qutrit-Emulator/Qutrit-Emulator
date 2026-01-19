@@ -1920,7 +1920,7 @@ load_program:
     ; Allocate program buffer via mmap
     mov rax, 9                  ; sys_mmap
     xor rdi, rdi
-    mov rsi, 65536              ; 64KB buffer
+    mov rsi, 1048576            ; 1MB buffer (was 64KB)
     mov rdx, 3                  ; PROT_READ | PROT_WRITE
     mov r10, 34                 ; MAP_PRIVATE | MAP_ANONYMOUS
     mov r8, -1
@@ -1936,7 +1936,7 @@ load_program:
     mov rax, 0                  ; sys_read
     mov rdi, r13                ; fd
     mov rsi, rbx                ; buffer
-    mov rdx, 65536              ; max size
+    mov rdx, 1048576            ; max size (1MB)
     syscall
 
     cmp rax, 0
