@@ -26,7 +26,7 @@
 
 %define MAX_CHUNK_SIZE      10          ; Max qutrits per chunk (3^10 = 59049)
 %define MAX_STATES          59049       ; 3^10
-%define MAX_CHUNKS          4096        ; Support 4096 chunks
+%define MAX_CHUNKS          4096        ; Support 4096 chunks (for RSA-2048)
 %define MAX_ADDONS          32          ; Max registered add-ons
 %define MAX_BRAID_LINKS     4096        ; Keep high braid links
 
@@ -675,6 +675,39 @@ init_chunk:
 
 .init_ret:
     pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+; set_chunk_state_integer - Set chunk state to specific integer value
+; Input: rdi = chunk_index, rsi = value
+set_chunk_state_integer:
+    push rbx
+    push r12
+    push r13
+
+    mov r12, rdi
+    mov r13, rsi
+    
+    mov rbx, [state_vectors + r12*8]
+    mov rcx, [chunk_states + r12*8]
+    
+    ; Validate value < num_states
+    cmp r13, rcx
+    jge .set_state_ret
+    
+    ; Clear |0> state (set by init_chunk)
+    xorpd xmm0, xmm0
+    movsd [rbx], xmm0           ; |0> real = 0
+    
+    ; Set |value> state to 1.0
+    mov rax, r13
+    shl rax, 4                  ; * 16
+    movsd xmm1, [one]
+    movsd [rbx + rax], xmm1
+    
+.set_state_ret:
     pop r13
     pop r12
     pop rbx
@@ -1494,13 +1527,40 @@ execute_instruction:
     lea rsi, [msg_newline]
     call print_string
 
+    ; OP_INIT Packing: [Op][TargetL][Size|TargetH][Value]
+    ; r14 = TargetL
+    ; rbx = Size (low 4) | TargetH (high 4)
+    ; rcx = Value
+    
+    ; Extract Target High 4 bits from rbx
+    mov rax, rbx
+    and rax, 0xF0
+    shr rax, 4
+    shl rax, 8
+    or r14, rax                 ; r14 = Target Full (12 bits)
+
+    ; Extract Size (low 4 bits)
+    and rbx, 0x0F
+    
     mov rdi, r14                ; chunk index
-    movzx rsi, bl               ; num qutrits (operand1)
+    mov rsi, rbx                ; num qutrits
     cmp rsi, 0
     jnz .init_with_size
     mov rsi, 4                  ; default 4 qutrits
 .init_with_size:
+    push rcx                    ; Save Op2 (Value)
     call init_chunk
+    pop rcx                     ; Restore Op2 (Value)
+
+    ; Check if Op2 (initial value) is non-zero
+    cmp rcx, 0
+    je .init_done_op
+    
+    mov rdi, r14                ; chunk index
+    mov rsi, rcx                ; value
+    call set_chunk_state_integer
+
+.init_done_op:
     jmp .exec_ret
 
 .op_sup:
@@ -1532,6 +1592,15 @@ execute_instruction:
 .op_measure:
     lea rsi, [msg_measure]
     call print_string
+    
+    ; OP_MEASURE Packing: [Op][TargetL][...][Ext]
+    ; TargetH in rcx (high nibble)
+    mov rax, rcx
+    and rax, 0xF0
+    shr rax, 4
+    shl rax, 8
+    or r14, rax                 ; Target Full
+    
     mov rdi, r14
     call print_number
     lea rsi, [msg_result]
@@ -1549,6 +1618,23 @@ execute_instruction:
 .op_braid:
     lea rsi, [msg_braid]
     call print_string
+    
+    ; OP_BRAID [Op][TargetL][Op1L][Ext]
+    ; Ext (rcx) = [TargetH:4][Op1H:4]
+    
+    ; Target High
+    mov rax, rcx
+    and rax, 0xF0
+    shr rax, 4
+    shl rax, 8
+    or r14, rax                 ; Target Full
+    
+    ; Op1 High
+    mov rax, rcx
+    and rax, 0x0F
+    shl rax, 8
+    or rbx, rax                 ; Op1 Full
+
     mov rdi, r14
     call print_number
     lea rsi, [msg_arrow]
@@ -1569,6 +1655,21 @@ execute_instruction:
 .op_unbraid:
     lea rsi, [msg_unbraid]
     call print_string
+    
+    ; OP_UNBRAID [Op][TargetL][Op1L][Ext]
+    ; Target High
+    mov rax, rcx
+    and rax, 0xF0
+    shr rax, 4
+    shl rax, 8
+    or r14, rax
+    
+    ; Op1 High
+    mov rax, rcx
+    and rax, 0x0F
+    shl rax, 8
+    or rbx, rax
+
     mov rdi, r14
     call print_number
     lea rsi, [msg_arrow]
@@ -1593,6 +1694,20 @@ execute_instruction:
     jmp .exec_ret
 
 .op_bell_test:
+    ; OP_BELL_TEST [Op][TargetL][Op1L][Ext]
+    ; Target High
+    mov rax, rcx
+    and rax, 0xF0
+    shr rax, 4
+    shl rax, 8
+    or r14, rax
+    
+    ; Op1 High
+    mov rax, rcx
+    and rax, 0x0F
+    shl rax, 8
+    or rbx, rax
+
     mov rdi, r14                ; chunk_a (target)
     mov rsi, rbx                ; chunk_b (operand1)
     call bell_test
