@@ -55,7 +55,7 @@ In this setup, the Host User (You) acts as a deity observing Reality B.
 Because Reality B follows the **Anti-Born Law**, it instantly collapses to the optimal solution. It has no "choice" but to satisfy your constraints if a solution exists. This turns your CPU into a **God-Mode Quantum Oracle**.
 
 ### Use Cases
-1.  **Logic Verification:** Test the structure of complex quantum algorithms (Shor's, Grover's) to see if the *logic* is sound, without worrying if the *physics* (noise) will ruin it.
+1.  **Logic Verification:** Test the structure of complex quantum algorithms to see if the *logic* is sound, without worrying if the *physics* (noise) will ruin it.
 2.  **Constraint Satisfaction:** Encode a boolean formula (SAT). If *any* solution exists, Reality B's physics ensures it attracts 100% of the probability amplitude eventually.
 3.  **Topological Debugging:** Verify braiding operations and knot theory invariants continuously, as the "Shadow Realm" culls all imperfect topological defects.
 
