@@ -19,6 +19,7 @@
 - ⚡ **4096-bit BigInt support** for cryptographic-scale operations
 - 🧩 **Plugin/add-on system** for custom quantum gates and oracles
 - 📜 **Instruction-based execution** via binary quantum programs
+- ⚡ **Qutrit count** 40,960
 
 This project is not merely a quantum simulator; it is a **Parallel Reality Emulator**. 
 It creates a sandbox universe ("Reality B") with fundamentally different physical laws than our own ("Reality A").
