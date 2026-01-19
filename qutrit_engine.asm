@@ -1467,6 +1467,8 @@ execute_instruction:
     je .op_print_state
     cmp r13, OP_BELL_TEST
     je .op_bell_test
+    cmp r13, OP_ADDON
+    je .op_explicit_addon
     cmp r13, OP_HALT
     je .op_halt
 
@@ -1604,6 +1606,20 @@ execute_instruction:
     mov rsi, r14                ; chunk
     mov rdx, rbx                ; operand1
                                 ; rcx already has operand2
+    call call_addon
+    jmp .exec_ret
+
+.op_explicit_addon:
+    ; Explicit ADDON instruction (0x0C)
+    ; Format: [0x0C][TargetChunk][OpCodes:AddonID][Op2:Param]
+    ; r14 = Chunk Index
+    ; rbx = Addon Opcode (from Op1 field)
+    ; rcx = Parameter 1 (from Op2 field)
+    
+    mov rdi, rbx                ; Addon Opcode
+    mov rsi, r14                ; Chunk Index
+    mov rdx, rcx                ; Parameter 1
+    xor rcx, rcx                ; Parameter 2 (Zero)
     call call_addon
     jmp .exec_ret
 
