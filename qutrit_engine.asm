@@ -1412,6 +1412,8 @@ call_addon:
 .found_addon:
     ; Call addon function
     mov rdi, [state_vectors + r13*8]
+    test rdi, rdi       ; Check for NULL state vector
+    jz .addon_ret       ; Skip if chunk not initialized
     mov rsi, [chunk_states + r13*8]
     mov rdx, r14
     mov rcx, rax
@@ -1550,6 +1552,8 @@ execute_instruction:
     jge .sum_done_all
     
     mov rbx, [state_vectors + rcx*8]
+    test rbx, rbx       ; Check for NULL state vector
+    jz .not_active      ; Treat as inactive if not initialized
     ; Load State 2 (Index 2 -> Offset 32)
     movsd xmm0, [rbx + 32]
     mulsd xmm0, xmm0
@@ -1662,9 +1666,19 @@ execute_instruction:
 
     mov rdi, r14                ; chunk_a
     mov rsi, rbx                ; chunk_b (operand1)
+    
+    ; Check chunks exist
+    mov rax, [state_vectors + r14*8]
+    test rax, rax
+    jz .braid_skip
+    mov rax, [state_vectors + rbx*8]
+    test rax, rax
+    jz .braid_skip
+
     xor rdx, rdx                ; qutrit 0
     xor rcx, rcx
     call braid_chunks
+.braid_skip:
     xor rax, rax
     jmp .exec_ret
 
