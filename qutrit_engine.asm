@@ -48,6 +48,7 @@
 %define OP_ADDON            0x0C
 %define OP_PRINT_STATE      0x0D
 %define OP_BELL_TEST        0x0E
+%define OP_SUMMARY          0x0F
 %define OP_HALT             0xFF
 
 ; Qutrit state offsets (3 basis states, each complex)
@@ -122,8 +123,10 @@ section .data
     msg_grover:         db "  [GROV] Diffusion on chunk ", 0
     msg_braid:          db "  [BRAID] Linking chunks ", 0
     msg_unbraid:        db "  [UNBRAID] Unlinking chunks ", 0
+    msg_summary:        db "  [SUMMARY] Global Active Mass (N=", 0
+    msg_chunks_colon:   db "): ", 0
     msg_measure:        db "  [MEAS] Measuring chunk ", 0
-    msg_result:         db " -> ", 0
+    msg_result:         db " => ", 0
     msg_halt:           db 10, "  [HALT] Execution complete.", 10, 0
     msg_addon_reg:      db "  [ADDON] Registered: ", 0
     msg_newline:        db 10, 0
@@ -482,6 +485,8 @@ gell_mann_interaction:
     jmp .gm_next
     
 .check_21_a:
+    cmp r8, 1
+    jne .gm_next
     cmp r9, 2
     jne .gm_next
     ; Found |12⟩, need to swap with |21⟩ (state index 7)
@@ -1437,15 +1442,18 @@ execute_instruction:
     push r13
     push r14
 
-    mov r12, rdi                ; full instruction
-
-    ; Extract fields
-    movzx r13, r12b             ; opcode (bits 0-7)
-    shr r12, 8
-    movzx r14, r12w             ; target (bits 8-23, 16 bits)
+    ; Extract fields from 64-bit instruction (passed in rdi)
+    ; Format: [Op2:16][Op1:16][Target:16][Opcode:16]
+    
+    mov r12, rdi                ; full 64-bit instruction
+    
+    movzx r13, r12w             ; opcode (bits 0-15)
     shr r12, 16
-    movzx rbx, r12b             ; operand1 (bits 24-31)
-    xor rcx, rcx                ; operand2 is unavailable (0)
+    movzx r14, r12w             ; target (bits 16-31)
+    shr r12, 16
+    movzx rbx, r12w             ; operand1 (bits 32-47)
+    shr r12, 16
+    movzx rcx, r12w             ; operand2 (bits 48-63)
 
     ; Dispatch based on opcode
     cmp r13, OP_NOP
@@ -1466,6 +1474,12 @@ execute_instruction:
     je .op_print_state
     cmp r13, OP_BELL_TEST
     je .op_bell_test
+    cmp r13, OP_SUMMARY
+    je .op_summary
+    cmp r13, 0x10
+    je .op_shift
+    cmp r13, OP_ADDON
+    je .op_addon
     cmp r13, OP_HALT
     je .op_halt
 
@@ -1512,6 +1526,95 @@ execute_instruction:
 
     mov rdi, r14
     call create_superposition
+    xor rax, rax
+    jmp .exec_ret
+
+.op_summary:
+    ; OP_SUMMARY (0x0F) - Global Sync/Wildfire Check
+    lea rsi, [msg_summary]
+    call print_string
+    mov rdi, r14
+    call print_number
+    lea rsi, [msg_chunks_colon]
+    call print_string
+    
+    xor r15, r15                ; Active Chunk Counter
+    xor rcx, rcx                ; Chunk Loop
+    
+    ; Load epsilon 0.001 into xmm2
+    mov rax, 0x3F50624DD2F1A9FC ; Double ~0.001
+    movq xmm2, rax
+    
+.sum_chunk_loop:
+    cmp rcx, r14
+    jge .sum_done_all
+    
+    mov rbx, [state_vectors + rcx*8]
+    ; Load State 2 (Index 2 -> Offset 32)
+    movsd xmm0, [rbx + 32]
+    mulsd xmm0, xmm0
+    movsd xmm1, [rbx + 40]
+    mulsd xmm1, xmm1
+    addsd xmm0, xmm1
+    ; xmm0 is |c_2|^2
+    
+    ucomisd xmm0, xmm2
+    jbe .not_active
+    inc r15
+.not_active:
+    inc rcx
+    jmp .sum_chunk_loop
+    
+.sum_done_all:
+    ; Print Integer Counter
+    mov rdi, r15
+    call print_number
+    
+    lea rsi, [msg_newline]
+    call print_string
+    
+    xor rax, rax
+    jmp .exec_ret
+
+.op_shift:
+    ; OP_SHIFT (0x10) - Cyclic X-Gate (0->1, 1->2, 2->0)
+    ; Input: r14 = target chunk
+    
+    mov rbx, [state_vectors + r14*8]
+    
+    ; Load amplitudes
+    ; Offsets: 0 (|0>), 16 (|1>), 32 (|2>)
+    ; Using xmm0-xmm5 for real/imag pairs
+    
+    ; Load |0> (Old0)
+    movsd xmm0, [rbx]       ; Real0
+    movsd xmm1, [rbx+8]     ; Imag0
+    
+    ; Load |1> (Old1)
+    movsd xmm2, [rbx+16]    ; Real1
+    movsd xmm3, [rbx+24]    ; Imag1
+    
+    ; Load |2> (Old2)
+    movsd xmm4, [rbx+32]    ; Real2
+    movsd xmm5, [rbx+40]    ; Imag2
+    
+    ; Permute:
+    ; New |0> = Old |2>
+    ; New |1> = Old |0>
+    ; New |2> = Old |1>
+    
+    ; Store New |0>
+    movsd [rbx], xmm4
+    movsd [rbx+8], xmm5
+    
+    ; Store New |1>
+    movsd [rbx+16], xmm0
+    movsd [rbx+24], xmm1
+    
+    ; Store New |2>
+    movsd [rbx+32], xmm2
+    movsd [rbx+40], xmm3
+    
     xor rax, rax
     jmp .exec_ret
 
@@ -1630,9 +1733,9 @@ execute_program:
     cmp r12, [program_end]
     jge .exec_done
 
-    ; Load 32-bit instruction
-    mov edi, [r12]
-    add r12, 4
+    ; Load 64-bit instruction
+    mov rdi, [r12]
+    add r12, 8
 
     call execute_instruction
 
