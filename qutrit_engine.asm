@@ -26,9 +26,9 @@
 
 %define MAX_CHUNK_SIZE      10          ; Max qutrits per chunk (3^10 = 59049)
 %define MAX_STATES          59049       ; 3^10
-%define MAX_CHUNKS          64          ; Support 640 qutrits total
+%define MAX_CHUNKS          4096        ; Support 4096 chunks
 %define MAX_ADDONS          32          ; Max registered add-ons
-%define MAX_BRAID_LINKS     128         ; Max entanglement links
+%define MAX_BRAID_LINKS     4096        ; Keep high braid links
 
 %define STATE_BYTES         16          ; Complex amplitude: 8 (real) + 8 (imag)
 
