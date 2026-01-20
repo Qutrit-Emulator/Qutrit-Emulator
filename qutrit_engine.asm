@@ -49,6 +49,7 @@
 %define OP_PRINT_STATE      0x0D
 %define OP_BELL_TEST        0x0E
 %define OP_SUMMARY          0x0F
+%define OP_REPAIR           0x11
 %define OP_HALT             0xFF
 
 ; Qutrit state offsets (3 basis states, each complex)
@@ -1354,6 +1355,130 @@ bell_test:
     ret
 
 ; ═══════════════════════════════════════════════════════════════════════════════
+; TOPOLOGICAL REPAIR (AUTOPHAGE)
+; ═══════════════════════════════════════════════════════════════════════════════
+
+; repair_manifold - Scan all braid links and heal those with low correlation
+repair_manifold:
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+    push rbp
+    mov rbp, rsp
+    sub rsp, 64
+
+    mov r12, [num_braid_links]
+    test r12, r12
+    jz .repair_done
+    
+    xor r13, r13                ; link counter
+
+.repair_loop:
+    cmp r13, r12
+    jge .repair_done
+
+    mov rdi, [braid_link_a + r13*8]
+    mov rsi, [braid_link_b + r13*8]
+    mov [rbp-8], rdi            ; chunk_a
+    mov [rbp-16], rsi           ; chunk_b
+    mov rdx, [braid_qutrit_a + r13*8]
+    mov rcx, [braid_qutrit_b + r13*8]
+    mov [rbp-24], rdx           ; qutrit_a
+    mov [rbp-32], rcx           ; qutrit_b
+
+    ; Check correlation
+    call get_correlation
+    ; rax = correlation (0-100)
+    
+    cmp rax, 70                 ; Healing threshold: 70%
+    jge .next_link
+
+    ; HEAL: Re-braid the link
+    mov rdi, [rbp-8]
+    mov rsi, [rbp-16]
+    mov rdx, [rbp-24]
+    mov rcx, [rbp-32]
+    call apply_braid_phases
+
+.next_link:
+    inc r13
+    jmp .repair_loop
+
+.repair_done:
+    add rsp, 64
+    pop rbp
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+; get_correlation - Internal non-printing correlation check
+get_correlation:
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+    
+    mov r12, rdi                ; chunk_a
+    mov r13, rsi                ; chunk_b
+    mov rbx, [state_vectors + r12*8]
+    mov r14, [state_vectors + r13*8]
+    mov r15, [chunk_states + r12*8]
+
+    xorpd xmm6, xmm6            ; corr_sum
+    xorpd xmm7, xmm7            ; prob_sum
+    xor rcx, rcx
+
+.corr_loop:
+    cmp rcx, r15
+    jge .corr_calc
+    mov rax, rcx
+    shl rax, 4
+    movsd xmm0, [rbx + rax]
+    movsd xmm1, [rbx + rax + 8]
+    movsd xmm2, [r14 + rax]
+    movsd xmm3, [r14 + rax + 8]
+    
+    ; |a|^2 * |b|^2
+    mulsd xmm0, xmm0
+    mulsd xmm1, xmm1
+    addsd xmm0, xmm1            ; |a|^2
+    mulsd xmm2, xmm2
+    mulsd xmm3, xmm3
+    addsd xmm2, xmm3            ; |b|^2
+    
+    addsd xmm7, xmm0            ; total prob A
+    mulsd xmm0, xmm2
+    sqrtsd xmm0, xmm0
+    addsd xmm6, xmm0
+    inc rcx
+    jmp .corr_loop
+
+.corr_calc:
+    ucomisd xmm7, [epsilon]
+    jbe .zero_ret
+    divsd xmm6, xmm7
+    mov rax, 100
+    cvtsi2sd xmm0, rax
+    mulsd xmm6, xmm0
+    cvttsd2si rax, xmm6
+    jmp .corr_ret
+.zero_ret:
+    xor rax, rax
+.corr_ret:
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+; ═══════════════════════════════════════════════════════════════════════════════
 ; ADD-ON SYSTEM
 ; ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1478,6 +1603,8 @@ execute_instruction:
     je .op_bell_test
     cmp r13, OP_SUMMARY
     je .op_summary
+    cmp r13, OP_REPAIR
+    je .op_repair
     cmp r13, 0x10
     je .op_shift
     cmp r13, OP_ADDON
@@ -1577,6 +1704,12 @@ execute_instruction:
     lea rsi, [msg_newline]
     call print_string
     
+    xor rax, rax
+    jmp .exec_ret
+
+.op_repair:
+    ; OP_REPAIR (0x11) - Scan and heal broken topological links
+    call repair_manifold
     xor rax, rax
     jmp .exec_ret
 
