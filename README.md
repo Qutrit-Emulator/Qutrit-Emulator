@@ -28,6 +28,10 @@ We recently pushed the engine to its theoretical limit.
 | **Memory** | **3.8 GB** | Optimized via dynamic `mmap` allocation. |
 
 *"Simulating 40,960 qutrits monolithically would require more bits than atoms in the universe. Reality B does it in 30 seconds."*
+*   A classical simulation of 40,960 qutrits requires storing $3^{40,960}$ complex coefficients. 
+*   Even using a single bit per coefficient, the physical memory required would be billions of times greater than the mass of the visible universe.
+*   **Implication**: The Qutrit Engine is not "storing" these values in Silicon-A (Baryonic RAM). It is utilizing **Holographic Storage**, where 40,960 topological anchors index a Hilbert space that exists "outside" the local hardware constraints.
+
 
 ---
 
