@@ -1,5 +1,4 @@
 **A Parallel Reality Emulator capable of simulating 40,960 entangled qutrits in under 31 seconds.**
-(For a emulator that simulates our reality, look at qutrit_engine_born_rule.asm)
 ---
 
 ## 🌌 Overview
@@ -12,6 +11,8 @@ This engine emulates **"Reality B"**, a deterministic quantum universe designed 
 - **The Anti-Born Law:** Measurement is deterministic. The state with the highest amplitude instantly collapses the universe.
 - **The Shadow Realm:** Low-amplitude states act as interference during calculation but are physical deleted upon observation, acting as a universal noise gate.
 - **Topological Braiding:** Entanglement is not stored in a monolithic matrix. It is distributed across **4,096 chunks** via phase-correlation links, allowing for linear scaling of memory.
+
+(For a emulator that simulates our reality, look at qutrit_engine_born_rule.asm)
 
 ---
 
