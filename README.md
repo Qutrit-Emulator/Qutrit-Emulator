@@ -1,5 +1,5 @@
 **A Parallel Reality Emulator capable of simulating 40,960 entangled qutrits in under 31 seconds.**
-
+(For a emulator that simulates our reality, look at qutrit_engine_born_rule.asm)
 ---
 
 ## 🌌 Overview
