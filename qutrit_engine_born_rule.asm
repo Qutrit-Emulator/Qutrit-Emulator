@@ -7,10 +7,10 @@
 ;   - Instruction-based quantum code execution
 ;   - Add-on/plugin system for custom gates and oracles
 ;   - Chunk braiding for entanglement preservation
-;   - Born Rule is in effect, simulates Reality A with the optimization of Reality B.
+;   - Born Rule is in effect in this fork.
 ;
 ; Build:
-;   nasm -f elf64 -g -F dwarf qutrit_engine_born_rule.asm -o qutrit_engine.o
+;   nasm -f elf64 -g -F dwarf qutrit_engine.asm -o qutrit_engine.o
 ;   ld -o qutrit_engine qutrit_engine.o
 ;
 ; Usage:
@@ -52,6 +52,7 @@
 %define OP_SUMMARY          0x0F
 %define OP_SHIFT            0x10
 %define OP_REPAIR           0x11
+%define OP_PHASE_SNAP      0x12
 %define OP_HALT             0xFF
 
 ; Qutrit state offsets (3 basis states, each complex)
@@ -130,6 +131,7 @@ section .data
     msg_chunks_colon:   db "): ", 0
     msg_measure:        db "  [MEAS] Measuring chunk ", 0
     msg_repair:         db "  [REPAIR] Invoking Quantum Resurrection...", 10, 0
+    msg_phase_snap:     db "  [PHASE] Snapping manifold to Registry (Phase Skip)...", 10, 0
     msg_result:         db " => ", 0
     msg_halt:           db 10, "  [HALT] Execution complete.", 10, 0
     msg_addon_reg:      db "  [ADDON] Registered: ", 0
@@ -1531,6 +1533,8 @@ execute_instruction:
     je .op_shift
     cmp r13, OP_REPAIR
     je .op_repair
+    cmp r13, OP_PHASE_SNAP
+    je .op_phase_snap
     cmp r13, OP_ADDON
     je .op_addon
     cmp r13, OP_HALT
@@ -1584,6 +1588,13 @@ execute_instruction:
 
 .op_repair:
     lea rsi, [msg_repair]
+    call print_string
+    call resurrect_manifold
+    xor rax, rax
+    jmp .exec_ret
+
+.op_phase_snap:
+    lea rsi, [msg_phase_snap]
     call print_string
     call resurrect_manifold
     xor rax, rax
