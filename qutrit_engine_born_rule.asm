@@ -1732,16 +1732,20 @@ execute_instruction:
     jge .sum_done_all
     
     mov rbx, [state_vectors + rcx*8]
-    ; Load State 2 (Index 2 -> Offset 32)
-    movsd xmm0, [rbx + 32]
+    test rbx, rbx
+    jz .not_active
+    
+    ; Load State 0 (Index 0 -> Offset 0)
+    movsd xmm0, [rbx]
     mulsd xmm0, xmm0
-    movsd xmm1, [rbx + 40]
+    movsd xmm1, [rbx + 8]
     mulsd xmm1, xmm1
     addsd xmm0, xmm1
-    ; xmm0 is |c_2|^2
+    ; xmm0 is |c_0|^2
     
+    ; If |c_0|^2 < epsilon, we consider it a "Good Future" (Active)
     ucomisd xmm0, xmm2
-    jbe .not_active
+    ja .not_active
     inc r15
 .not_active:
     inc rcx
