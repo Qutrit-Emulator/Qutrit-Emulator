@@ -1,5 +1,8 @@
 **A Parallel Reality Emulator capable of simulating 40,960 entangled qutrits in under 31 seconds.**
 ---
+## Why does this exist?
+
+Because it can.
 
 ## 🌌 Overview
 
