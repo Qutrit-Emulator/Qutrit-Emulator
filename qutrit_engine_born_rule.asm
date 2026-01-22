@@ -53,6 +53,7 @@
 %define OP_SHIFT            0x10
 %define OP_REPAIR           0x11
 %define OP_PHASE_SNAP      0x12
+%define OP_FUTURE_ORACLE    0x13
 %define OP_HALT             0xFF
 
 ; Qutrit state offsets (3 basis states, each complex)
@@ -132,6 +133,7 @@ section .data
     msg_measure:        db "  [MEAS] Measuring chunk ", 0
     msg_repair:         db "  [REPAIR] Invoking Quantum Resurrection...", 10, 0
     msg_phase_snap:     db "  [PHASE] Snapping manifold to Registry (Phase Skip)...", 10, 0
+    msg_future:         db "  [FUTURE] Predicting future for chunk ", 0
     msg_result:         db " => ", 0
     msg_halt:           db 10, "  [HALT] Execution complete.", 10, 0
     msg_addon_reg:      db "  [ADDON] Registered: ", 0
@@ -916,6 +918,113 @@ measure_chunk:
     pop rbx
     ret
 
+; future_prediction_oracle - Prune states that lead to "bad" futures
+; Input: rdi = chunk_index
+future_prediction_oracle:
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+    push rbp
+    mov rbp, rsp
+    sub rsp, 32
+
+    mov r12, rdi                ; chunk index
+    mov rbx, [state_vectors + r12*8]
+    mov r13, [chunk_states + r12*8]
+    mov r15, [chunk_sizes + r12*8] ; num qutrits
+
+    ; Step 1: Zero out "bad" states
+    xor rcx, rcx                ; state index (I)
+.fp_prune_loop:
+    cmp rcx, r13
+    jge .fp_normalization
+    
+    ; Extract d0 = I % 3
+    mov rax, rcx
+    xor rdx, rdx
+    mov r8, 3
+    div r8                      ; rax = I / 3, rdx = I % 3 (d0)
+    
+    cmp rdx, 0
+    je .fp_state_is_bad         ; d0 == 0 is bad
+    
+    ; If more than 1 qutrit, extract d1 = (I / 3) % 3
+    cmp r15, 1
+    jle .fp_state_is_good       ; Only 1 qutrit, and d0 != 0
+    
+    xor rdx, rdx
+    div r8                      ; rax = I / 9, rdx = (I/3) % 3 (d1)
+    cmp rdx, 0
+    je .fp_state_is_bad         ; d1 == 0 is bad
+    
+.fp_state_is_good:
+    jmp .fp_prune_next
+
+.fp_state_is_bad:
+    mov rax, rcx
+    shl rax, 4                  ; * 16
+    xorpd xmm0, xmm0
+    movsd [rbx + rax], xmm0
+    movsd [rbx + rax + 8], xmm0
+
+.fp_prune_next:
+    inc rcx
+    jmp .fp_prune_loop
+
+.fp_normalization:
+    ; Step 2: Sum |amp|^2 for remaining states
+    xorpd xmm7, xmm7            ; total_prob
+    xor rcx, rcx
+.fp_sum_loop:
+    cmp rcx, r13
+    jge .fp_check_sum
+    mov rax, rcx
+    shl rax, 4
+    movsd xmm0, [rbx + rax]
+    movsd xmm1, [rbx + rax + 8]
+    mulsd xmm0, xmm0
+    mulsd xmm1, xmm1
+    addsd xmm0, xmm1
+    addsd xmm7, xmm0
+    inc rcx
+    jmp .fp_sum_loop
+
+.fp_check_sum:
+    xorpd xmm0, xmm0
+    ucomisd xmm7, xmm0
+    jbe .fp_done                ; If sum is 0, everything is bad
+    
+    sqrtsd xmm7, xmm7           ; norm = sqrt(total_prob)
+    
+    ; Step 3: Divide remaining amplitudes by norm to re-normalize
+    xor rcx, rcx
+.fp_div_loop:
+    cmp rcx, r13
+    jge .fp_done
+    mov rax, rcx
+    shl rax, 4
+    movsd xmm0, [rbx + rax]
+    movsd xmm1, [rbx + rax + 8]
+    divsd xmm0, xmm7
+    divsd xmm1, xmm7
+    movsd [rbx + rax], xmm0
+    movsd [rbx + rax + 8], xmm1
+    inc rcx
+    jmp .fp_div_loop
+
+.fp_done:
+    add rsp, 32
+    pop rbp
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+
 ; ═══════════════════════════════════════════════════════════════════════════════
 ; CHUNK BRAIDING - Entanglement Preservation
 ; ═══════════════════════════════════════════════════════════════════════════════
@@ -1537,6 +1646,8 @@ execute_instruction:
     je .op_phase_snap
     cmp r13, OP_ADDON
     je .op_addon
+    cmp r13, OP_FUTURE_ORACLE
+    je .op_future_oracle
     cmp r13, OP_HALT
     je .op_halt
 
@@ -1716,6 +1827,19 @@ execute_instruction:
     call print_number
     lea rsi, [msg_newline]
     call print_string
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_oracle:
+    lea rsi, [msg_future]
+    call print_string
+    mov rdi, r14
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+
+    mov rdi, r14
+    call future_prediction_oracle
     xor rax, rax
     jmp .exec_ret
 
