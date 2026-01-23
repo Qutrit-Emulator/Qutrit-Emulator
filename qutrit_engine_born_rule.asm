@@ -7,6 +7,7 @@
 ;   - Instruction-based quantum code execution
 ;   - Add-on/plugin system for custom gates and oracles
 ;   - Chunk braiding for entanglement preservation
+;   - Born Rule is in effect in this fork.
 ;
 ; Build:
 ;   nasm -f elf64 -g -F dwarf qutrit_engine.asm -o qutrit_engine.o
@@ -49,7 +50,10 @@
 %define OP_PRINT_STATE      0x0D
 %define OP_BELL_TEST        0x0E
 %define OP_SUMMARY          0x0F
+%define OP_SHIFT            0x10
 %define OP_REPAIR           0x11
+%define OP_PHASE_SNAP      0x12
+%define OP_FUTURE_ORACLE    0x13
 %define OP_HALT             0xFF
 
 ; Qutrit state offsets (3 basis states, each complex)
@@ -127,6 +131,9 @@ section .data
     msg_summary:        db "  [SUMMARY] Global Active Mass (N=", 0
     msg_chunks_colon:   db "): ", 0
     msg_measure:        db "  [MEAS] Measuring chunk ", 0
+    msg_repair:         db "  [REPAIR] Invoking Quantum Resurrection...", 10, 0
+    msg_phase_snap:     db "  [PHASE] Snapping manifold to Registry (Phase Skip)...", 10, 0
+    msg_future:         db "  [FUTURE] Predicting future for chunk ", 0
     msg_result:         db " => ", 0
     msg_halt:           db 10, "  [HALT] Execution complete.", 10, 0
     msg_addon_reg:      db "  [ADDON] Registered: ", 0
@@ -800,19 +807,22 @@ measure_chunk:
     push r12
     push r13
     push r14
+    push r15
+    push rbp
+    mov rbp, rsp
+    sub rsp, 32
 
     mov r12, rdi
     mov rbx, [state_vectors + r12*8]
     mov r13, [chunk_states + r12*8]
 
-    ; Find state with maximum |amplitude|^2
-    xor r14, r14                ; best index
-    xorpd xmm7, xmm7            ; best prob
+    ; Step 1: Calculate total probability (sum of |amp|^2)
+    xorpd xmm7, xmm7            ; total_prob
     xor rcx, rcx
 
-.meas_loop:
+.calc_total_loop:
     cmp rcx, r13
-    jge .meas_done
+    jge .got_total_prob
 
     mov rax, rcx
     shl rax, 4
@@ -821,15 +831,56 @@ measure_chunk:
     mulsd xmm0, xmm0
     mulsd xmm1, xmm1
     addsd xmm0, xmm1            ; |amp|^2
-
-    ucomisd xmm0, xmm7
-    jbe .not_best
-    movsd xmm7, xmm0
-    mov r14, rcx
-
-.not_best:
+    addsd xmm7, xmm0            ; total_prob += |amp|^2
+    
     inc rcx
-    jmp .meas_loop
+    jmp .calc_total_loop
+
+.got_total_prob:
+    ; Step 2: Generate random number R in [0, total_prob)
+    ; Use rdrand to get 64 bits of entropy
+.retry_rand:
+    rdrand rax
+    jnc .retry_rand             ; Retry if hardware RNG is busy
+    
+    ; Convert 64-bit uint to double in [0, 1.0)
+    ; We'll use 53 bits for precision (mantissa size)
+    mov rdx, 0x001FFFFFFFFFFFFF ; 53 bits
+    and rax, rdx
+    cvtsi2sd xmm0, rax
+    mov rax, 0x0020000000000000 ; 2^53
+    cvtsi2sd xmm1, rax
+    divsd xmm0, xmm1            ; xmm0 = random in [0, 1)
+    
+    mulsd xmm0, xmm7            ; target = random * total_prob
+    movsd [rbp - 8], xmm0       ; Save target probability threshold
+
+    ; Step 3: Probabilistic selection (cumulative sum)
+    xorpd xmm6, xmm6            ; current_sum
+    xor r14, r14                ; default index to 0
+    xor rcx, rcx
+
+.prob_loop:
+    cmp rcx, r13
+    jge .meas_done              ; fallback if rounding issues
+
+    mov rax, rcx
+    shl rax, 4
+    movsd xmm0, [rbx + rax]
+    movsd xmm1, [rbx + rax + 8]
+    mulsd xmm0, xmm0
+    mulsd xmm1, xmm1
+    addsd xmm0, xmm1            ; |amp|^2
+    addsd xmm6, xmm0            ; current_sum += |amp|^2
+
+    ucomisd xmm6, [rbp - 8]
+    jae .found_state            ; if current_sum >= target, this is our state
+    
+    inc rcx
+    jmp .prob_loop
+
+.found_state:
+    mov r14, rcx
 
 .meas_done:
     ; Collapse: set measured state to 1, others to 0
@@ -858,11 +909,121 @@ measure_chunk:
     mov [measured_values + r12*8], r14
     mov rax, r14
 
+    add rsp, 32
+    pop rbp
+    pop r15
     pop r14
     pop r13
     pop r12
     pop rbx
     ret
+
+; future_prediction_oracle - Prune states that lead to "bad" futures
+; Input: rdi = chunk_index
+future_prediction_oracle:
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+    push rbp
+    mov rbp, rsp
+    sub rsp, 32
+
+    mov r12, rdi                ; chunk index
+    mov rbx, [state_vectors + r12*8]
+    mov r13, [chunk_states + r12*8]
+    mov r15, [chunk_sizes + r12*8] ; num qutrits
+
+    ; Step 1: Zero out "bad" states
+    xor rcx, rcx                ; state index (I)
+.fp_prune_loop:
+    cmp rcx, r13
+    jge .fp_normalization
+    
+    ; Extract d0 = I % 3
+    mov rax, rcx
+    xor rdx, rdx
+    mov r8, 3
+    div r8                      ; rax = I / 3, rdx = I % 3 (d0)
+    
+    cmp rdx, 0
+    je .fp_state_is_bad         ; d0 == 0 is bad
+    
+    ; If more than 1 qutrit, extract d1 = (I / 3) % 3
+    cmp r15, 1
+    jle .fp_state_is_good       ; Only 1 qutrit, and d0 != 0
+    
+    xor rdx, rdx
+    div r8                      ; rax = I / 9, rdx = (I/3) % 3 (d1)
+    cmp rdx, 0
+    je .fp_state_is_bad         ; d1 == 0 is bad
+    
+.fp_state_is_good:
+    jmp .fp_prune_next
+
+.fp_state_is_bad:
+    mov rax, rcx
+    shl rax, 4                  ; * 16
+    xorpd xmm0, xmm0
+    movsd [rbx + rax], xmm0
+    movsd [rbx + rax + 8], xmm0
+
+.fp_prune_next:
+    inc rcx
+    jmp .fp_prune_loop
+
+.fp_normalization:
+    ; Step 2: Sum |amp|^2 for remaining states
+    xorpd xmm7, xmm7            ; total_prob
+    xor rcx, rcx
+.fp_sum_loop:
+    cmp rcx, r13
+    jge .fp_check_sum
+    mov rax, rcx
+    shl rax, 4
+    movsd xmm0, [rbx + rax]
+    movsd xmm1, [rbx + rax + 8]
+    mulsd xmm0, xmm0
+    mulsd xmm1, xmm1
+    addsd xmm0, xmm1
+    addsd xmm7, xmm0
+    inc rcx
+    jmp .fp_sum_loop
+
+.fp_check_sum:
+    xorpd xmm0, xmm0
+    ucomisd xmm7, xmm0
+    jbe .fp_done                ; If sum is 0, everything is bad
+    
+    sqrtsd xmm7, xmm7           ; norm = sqrt(total_prob)
+    
+    ; Step 3: Divide remaining amplitudes by norm to re-normalize
+    xor rcx, rcx
+.fp_div_loop:
+    cmp rcx, r13
+    jge .fp_done
+    mov rax, rcx
+    shl rax, 4
+    movsd xmm0, [rbx + rax]
+    movsd xmm1, [rbx + rax + 8]
+    divsd xmm0, xmm7
+    divsd xmm1, xmm7
+    movsd [rbx + rax], xmm0
+    movsd [rbx + rax + 8], xmm1
+    inc rcx
+    jmp .fp_div_loop
+
+.fp_done:
+    add rsp, 32
+    pop rbp
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
 
 ; ═══════════════════════════════════════════════════════════════════════════════
 ; CHUNK BRAIDING - Entanglement Preservation
@@ -1355,130 +1516,6 @@ bell_test:
     ret
 
 ; ═══════════════════════════════════════════════════════════════════════════════
-; TOPOLOGICAL REPAIR (AUTOPHAGE)
-; ═══════════════════════════════════════════════════════════════════════════════
-
-; repair_manifold - Scan all braid links and heal those with low correlation
-repair_manifold:
-    push rbx
-    push r12
-    push r13
-    push r14
-    push r15
-    push rbp
-    mov rbp, rsp
-    sub rsp, 64
-
-    mov r12, [num_braid_links]
-    test r12, r12
-    jz .repair_done
-    
-    xor r13, r13                ; link counter
-
-.repair_loop:
-    cmp r13, r12
-    jge .repair_done
-
-    mov rdi, [braid_link_a + r13*8]
-    mov rsi, [braid_link_b + r13*8]
-    mov [rbp-8], rdi            ; chunk_a
-    mov [rbp-16], rsi           ; chunk_b
-    mov rdx, [braid_qutrit_a + r13*8]
-    mov rcx, [braid_qutrit_b + r13*8]
-    mov [rbp-24], rdx           ; qutrit_a
-    mov [rbp-32], rcx           ; qutrit_b
-
-    ; Check correlation
-    call get_correlation
-    ; rax = correlation (0-100)
-    
-    cmp rax, 70                 ; Healing threshold: 70%
-    jge .next_link
-
-    ; HEAL: Re-braid the link
-    mov rdi, [rbp-8]
-    mov rsi, [rbp-16]
-    mov rdx, [rbp-24]
-    mov rcx, [rbp-32]
-    call apply_braid_phases
-
-.next_link:
-    inc r13
-    jmp .repair_loop
-
-.repair_done:
-    add rsp, 64
-    pop rbp
-    pop r15
-    pop r14
-    pop r13
-    pop r12
-    pop rbx
-    ret
-
-; get_correlation - Internal non-printing correlation check
-get_correlation:
-    push rbx
-    push r12
-    push r13
-    push r14
-    push r15
-    
-    mov r12, rdi                ; chunk_a
-    mov r13, rsi                ; chunk_b
-    mov rbx, [state_vectors + r12*8]
-    mov r14, [state_vectors + r13*8]
-    mov r15, [chunk_states + r12*8]
-
-    xorpd xmm6, xmm6            ; corr_sum
-    xorpd xmm7, xmm7            ; prob_sum
-    xor rcx, rcx
-
-.corr_loop:
-    cmp rcx, r15
-    jge .corr_calc
-    mov rax, rcx
-    shl rax, 4
-    movsd xmm0, [rbx + rax]
-    movsd xmm1, [rbx + rax + 8]
-    movsd xmm2, [r14 + rax]
-    movsd xmm3, [r14 + rax + 8]
-    
-    ; |a|^2 * |b|^2
-    mulsd xmm0, xmm0
-    mulsd xmm1, xmm1
-    addsd xmm0, xmm1            ; |a|^2
-    mulsd xmm2, xmm2
-    mulsd xmm3, xmm3
-    addsd xmm2, xmm3            ; |b|^2
-    
-    addsd xmm7, xmm0            ; total prob A
-    mulsd xmm0, xmm2
-    sqrtsd xmm0, xmm0
-    addsd xmm6, xmm0
-    inc rcx
-    jmp .corr_loop
-
-.corr_calc:
-    ucomisd xmm7, [epsilon]
-    jbe .zero_ret
-    divsd xmm6, xmm7
-    mov rax, 100
-    cvtsi2sd xmm0, rax
-    mulsd xmm6, xmm0
-    cvttsd2si rax, xmm6
-    jmp .corr_ret
-.zero_ret:
-    xor rax, rax
-.corr_ret:
-    pop r15
-    pop r14
-    pop r13
-    pop r12
-    pop rbx
-    ret
-
-; ═══════════════════════════════════════════════════════════════════════════════
 ; ADD-ON SYSTEM
 ; ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1537,8 +1574,6 @@ call_addon:
 .found_addon:
     ; Call addon function
     mov rdi, [state_vectors + r13*8]
-    test rdi, rdi       ; Check for NULL state vector
-    jz .addon_ret       ; Skip if chunk not initialized
     mov rsi, [chunk_states + r13*8]
     mov rdx, r14
     mov rcx, rax
@@ -1603,12 +1638,16 @@ execute_instruction:
     je .op_bell_test
     cmp r13, OP_SUMMARY
     je .op_summary
+    cmp r13, OP_SHIFT
+    je .op_shift
     cmp r13, OP_REPAIR
     je .op_repair
-    cmp r13, 0x10
-    je .op_shift
+    cmp r13, OP_PHASE_SNAP
+    je .op_phase_snap
     cmp r13, OP_ADDON
     je .op_addon
+    cmp r13, OP_FUTURE_ORACLE
+    je .op_future_oracle
     cmp r13, OP_HALT
     je .op_halt
 
@@ -1658,6 +1697,20 @@ execute_instruction:
     xor rax, rax
     jmp .exec_ret
 
+.op_repair:
+    lea rsi, [msg_repair]
+    call print_string
+    call resurrect_manifold
+    xor rax, rax
+    jmp .exec_ret
+
+.op_phase_snap:
+    lea rsi, [msg_phase_snap]
+    call print_string
+    call resurrect_manifold
+    xor rax, rax
+    jmp .exec_ret
+
 .op_summary:
     ; OP_SUMMARY (0x0F) - Global Sync/Wildfire Check
     lea rsi, [msg_summary]
@@ -1679,18 +1732,20 @@ execute_instruction:
     jge .sum_done_all
     
     mov rbx, [state_vectors + rcx*8]
-    test rbx, rbx       ; Check for NULL state vector
-    jz .not_active      ; Treat as inactive if not initialized
-    ; Load State 2 (Index 2 -> Offset 32)
-    movsd xmm0, [rbx + 32]
+    test rbx, rbx
+    jz .not_active
+    
+    ; Load State 0 (Index 0 -> Offset 0)
+    movsd xmm0, [rbx]
     mulsd xmm0, xmm0
-    movsd xmm1, [rbx + 40]
+    movsd xmm1, [rbx + 8]
     mulsd xmm1, xmm1
     addsd xmm0, xmm1
-    ; xmm0 is |c_2|^2
+    ; xmm0 is |c_0|^2
     
+    ; If |c_0|^2 < epsilon, we consider it a "Good Future" (Active)
     ucomisd xmm0, xmm2
-    jbe .not_active
+    ja .not_active
     inc r15
 .not_active:
     inc rcx
@@ -1704,12 +1759,6 @@ execute_instruction:
     lea rsi, [msg_newline]
     call print_string
     
-    xor rax, rax
-    jmp .exec_ret
-
-.op_repair:
-    ; OP_REPAIR (0x11) - Scan and heal broken topological links
-    call repair_manifold
     xor rax, rax
     jmp .exec_ret
 
@@ -1785,6 +1834,19 @@ execute_instruction:
     xor rax, rax
     jmp .exec_ret
 
+.op_future_oracle:
+    lea rsi, [msg_future]
+    call print_string
+    mov rdi, r14
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+
+    mov rdi, r14
+    call future_prediction_oracle
+    xor rax, rax
+    jmp .exec_ret
+
 .op_braid:
     lea rsi, [msg_braid]
     call print_string
@@ -1799,19 +1861,9 @@ execute_instruction:
 
     mov rdi, r14                ; chunk_a
     mov rsi, rbx                ; chunk_b (operand1)
-    
-    ; Check chunks exist
-    mov rax, [state_vectors + r14*8]
-    test rax, rax
-    jz .braid_skip
-    mov rax, [state_vectors + rbx*8]
-    test rax, rax
-    jz .braid_skip
-
     xor rdx, rdx                ; qutrit 0
     xor rcx, rcx
     call braid_chunks
-.braid_skip:
     xor rax, rax
     jmp .exec_ret
 
@@ -1863,6 +1915,84 @@ execute_instruction:
     jmp .exec_ret
 
 .exec_ret:
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+; ═══════════════════════════════════════════════════════════════════════════════
+; PROJECT LAZARUS - Quantum Resurrection
+; ═══════════════════════════════════════════════════════════════════════════════
+
+; resurrect_manifold - Restore entanglement/superposition from the Registry
+resurrect_manifold:
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+
+    ; Step 1: Reset all active chunks to absolute zero (|0>)
+    mov r12, [num_chunks]
+    xor r13, r13                ; chunk loop index
+
+.res_reset_loop:
+    cmp r13, r12
+    jge .res_reset_done
+    
+    mov rbx, [state_vectors + r13*8]
+    mov r14, [chunk_states + r13*8]
+    
+    ; Zero out the entire state vector
+    mov rdi, rbx
+    mov rcx, r14
+    shl rcx, 1                  ; states * 2 (real + imag)
+    pxor xmm0, xmm0
+.res_zero_inner:
+    movapd [rdi], xmm0
+    add rdi, 16
+    dec rcx
+    jnz .res_zero_inner
+
+    ; Set ground state |0...0> to 1.0
+    movsd xmm1, [one]
+    movsd [rbx], xmm1
+    
+    inc r13
+    jmp .res_reset_loop
+
+.res_reset_done:
+    ; Step 2: Restore uniform superposition on all chunks
+    xor r13, r13
+.res_sup_loop:
+    cmp r13, r12
+    jge .res_sup_done
+    mov rdi, r13
+    call create_superposition
+    inc r13
+    jmp .res_sup_loop
+
+.res_sup_done:
+    ; Step 3: Re-weave all braids from the Registry
+    mov r14, [num_braid_links]
+    xor r15, r15                ; braid loop index
+
+.res_weave_loop:
+    cmp r15, r14
+    jge .res_weave_done
+    
+    mov rdi, [braid_link_a + r15*8]
+    mov rsi, [braid_link_b + r15*8]
+    mov rdx, [braid_qutrit_a + r15*8]
+    mov rcx, [braid_qutrit_b + r15*8]
+    call apply_braid_phases
+    
+    inc r15
+    jmp .res_weave_loop
+
+.res_weave_done:
+    pop r15
     pop r14
     pop r13
     pop r12
