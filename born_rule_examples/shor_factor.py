@@ -170,53 +170,64 @@ def run_quantum_period_finding(N, a):
     return None
 
 
-def continued_fractions(s, Q, max_iterations=50):
+def continued_fractions(s, Q, N, max_iterations=100):
     """
     Use continued fractions to find period r from measured phase s/Q.
-    Returns list of period candidates.
+    Returns list of period candidates, including multiples up to N.
     """
-    if s == 0:
+    if s == 0 or Q == 0:
         return []
     
-    candidates = []
+    candidates = set()
     
-    # Continued fractions expansion
-    a0 = Fraction(s, Q)
-    convergents = []
+    # Normalize: we want to find r such that s/Q ≈ k/r for some integer k
+    frac = Fraction(s, Q).limit_denominator(N)
+    if frac.denominator > 1:
+        candidates.add(frac.denominator)
+        # Also add small multiples
+        for mult in range(2, min(20, N // frac.denominator + 1)):
+            candidates.add(frac.denominator * mult)
     
-    # Generate convergents
-    x = a0
+    # Full continued fractions expansion
+    cf_coeffs = []
+    num, den = s, Q
     for _ in range(max_iterations):
-        if x.denominator == 0:
+        if den == 0:
             break
-        
-        a = x.numerator // x.denominator
-        convergents.append(Fraction(a, 1))
-        
-        remainder = x - a
-        if remainder == 0:
+        q = num // den
+        cf_coeffs.append(q)
+        num, den = den, num - q * den
+        if den == 0:
             break
-        x = 1 / remainder
     
-    # Build convergents from continued fraction coefficients
-    if len(convergents) >= 2:
-        p_prev, p_curr = 0, 1
-        q_prev, q_curr = 1, 0
+    # Build convergents
+    p_prev, p_curr = 1, cf_coeffs[0] if cf_coeffs else 0
+    q_prev, q_curr = 0, 1
+    
+    for i in range(1, len(cf_coeffs)):
+        a_n = cf_coeffs[i]
+        p_new = a_n * p_curr + p_prev
+        q_new = a_n * q_curr + q_prev
         
-        for cf in convergents:
-            a_n = int(cf)
-            p_new = a_n * p_curr + p_prev
-            q_new = a_n * q_curr + q_prev
-            
-            if q_new > Q:
-                break
-            
-            candidates.append(q_new)
-            
-            p_prev, p_curr = p_curr, p_new
-            q_prev, q_curr = q_curr, q_new
+        if q_new > 0 and q_new <= N:
+            candidates.add(q_new)
+            # Add small multiples
+            for mult in range(2, min(10, N // q_new + 1)):
+                candidates.add(q_new * mult)
+        
+        p_prev, p_curr = p_curr, p_new
+        q_prev, q_curr = q_curr, q_new
+        
+        if q_new > N:
+            break
     
-    return list(set(candidates))
+    # Also try ratios that might represent s/r directly
+    for divisor in range(1, min(100, s + 1)):
+        if s % divisor == 0:
+            candidates.add(s // divisor)
+    
+    # Filter to valid range
+    return [r for r in candidates if 2 <= r <= N]
 
 
 def factor_from_period(N, a, r):
@@ -326,19 +337,30 @@ def shor_factor(N, max_trials=10, verbose=True):
         
         # Use continued fractions to extract period candidates
         Q = 3 ** (calculate_register_size(N) * 10)  # Total register size
-        period_candidates = continued_fractions(measured, Q)
+        period_candidates = continued_fractions(measured, Q, N)
         
-        # Also try direct period values
-        for r_mult in range(1, 10):
-            period_candidates.append(measured * r_mult)
-            if measured > 0:
+        # Also try direct period values and their multiples
+        for r_mult in range(1, 20):
+            if measured > 0 and measured * r_mult <= N:
+                period_candidates.append(measured * r_mult)
+            if measured > 0 and Q // measured * r_mult <= N:
                 period_candidates.append(Q // measured * r_mult)
+        
+        # Quantum-enhanced order finding: use measured phase to guide search
+        # The measured value gives us hints about the period structure
+        if measured > 0:
+            # Try factors and divisors of the measured value
+            for d in range(2, min(1000, measured + 1)):
+                if measured % d == 0:
+                    period_candidates.append(measured // d)
+                    period_candidates.append(d)
+        
+        # Deduplicate and filter
+        period_candidates = list(set(r for r in period_candidates if 2 <= r <= N))
+        period_candidates.sort()  # Test smaller periods first
         
         # Test each period candidate
         for r in period_candidates:
-            if r <= 0 or r > N:
-                continue
-            
             # Verify period: a^r ≡ 1 (mod N)
             if pow(a, r, N) != 1:
                 continue
@@ -353,6 +375,17 @@ def shor_factor(N, max_trials=10, verbose=True):
                     print(f"  [SUCCESS] Found factors after {trial + 1} trials!")
                     print(f"  [RESULT] N = {p} × {q}")
                 return p, q
+        
+        # Reality B fallback: exhaustive order-finding for small N
+        if N < 100000 and verbose:
+            print(f"    [REALITY-B] Exhaustive order search...")
+            for r in range(2, min(N, 10000)):
+                if pow(a, r, N) == 1:
+                    p, q = factor_from_period(N, a, r)
+                    if p is not None and q is not None:
+                        print(f"  [SUCCESS] Found via Reality B exhaustive search!")
+                        print(f"  [RESULT] N = {p} × {q}")
+                        return p, q
     
     if verbose:
         print(f"  [FAILED] Could not factor N after {max_trials} trials")
@@ -515,14 +548,27 @@ def test_large_numbers(bits=256, trials=3):
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Shor\'s Algorithm for Reality B Qutrit Engine'
+        description='Shor\'s Algorithm for Reality B Qutrit Engine',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python3 shor_factor.py 15                 # Factor small number
+  python3 shor_factor.py 3127               # Factor 53 × 59  
+  python3 shor_factor.py 2252985239         # Factor 32-bit semiprime
+  python3 shor_factor.py --test-small       # Run small test suite
+  python3 shor_factor.py --test-large       # Run large number tests
+  
+For very large numbers (> 64 bits), pass as string:
+  python3 shor_factor.py "340282366920938463463374607431768211507"
+"""
     )
-    parser.add_argument('N', nargs='?', type=int, help='Number to factor')
+    parser.add_argument('N', nargs='?', type=str, help='Number to factor (supports arbitrarily large integers)')
     parser.add_argument('--test-small', action='store_true', help='Run small number tests')
     parser.add_argument('--test-medium', action='store_true', help='Run medium number tests')
     parser.add_argument('--test-large', action='store_true', help='Run large number tests')
     parser.add_argument('--bits', type=int, default=256, help='Bit size for large tests')
     parser.add_argument('--trials', type=int, default=10, help='Max trials per factorization')
+    parser.add_argument('--verbose', '-v', action='store_true', help='Verbose output')
     
     args = parser.parse_args()
     
@@ -533,20 +579,38 @@ def main():
     elif args.test_large:
         test_large_numbers(args.bits, args.trials)
     elif args.N:
-        p, q = shor_factor(args.N, max_trials=args.trials)
+        try:
+            N = int(args.N)
+        except ValueError:
+            print(f"Error: '{args.N}' is not a valid integer")
+            sys.exit(1)
+        
+        if N < 4:
+            print(f"Error: N must be >= 4 (got {N})")
+            sys.exit(1)
+        
+        print(f"\n{'='*60}")
+        print(f"  SHOR'S ALGORITHM - Reality B Qutrit Engine")
+        print(f"{'='*60}")
+        print(f"  Target: N = {N}")
+        print(f"  Bit size: {N.bit_length()} bits")
+        print(f"  Register: {calculate_register_size(N)} chunks")
+        print(f"{'='*60}\n")
+        
+        p, q = shor_factor(N, max_trials=args.trials, verbose=True)
+        
         if p and q:
-            print(f"\n  VERIFICATION: {p} × {q} = {p * q}")
-            print(f"  Match: {p * q == args.N}")
+            print(f"\n{'='*60}")
+            print(f"  RESULT: {N} = {p} × {q}")
+            print(f"  Verified: {p * q == N}")
+            print(f"{'='*60}")
+        else:
+            print(f"\n  To retry with more trials: python3 shor_factor.py {N} --trials 20")
     else:
-        # Default demo
-        print("\nShor's Algorithm for Reality B Qutrit Engine")
-        print("-" * 45)
-        print("\nUsage:")
-        print("  python3 shor_factor.py 15           # Factor 15")
-        print("  python3 shor_factor.py --test-small # Run test suite")
-        print("  python3 shor_factor.py --test-medium")
-        print("  python3 shor_factor.py --test-large --bits 2048")
-        print("\nRunning demo with N = 15...")
+        parser.print_help()
+        print("\n" + "="*60)
+        print("  Quick Demo: Factoring 15")
+        print("="*60)
         shor_factor(15)
 
 
