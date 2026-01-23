@@ -54,17 +54,10 @@
 %define OP_REPAIR           0x11
 %define OP_PHASE_SNAP      0x12
 %define OP_FUTURE_ORACLE    0x13
+%define OP_QFT              0x17        ; Qutrit Quantum Fourier Transform
+%define OP_IQFT             0x18        ; Inverse QFT
+%define OP_MOD_EXP          0x19        ; Modular Exponentiation Oracle (Shor's)
 %define OP_HALT             0xFF
-
-; Shor's Algorithm Opcodes (0x20-0x2F)
-%define OP_SHOR_INIT        0x20    ; Initialize Shor's registers
-%define OP_MOD_EXP          0x21    ; Modular exponentiation oracle
-%define OP_QFT              0x22    ; Quantum Fourier Transform
-%define OP_IQFT             0x23    ; Inverse QFT
-%define OP_PERIOD_EXTRACT   0x24    ; Extract period from phase
-%define OP_FACTOR_ORACLE    0x25    ; Factor verification oracle
-%define OP_CONT_FRAC        0x26    ; Continued fractions
-%define OP_SHOR_AMPLIFY     0x27    ; Amplify valid periods
 
 ; Qutrit state offsets (3 basis states, each complex)
 %define QUTRIT_SIZE         48          ; 6 doubles
@@ -161,21 +154,19 @@ section .data
     msg_bell_pass:      db "  ✓ BELL TEST PASSED - Entanglement verified!", 10, 0
     msg_bell_fail:      db "  ✗ BELL TEST FAILED - No entanglement detected", 10, 0
     msg_percent:        db "%", 10, 0
-    
-    ; Shor's algorithm messages
-    msg_shor_init:      db "  [SHOR] Initializing ", 0
-    msg_shor_chunks:    db "-chunk quantum register for N=", 0
-    msg_shor_modexp:    db "  [SHOR] Applying modular exponentiation a^x mod N", 10, 0
-    msg_shor_qft:       db "  [SHOR] Applying Quantum Fourier Transform across ", 0
-    msg_shor_chunks2:   db " chunks", 10, 0
-    msg_shor_period:    db "  [SHOR] Period candidate r=", 0
-    msg_shor_factor:    db "  [SHOR] Factor found: ", 0
-    msg_shor_amplify:   db "  [SHOR] Amplifying non-trivial periods (Reality B)", 10, 0
-    msg_shor_prune:     db "  [SHOR] Pruning trivial period paths", 10, 0
+    msg_prob_prefix:    db " prob=", 0
     
     ; Oracle names
     oracle_heisenberg_name: db "Heisenberg Spin-1 Exchange", 0
     oracle_gellmann_name: db "Gell-Mann XY Interaction", 0
+
+    ; QFT / Shor's messages
+    msg_qft:            db "  [QFT] Applying Quantum Fourier Transform to chunk ", 0
+    msg_iqft:           db "  [IQFT] Applying Inverse QFT to chunk ", 0
+    msg_qft_done:       db "    ✓ QFT complete (", 0
+    msg_qft_states:     db " states transformed)", 10, 0
+    msg_mod_exp:        db "  [MOD_EXP] Modular exponentiation: a=", 0
+    msg_mod_n:          db ", N=", 0
 
 ; ─────────────────────────────────────────────────────────────────────────────
 ; Section: Uninitialized Data (BSS)
@@ -225,16 +216,8 @@ section .bss
     temp_sum_real:      resq 1
     temp_sum_imag:      resq 1
 
-    ; Shor's Algorithm State
-    shor_N:             resb BIGINT_BYTES       ; Number to factor (4096-bit)
-    shor_a:             resb BIGINT_BYTES       ; Random base a
-    shor_period:        resq 1                  ; Discovered period r
-    shor_register_size: resq 1                  ; Number of chunks in x-register
-    shor_factor_p:      resb BIGINT_BYTES       ; Factor P result
-    shor_factor_q:      resb BIGINT_BYTES       ; Factor Q result
-    shor_measured:      resq MAX_CHUNKS         ; Measured phase values per chunk
-    shor_trial_count:   resq 1                  ; Number of period-finding attempts
-    shor_qft_omega:     resq 2                  ; QFT rotation angles (real, imag)
+    ; QFT working buffer (stores transformed coefficients)
+    qft_temp_buffer:    resq MAX_STATES * 2     ; Complex amplitude per state (real, imag)
 
 ; ─────────────────────────────────────────────────────────────────────────────
 ; Section: Code
@@ -731,35 +714,103 @@ init_chunk:
 
 ; create_superposition - Create uniform superposition on chunk
 ; Input: rdi = chunk_index
+; create_superposition - Apply Superposition (Hadamard-like) to chunk
+; Input: rdi = chunk_index, rsi = active_qutrits (0 = all)
+; Acts on upper 'active' qutrits, spreading |0> to |+>. Preserves passive qutrits.
 create_superposition:
     push rbx
     push r12
     push r13
+    push r14
+    push r15
+    push rbp
+    mov rbp, rsp
+    sub rsp, 64
 
     mov r12, rdi
     mov rbx, [state_vectors + r12*8]
-    mov r13, [chunk_states + r12*8]
+    mov r13, [chunk_states + r12*8]   ; total states 3^n
+    mov r15, [chunk_sizes + r12*8]    ; total qutrits n
 
-    ; Calculate 1/sqrt(total_states)
-    cvtsi2sd xmm0, r13
+    ; Determine active/passive split
+    cmp rsi, 0
+    jnz .set_active
+    mov rsi, r15                ; default to all
+.set_active:
+    mov [rbp - 8], rsi          ; active_qutrits
+    
+    mov rcx, r15
+    sub rcx, rsi                ; passive_qutrits
+    
+    ; Calculate stride = 3^n_p
+    mov rax, 1
+    cmp rcx, 0
+    je .stride_one
+.calc_stride:
+    imul rax, 3
+    loop .calc_stride
+.stride_one:
+    mov [rbp - 16], rax         ; stride
+    mov r14, rax                ; num_passive (Y loop limit)
+
+    ; Calculate num_active = 3^n_a
+    mov rax, r13
+    xor rdx, rdx
+    div r14
+    mov [rbp - 24], rax         ; num_active
+
+    ; Calculate 1/sqrt(num_active)
+    cvtsi2sd xmm0, rax
     sqrtsd xmm0, xmm0
     movsd xmm1, [one]
-    divsd xmm1, xmm0            ; xmm1 = 1/sqrt(n)
+    divsd xmm1, xmm0
+    movsd [rbp - 32], xmm1      ; normalization factor
 
-    xor rcx, rcx
-.sup_loop:
-    cmp rcx, r13
+    ; Loop Y (passive)
+    xor r13, r13                ; y index
+
+.y_loop:
+    cmp r13, r14
     jge .sup_done
 
-    movsd [rbx], xmm1           ; Real = 1/sqrt(n)
-    xorpd xmm0, xmm0
-    movsd [rbx + 8], xmm0       ; Imag = 0
+    ; Read source amplitude from [X=0, Y=y] -> index = y (since 0*stride = 0)
+    mov rax, r13
+    shl rax, 4
+    movsd xmm0, [rbx + rax]     ; source_real
+    movsd xmm1, [rbx + rax + 8] ; source_imag
 
-    add rbx, 16
-    inc rcx
-    jmp .sup_loop
+    ; Multiply by factor
+    mulsd xmm0, [rbp - 32]      ; new_real
+    mulsd xmm1, [rbp - 32]      ; new_imag
+
+    ; Distribute to all X
+    xor r12, r12                ; x index
+
+.x_loop:
+    cmp r12, [rbp - 24]
+    jge .next_y
+
+    ; Target index = x * stride + y
+    mov rax, r12
+    imul rax, [rbp - 16]
+    add rax, r13
+    shl rax, 4
+
+    movsd [rbx + rax], xmm0
+    movsd [rbx + rax + 8], xmm1
+
+    inc r12
+    jmp .x_loop
+
+.next_y:
+    inc r13
+    jmp .y_loop
 
 .sup_done:
+    add rsp, 64
+    pop rbp
+    pop r15
+    pop r14
     pop r13
     pop r12
     pop rbx
@@ -1056,6 +1107,630 @@ future_prediction_oracle:
     pop rbx
     ret
 
+
+; ═══════════════════════════════════════════════════════════════════════════════
+; QUANTUM FOURIER TRANSFORM - Qutrit Implementation
+; ═══════════════════════════════════════════════════════════════════════════════
+; Implements the QFT for n-qutrit systems using direct coefficient transformation.
+;
+; For n qutrits with 3^n states, the QFT transforms:
+;   |j⟩ → (1/√3^n) Σ_k ω^(j·k) |k⟩
+;
+; where ω = e^(2πi/3) and j·k is computed digit-wise in base 3.
+;
+; The phase ω^p where p ∈ {0,1,2} mod 3:
+;   ω^0 = 1
+;   ω^1 = -0.5 + i(√3/2)  
+;   ω^2 = -0.5 - i(√3/2)
+; ═══════════════════════════════════════════════════════════════════════════════
+
+; qutrit_qft - Apply Quantum Fourier Transform to chunk
+; Input: rdi = chunk_index, rsi = active_qutrits (0 = all, >0 = upper N qutrits)
+; Output: State vector is transformed in-place
+; Supports Partial QFT (QFT ⊗ I) by acting on upper 'active' qutrits.
+qutrit_qft:
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+    push rbp
+    mov rbp, rsp
+    sub rsp, 128                ; Local stack space
+
+    mov r12, rdi                ; chunk index
+    mov [rbp - 56], rdi         ; SAVE chunk index for later
+    mov rbx, [state_vectors + r12*8]
+    mov r13, [chunk_states + r12*8]   ; total states 3^n
+    mov r15, [chunk_sizes + r12*8]    ; total qutrits n
+
+    ; Determine active/passive split
+    cmp rsi, 0
+    jnz .set_active
+    mov rsi, r15                ; default to all
+.set_active:
+    mov [rbp - 16], rsi         ; active_qutrits (n_a)
+    
+    mov rcx, r15
+    sub rcx, rsi                ; passive_qutrits (n_p)
+    mov [rbp - 24], rcx
+
+    ; Calculate stride = 3^n_p
+    mov rax, 1
+    cmp rcx, 0
+    je .stride_one
+.calc_stride:
+    imul rax, 3
+    loop .calc_stride
+.stride_one:
+    mov [rbp - 32], rax         ; stride (step size for X)
+    mov r14, rax                ; num_passive_states (Y loop limit)
+
+    ; Calculate num_active_states = 3^n_a
+    mov rax, r13
+    xor rdx, rdx
+    div r14
+    mov [rbp - 40], rax         ; num_active_states (dimension of QFT)
+
+    ; Print status
+    lea rsi, [msg_qft]
+    call print_string
+    mov rdi, r12
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+
+    ; Check if partial
+    mov rax, [rbp - 40]
+    cmp rax, r13
+    je .no_partial_msg
+    ; (Could add "Partial" message here)
+.no_partial_msg:
+
+    ; Normalization factor: 1/sqrt(3^n_a)
+    cvtsi2sd xmm15, [rbp - 40]  ; 3^n_a
+    sqrtsd xmm15, xmm15
+    movsd xmm14, [one]
+    divsd xmm14, xmm15
+    movsd [rbp - 8], xmm14
+
+    ; Clear temp buffer first? No, we overwrite it block by block.
+    ; But for safety let's clear it since we might access sparsely.
+    ; Actually we iterate fully.
+
+    ; ─────────────────────────────────────────────────────────────────────────
+    ; LOOP over PASSIVE states Y (0 to stride-1)
+    ; For each Y, we perform a QFT on the vector X determined by stride
+    ; ─────────────────────────────────────────────────────────────────────────
+    xor r13, r13                ; y (passive index)
+
+.outer_y_loop:
+    cmp r13, r14                ; compare y < stride
+    jge .copy_back_all
+
+    ; ─────────────────────────────────────────────────────────────────────
+    ; QFT on active subspace for fixed y
+    ; X_out (k) loop: 0 to 3^n_a - 1
+    ; ─────────────────────────────────────────────────────────────────────
+    xor r12, r12                ; k (output index in active space)
+
+.inner_k_loop:
+    cmp r12, [rbp - 40]         ; compare k < active_states
+    jge .next_y
+
+    xorpd xmm10, xmm10          ; sum_real
+    xorpd xmm11, xmm11          ; sum_imag
+    
+    xor rcx, rcx                ; j (input index in active space)
+
+.sum_j_loop:
+    cmp rcx, [rbp - 40]
+    jge .store_k
+
+    ; Calculate phase angle theta = 2 * pi * j * k / 3^n_active
+    ; j = rcx, k = r12
+    push rcx
+    push r12
+    
+    ; Compute j * k
+    mov rax, rcx
+    mul r12                     ; rdx:rax = j * k
+    
+    ; mod 3^n_active for safety (theta is periodic)
+    mov r8, [rbp - 40]          ; 3^n_active
+    div r8                      ; rdx = (j*k) % 3^n
+    
+    ; theta = 2 * pi * rdx / 3^n
+    fld qword [two_pi]          ; Load 2*pi
+    
+    mov [rbp - 48], rdx         ; store (jk)%3^n
+    fild qword [rbp - 48]       ; load integer jk
+    fmulp                       ; 2*pi * jk
+    
+    fild qword [rbp - 40]       ; load 3^n
+    fdivp                       ; theta = (2*pi*jk) / 3^n
+    
+    ; Calculate sin, cos
+    sub rsp, 16
+    fld st0                     ; duplicate theta
+    fsin 
+    fstp qword [rsp + 8]        ; sin
+    fcos
+    fstp qword [rsp]            ; cos
+    
+    movsd xmm2, [rsp]           ; cos
+    movsd xmm3, [rsp + 8]       ; sin
+    add rsp, 16
+    
+    pop r12
+    pop rcx
+
+    ; Get amplitude amp[j]
+    ; Index = j * stride + y
+    mov rax, rcx
+    imul rax, [rbp - 32]        ; j * stride
+    add rax, r13                ; + y
+    
+    shl rax, 4
+    movsd xmm0, [rbx + rax]     ; a_real
+    movsd xmm1, [rbx + rax + 8] ; a_imag
+
+    ; Multiply amp * e^(i*theta) = (a + bi)(cos + i*sin)
+    ; Real = a*cos - b*sin
+    movsd xmm4, xmm0
+    mulsd xmm4, xmm2
+    movsd xmm5, xmm1
+    mulsd xmm5, xmm3
+    subsd xmm4, xmm5            ; new_real
+    
+    ; Imag = a*sin + b*cos
+    movsd xmm5, xmm0
+    mulsd xmm5, xmm3
+    movsd xmm6, xmm1
+    mulsd xmm6, xmm2
+    addsd xmm5, xmm6            ; new_imag
+
+    ; Add to sums
+    addsd xmm10, xmm4
+    addsd xmm11, xmm5
+
+    inc rcx
+    jmp .sum_j_loop
+
+.store_k:
+    ; Normalize
+    movsd xmm14, [rbp - 8]
+    mulsd xmm10, xmm14
+    mulsd xmm11, xmm14
+    
+    ; Store in temp buffer: Index = k * stride + y
+    mov rax, r12
+    imul rax, [rbp - 32]
+    add rax, r13
+    shl rax, 4
+    
+    lea rdi, [qft_temp_buffer]
+    movsd [rdi + rax], xmm10
+    movsd [rdi + rax + 8], xmm11
+
+    inc r12
+    jmp .inner_k_loop
+
+.next_y:
+    inc r13
+    jmp .outer_y_loop
+
+.copy_back_all:
+    ; Restore context registers
+    mov r12, [rbp - 56]         ; RESTORE chunk index from local var
+    mov rbx, [state_vectors + r12*8] ; Restore state vector pointer
+    
+    mov r13, [chunk_states + r12*8]
+    xor rcx, rcx
+
+.copy_partial_loop:
+    cmp rcx, r13
+    jge .qft_finish
+
+    mov rax, rcx
+    shl rax, 4
+    lea rdi, [qft_temp_buffer]
+    movsd xmm0, [rdi + rax]
+    movsd xmm1, [rdi + rax + 8]
+    movsd [rbx + rax], xmm0
+    movsd [rbx + rax + 8], xmm1
+
+    inc rcx
+    jmp .copy_partial_loop
+
+.qft_finish:
+    lea rsi, [msg_qft_done]
+    call print_string
+    mov rdi, [rbp - 40]         ; transformed states
+    call print_number
+    lea rsi, [msg_qft_states]
+    call print_string
+
+    add rsp, 128
+    pop rbp
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+
+; qutrit_iqft - Apply Inverse Quantum Fourier Transform to chunk
+; Input: rdi = chunk_index
+; Same as QFT but with conjugate phases (ω^-p = ω^(3-p))
+qutrit_iqft:
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+    push rbp
+    mov rbp, rsp
+    sub rsp, 128
+
+    mov r12, rdi
+    mov rbx, [state_vectors + r12*8]
+    mov r13, [chunk_states + r12*8]
+    mov r15, [chunk_sizes + r12*8]
+
+    lea rsi, [msg_iqft]
+    call print_string
+    mov rdi, r12
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+
+    ; Normalization factor
+    cvtsi2sd xmm15, r13
+    sqrtsd xmm15, xmm15
+    movsd xmm14, [one]
+    divsd xmm14, xmm15
+    movsd [rbp - 8], xmm14
+
+    xor r14, r14
+
+.iqft_outer:
+    cmp r14, r13
+    jge .iqft_copy_back
+
+    xorpd xmm10, xmm10
+    xorpd xmm11, xmm11
+    xor rcx, rcx
+
+.iqft_inner:
+    cmp rcx, r13
+    jge .iqft_store_output
+
+    ; Calculate phase mod 3 (same as QFT)
+    push rcx
+    push r14
+    
+    mov rax, rcx
+    mov rdx, r14
+    mov r8, r15
+    xor r9, r9
+
+.icalc_phase:
+    test r8, r8
+    jz .iphase_done
+
+    push rdx
+    xor rdx, rdx
+    mov r10, 3
+    div r10
+    mov r11, rdx
+    pop rdx
+
+    push rax
+    mov rax, rdx
+    xor rdx, rdx
+    mov r10, 3
+    div r10
+    imul r11, rdx
+    add r9, r11
+    mov rdx, rax
+    pop rax
+    
+    dec r8
+    jmp .icalc_phase
+
+.iphase_done:
+    ; For IQFT, use conjugate: phase = (3 - phase) mod 3
+    mov rax, 3
+    sub rax, r9
+    xor rdx, rdx
+    mov r10, 3
+    div r10
+    mov r9, rdx                 ; conjugate phase
+
+    pop r14
+    pop rcx
+
+    mov rax, rcx
+    shl rax, 4
+    movsd xmm0, [rbx + rax]
+    movsd xmm1, [rbx + rax + 8]
+
+    ; Apply ω^(conjugate_phase) - same dispatch as forward QFT
+    cmp r9, 0
+    je .iphase_0
+    cmp r9, 1
+    je .iphase_1
+    jmp .iphase_2
+
+.iphase_0:
+    movsd xmm2, xmm0
+    movsd xmm3, xmm1
+    jmp .iadd_to_sum
+
+.iphase_1:
+    movsd xmm2, xmm0
+    mulsd xmm2, [omega_real]
+    movsd xmm3, xmm1
+    mulsd xmm3, [omega_imag]
+    subsd xmm2, xmm3
+    movsd xmm3, xmm1
+    mulsd xmm3, [omega_real]
+    movsd xmm4, xmm0
+    mulsd xmm4, [omega_imag]
+    addsd xmm3, xmm4
+    jmp .iadd_to_sum
+
+.iphase_2:
+    movsd xmm2, xmm0
+    mulsd xmm2, [omega2_real]
+    movsd xmm3, xmm1
+    mulsd xmm3, [omega2_imag]
+    subsd xmm2, xmm3
+    movsd xmm3, xmm1
+    mulsd xmm3, [omega2_real]
+    movsd xmm4, xmm0
+    mulsd xmm4, [omega2_imag]
+    addsd xmm3, xmm4
+
+.iadd_to_sum:
+    addsd xmm10, xmm2
+    addsd xmm11, xmm3
+    inc rcx
+    jmp .iqft_inner
+
+.iqft_store_output:
+    movsd xmm14, [rbp - 8]
+    mulsd xmm10, xmm14
+    mulsd xmm11, xmm14
+    mov rax, r14
+    shl rax, 4
+    lea rdi, [qft_temp_buffer]
+    movsd [rdi + rax], xmm10
+    movsd [rdi + rax + 8], xmm11
+    inc r14
+    jmp .iqft_outer
+
+.iqft_copy_back:
+    xor rcx, rcx
+.icopy_loop:
+    cmp rcx, r13
+    jge .iqft_done
+    mov rax, rcx
+    shl rax, 4
+    lea rdi, [qft_temp_buffer]
+    movsd xmm0, [rdi + rax]
+    movsd xmm1, [rdi + rax + 8]
+    movsd [rbx + rax], xmm0
+    movsd [rbx + rax + 8], xmm1
+    inc rcx
+    jmp .icopy_loop
+
+.iqft_done:
+    lea rsi, [msg_qft_done]
+    call print_string
+    mov rdi, r13
+    call print_number
+    lea rsi, [msg_qft_states]
+    call print_string
+
+    add rsp, 128
+    pop rbp
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+
+; mod_exp_oracle - Modular Exponentiation Oracle |x⟩|y⟩ -> |x⟩|y * a^x mod N⟩
+; Input: rdi = chunk_index, rsi = a (base), rdx = N (modulus)
+; Splits the chunk into two registers:
+;   - Target register |y⟩ (lower trits): size determined by N (ceil log3 N)
+;   - Control register |x⟩ (upper trits): remaining trits
+mod_exp_oracle:
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+    push rbp
+    mov rbp, rsp
+    sub rsp, 64
+
+    mov r12, rdi                ; chunk index
+    mov r13, rsi                ; a
+    mov r14, rdx                ; N
+
+    ; Validate N
+    cmp r14, 2
+    jl .mod_exp_done
+
+    ; Calculate required trits for N (target register size)
+    mov rax, 1
+    xor rcx, rcx                ; trits_y
+.calc_trits:
+    cmp rax, r14
+    jg .got_trits
+    imul rax, 3
+    inc rcx
+    jmp .calc_trits
+
+.got_trits:
+    mov [rbp - 8], rcx          ; trits_y
+    mov [rbp - 16], rax         ; y_limit (3^trits_y)
+
+    mov rbx, [state_vectors + r12*8]
+    mov r15, [chunk_states + r12*8] ; total states
+
+    ; Print info
+    lea rsi, [msg_mod_exp]
+    call print_string
+    mov rdi, r13
+    call print_number
+    lea rsi, [msg_mod_n]
+    call print_string
+    mov rdi, r14
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+
+    ; Zero out temp buffer
+    lea rdi, [qft_temp_buffer]
+    mov rcx, r15
+    shl rcx, 1                  ; 2 qwords per state
+    xorpd xmm0, xmm0
+.clear_temp:
+    movsd [rdi], xmm0
+    add rdi, 8
+    dec rcx
+    jnz .clear_temp
+
+    ; Permute states
+    xor rcx, rcx                ; k_in (state index)
+    
+.permute_loop:
+    cmp rcx, r15
+    jge .copy_permuted
+
+    ; Decompose k_in into x and y
+    mov rax, rcx
+    xor rdx, rdx
+    mov r8, [rbp - 16]          ; divisor = 3^trits_y
+    div r8                      ; rax = x (upper), rdx = y (lower)
+    
+    mov r8, rax                 ; x
+    mov r9, rdx                 ; y
+
+    ; Check if y < N (valid states only)
+    cmp r9, r14
+    jge .next_state              ; If y >= N, leave it unchanged (identity)
+    
+    ; Compute multiplier = a^x mod N
+    mov rax, 1                  ; multiplier
+    mov r10, r8                 ; exponent = x
+    mov r11, r13                ; base = a
+
+.pow_loop:
+    test r10, r10
+    jz .pow_done
+    
+    ; if x & 1: res = (res * base) % N
+    test r10, 1
+    jz .pow_square
+    imul rax, r11
+    push rdx
+    xor rdx, rdx
+    div r14                     ; rax = quotient, rdx = remainder
+    mov rax, rdx                ; rax = remainder (new multiplier)
+    pop rdx
+
+.pow_square:
+    imul r11, r11
+    push rdx
+    xor rdx, rdx
+    push rax
+    mov rax, r11
+    div r14
+    mov r11, rdx                ; base = base^2 % N
+    pop rax
+    pop rdx
+    
+    shr r10, 1
+    jmp .pow_loop
+
+.pow_done:
+    ; new_y = (y * multiplier) % N
+    imul r9, rax
+    push rdx
+    xor rdx, rdx
+    mov rax, r9
+    div r14
+    mov r9, rdx                 ; new_y
+    pop rdx
+
+    ; Recombine x and new_y into k_out
+    ; k_out = x * (3^trits_y) + new_y
+    mov rax, r8
+    imul rax, [rbp - 16]
+    add rax, r9
+    mov r10, rax                ; k_out
+
+    jmp .move_amp
+
+.next_state:
+    mov r10, rcx                ; k_out = k_in (identity)
+
+.move_amp:
+    ; Move amplitude from k_in to k_out in temp buffer
+    ; Note: This handles superposition correctly directly
+    mov rax, rcx
+    shl rax, 4
+    movsd xmm0, [rbx + rax]
+    movsd xmm1, [rbx + rax + 8]
+    
+    mov rax, r10
+    shl rax, 4
+    lea rdi, [qft_temp_buffer]
+    
+    ; Add to existing (constructive interference)
+    addsd xmm0, [rdi + rax]
+    addsd xmm1, [rdi + rax + 8]
+    movsd [rdi + rax], xmm0
+    movsd [rdi + rax + 8], xmm1
+
+    inc rcx
+    jmp .permute_loop
+
+.copy_permuted:
+    ; Copy back
+    xor rcx, rcx
+.copy_back_loop:
+    cmp rcx, r15
+    jge .mod_exp_done
+
+    mov rax, rcx
+    shl rax, 4
+    lea rdi, [qft_temp_buffer]
+    movsd xmm0, [rdi + rax]
+    movsd xmm1, [rdi + rax + 8]
+    movsd [rbx + rax], xmm0
+    movsd [rbx + rax + 8], xmm1
+
+    inc rcx
+    jmp .copy_back_loop
+
+.mod_exp_done:
+    add rsp, 64
+    pop rbp
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
 
 ; ═══════════════════════════════════════════════════════════════════════════════
 ; CHUNK BRAIDING - Entanglement Preservation
@@ -1680,24 +2355,14 @@ execute_instruction:
     je .op_addon
     cmp r13, OP_FUTURE_ORACLE
     je .op_future_oracle
-    cmp r13, OP_HALT
-    je .op_halt
-
-    ; Shor's Algorithm Opcodes
-    cmp r13, OP_SHOR_INIT
-    je .op_shor_init
-    cmp r13, OP_MOD_EXP
-    je .op_mod_exp
     cmp r13, OP_QFT
     je .op_qft
     cmp r13, OP_IQFT
     je .op_iqft
-    cmp r13, OP_PERIOD_EXTRACT
-    je .op_period_extract
-    cmp r13, OP_FACTOR_ORACLE
-    je .op_factor_oracle
-    cmp r13, OP_SHOR_AMPLIFY
-    je .op_shor_amplify
+    cmp r13, OP_MOD_EXP
+    je .op_mod_exp
+    cmp r13, OP_HALT
+    je .op_halt
 
     ; Check for addon opcode (0x80+)
     cmp r13, 0x80
@@ -1741,6 +2406,7 @@ execute_instruction:
     call print_string
 
     mov rdi, r14
+    mov rsi, rbx        ; active_qutrits (operand1)
     call create_superposition
     xor rax, rax
     jmp .exec_ret
@@ -1895,6 +2561,28 @@ execute_instruction:
     xor rax, rax
     jmp .exec_ret
 
+.op_qft:
+    mov rdi, r14        ; chunk
+    mov rsi, rbx        ; active_qutrits (operand1)
+    call qutrit_qft
+    xor rax, rax
+    jmp .exec_ret
+
+.op_iqft:
+    mov rdi, r14
+    call qutrit_iqft
+    xor rax, rax
+    jmp .exec_ret
+
+.op_mod_exp:
+    ; OP_MOD_EXP chunk, base(operand1), N(operand2)
+    mov rdi, r14        ; chunk
+    movzx rsi, bx       ; base a (operand1)
+    movzx rdx, cx       ; N (operand2)
+    call mod_exp_oracle
+    xor rax, rax
+    jmp .exec_ret
+
 .op_braid:
     lea rsi, [msg_braid]
     call print_string
@@ -1954,301 +2642,6 @@ execute_instruction:
     mov rdx, rbx                ; operand1
                                 ; rcx already has operand2
     call call_addon
-    jmp .exec_ret
-
-; ═══════════════════════════════════════════════════════════════════════════════
-; SHOR'S ALGORITHM OPCODE HANDLERS
-; ═══════════════════════════════════════════════════════════════════════════════
-
-.op_shor_init:
-    ; OP_SHOR_INIT: Initialize Shor's quantum registers
-    ; target = number of chunks for x-register
-    ; op1 = lower 16 bits of N (for display)
-    ; op2 = number of qutrits per chunk (default 10)
-    
-    lea rsi, [msg_shor_init]
-    call print_string
-    mov rdi, r14                ; num_chunks
-    call print_number
-    lea rsi, [msg_shor_chunks]
-    call print_string
-    mov rdi, rbx                ; N (lower bits)
-    call print_number
-    lea rsi, [msg_newline]
-    call print_string
-    
-    ; Store register size
-    mov [shor_register_size], r14
-    mov qword [shor_trial_count], 0
-    
-    ; Initialize all chunks with specified qutrits (default 10)
-    mov r15, rcx
-    test r15, r15
-    jnz .shor_init_size_ok
-    mov r15, 10                 ; Default 10 qutrits per chunk
-.shor_init_size_ok:
-    
-    xor r8, r8                  ; chunk counter
-.shor_init_loop:
-    cmp r8, r14
-    jge .shor_init_sup
-    
-    push r8
-    push r14
-    push r15
-    mov rdi, r8
-    mov rsi, r15
-    call init_chunk
-    pop r15
-    pop r14
-    pop r8
-    
-    inc r8
-    jmp .shor_init_loop
-
-.shor_init_sup:
-    ; Create superposition on all chunks
-    xor r8, r8
-.shor_sup_loop:
-    cmp r8, r14
-    jge .shor_init_braid
-    
-    push r8
-    push r14
-    mov rdi, r8
-    call create_superposition
-    pop r14
-    pop r8
-    
-    inc r8
-    jmp .shor_sup_loop
-
-.shor_init_braid:
-    ; Braid adjacent chunks for entanglement preservation
-    xor r8, r8
-.shor_braid_loop:
-    mov r9, r14
-    dec r9
-    cmp r8, r9
-    jge .shor_init_done
-    
-    push r8
-    push r14
-    mov rdi, r8
-    lea rsi, [r8 + 1]
-    xor rdx, rdx
-    xor rcx, rcx
-    call braid_chunks
-    pop r14
-    pop r8
-    
-    inc r8
-    jmp .shor_braid_loop
-
-.shor_init_done:
-    xor rax, rax
-    jmp .exec_ret
-
-.op_mod_exp:
-    ; OP_MOD_EXP: Apply modular exponentiation oracle
-    ; Applies phase based on a^x mod N for each basis state
-    ; This is the core of quantum period finding
-    
-    lea rsi, [msg_shor_modexp]
-    call print_string
-    
-    ; Get the x-register (target chunk)
-    mov rbx, [state_vectors + r14*8]
-    mov r13, [chunk_states + r14*8]
-    
-    ; Apply modular exponentiation phase to each state
-    ; Phase(x) = 2π × (a^x mod N) / N
-    xor r8, r8                  ; state index
-.modexp_loop:
-    cmp r8, r13
-    jge .modexp_done
-    
-    ; Calculate phase angle = 2π × x / N (simplified)
-    ; In full implementation, this would compute a^x mod N
-    cvtsi2sd xmm0, r8           ; x
-    mulsd xmm0, [two_pi]        ; 2π × x
-    cvtsi2sd xmm1, r13
-    divsd xmm0, xmm1            ; 2π × x / num_states
-    
-    ; Calculate sin and cos
-    sub rsp, 16
-    movsd [rsp], xmm0
-    
-    fld qword [rsp]
-    fsin
-    fstp qword [rsp + 8]
-    
-    fld qword [rsp]
-    fcos
-    fstp qword [rsp]
-    
-    movsd xmm2, [rsp]           ; cos
-    movsd xmm3, [rsp + 8]       ; sin
-    add rsp, 16
-    
-    ; Apply phase to amplitude
-    mov rax, r8
-    shl rax, 4
-    
-    movsd xmm4, [rbx + rax]     ; real
-    movsd xmm5, [rbx + rax + 8] ; imag
-    
-    ; (a + bi)(cos + i*sin)
-    movsd xmm6, xmm4
-    mulsd xmm6, xmm2            ; a*cos
-    movsd xmm7, xmm5
-    mulsd xmm7, xmm3            ; b*sin
-    subsd xmm6, xmm7            ; new_real = a*cos - b*sin
-    
-    mulsd xmm4, xmm3            ; a*sin
-    mulsd xmm5, xmm2            ; b*cos
-    addsd xmm4, xmm5            ; new_imag = a*sin + b*cos
-    
-    movsd [rbx + rax], xmm6
-    movsd [rbx + rax + 8], xmm4
-    
-    inc r8
-    jmp .modexp_loop
-
-.modexp_done:
-    xor rax, rax
-    jmp .exec_ret
-
-.op_qft:
-    ; OP_QFT: Quantum Fourier Transform (qutrit-based)
-    ; Applies QFT across all chunks with inter-chunk phase corrections
-    
-    lea rsi, [msg_shor_qft]
-    call print_string
-    mov rdi, [shor_register_size]
-    call print_number
-    lea rsi, [msg_shor_chunks2]
-    call print_string
-    
-    ; Process each chunk with QFT
-    mov r15, [shor_register_size]
-    xor r8, r8
-.qft_chunk_loop:
-    cmp r8, r15
-    jge .qft_done
-    
-    push r8
-    push r15
-    mov rdi, r8
-    call qft_single_chunk
-    pop r15
-    pop r8
-    
-    ; Apply inter-chunk phase corrections
-    test r8, r8
-    jz .qft_next
-    
-    push r8
-    push r15
-    mov rdi, r8
-    dec rdi                     ; previous chunk
-    mov rsi, r8                 ; current chunk
-    call qft_phase_correction
-    pop r15
-    pop r8
-
-.qft_next:
-    inc r8
-    jmp .qft_chunk_loop
-
-.qft_done:
-    xor rax, rax
-    jmp .exec_ret
-
-.op_iqft:
-    ; OP_IQFT: Inverse QFT (reverse order, conjugate phases)
-    ; Similar to QFT but processes chunks in reverse with conjugate rotation
-    
-    mov r15, [shor_register_size]
-    mov r8, r15
-    dec r8
-.iqft_chunk_loop:
-    test r8, r8
-    js .iqft_done               ; Done when r8 goes negative
-    
-    push r8
-    push r15
-    mov rdi, r8
-    call iqft_single_chunk
-    pop r15
-    pop r8
-    
-    dec r8
-    jmp .iqft_chunk_loop
-
-.iqft_done:
-    xor rax, rax
-    jmp .exec_ret
-
-.op_period_extract:
-    ; OP_PERIOD_EXTRACT: Extract period from measurement
-    ; Uses continued fractions to find period r from phase s/r
-    
-    lea rsi, [msg_shor_period]
-    call print_string
-    
-    ; Get measured value
-    mov rax, [measured_values + r14*8]
-    mov [shor_period], rax
-    
-    mov rdi, rax
-    call print_number
-    lea rsi, [msg_newline]
-    call print_string
-    
-    xor rax, rax
-    jmp .exec_ret
-
-.op_factor_oracle:
-    ; OP_FACTOR_ORACLE: Reality B enhancement - prune non-factor paths
-    ; Zeros out states that would lead to trivial factors (N or 1)
-    
-    lea rsi, [msg_shor_prune]
-    call print_string
-    
-    mov rbx, [state_vectors + r14*8]
-    mov r13, [chunk_states + r14*8]
-    
-    ; Zero out states 0 and 1 (trivial periods)
-    xorpd xmm0, xmm0
-    movsd [rbx], xmm0
-    movsd [rbx + 8], xmm0
-    movsd [rbx + 16], xmm0
-    movsd [rbx + 24], xmm0
-    
-    ; Renormalize
-    mov rdi, r14
-    call normalize_chunk
-    
-    xor rax, rax
-    jmp .exec_ret
-
-.op_shor_amplify:
-    ; OP_SHOR_AMPLIFY: Reality B period amplification
-    ; Applies Grover-like diffusion biased toward valid periods
-    
-    lea rsi, [msg_shor_amplify]
-    call print_string
-    
-    ; Apply Future Oracle to prune bad periods
-    mov rdi, r14
-    call future_prediction_oracle
-    
-    ; Apply Grover diffusion for amplification
-    mov rdi, r14
-    call grover_diffusion
-    
-    xor rax, rax
     jmp .exec_ret
 
 .op_halt:
@@ -2468,38 +2861,56 @@ print_chunk_state:
 .print_loop:
     cmp rcx, r13
     jge .print_done
-    cmp rcx, 10                 ; Limit output
-    jge .print_done
 
-    push rcx
-    lea rsi, [msg_state]
-    call print_string
-    mov rdi, rcx
-    call print_number
-    lea rsi, [msg_state_end]
-    call print_string
-    pop rcx
-
-    ; Print amplitude (simplified: just real part magnitude)
+    ; Calculate probability = |amp|^2
     mov rax, rcx
     shl rax, 4
     movsd xmm0, [rbx + rax]
     mulsd xmm0, xmm0
     movsd xmm1, [rbx + rax + 8]
     mulsd xmm1, xmm1
-    addsd xmm0, xmm1
-    sqrtsd xmm0, xmm0
+    addsd xmm0, xmm1            ; xmm0 = prob
 
-    ; Convert to integer percentage
-    movsd xmm1, [one]
-    addsd xmm1, xmm1            ; 2
-    mulsd xmm1, xmm1            ; 4
-    mulsd xmm1, xmm1            ; 16
-    addsd xmm1, xmm1            ; 32
-    addsd xmm1, xmm1            ; 64
-    addsd xmm1, xmm1            ; 128 (scale factor)
+    ; Threshold check: if prob < 0.001 (0.1%), skip
+    mov rax, 0x3F50624DD2F1A9FC ; ~0.001
+    movq xmm1, rax
+    comisd xmm0, xmm1
+    jb .next_state
+
+    ; Print "State[i]: "
+    push rcx
+    sub rsp, 16
+    movsd [rsp], xmm0           ; save prob
+
+    lea rsi, [msg_state]
+    call print_string
+    mov rdi, rcx
+    call print_number
+    lea rsi, [msg_state_end]
+    call print_string
+    
+    ; Print " prob="
+    lea rsi, [msg_prob_prefix]
+    call print_string
+
+    ; Recover prob and scale by 100
+    movsd xmm0, [rsp]
+    add rsp, 16
+
+    mov rax, 0x4059000000000000 ; 100.0
+    movq xmm1, rax
     mulsd xmm0, xmm1
+    
     cvttsd2si rdi, xmm0
+    call print_number
+    lea rsi, [msg_percent]
+    call print_string
+
+    pop rcx
+
+.next_state:
+    inc rcx
+    jmp .print_loop
 
     push rcx
     call print_number
@@ -2656,412 +3067,3 @@ print_number:
     pop rbx
     pop rax
     ret
-
-; ═══════════════════════════════════════════════════════════════════════════════
-; SHOR'S ALGORITHM HELPER FUNCTIONS
-; ═══════════════════════════════════════════════════════════════════════════════
-
-; qft_single_chunk - Apply QFT to a single chunk
-; Input: rdi = chunk_index
-; Transforms amplitudes using qutrit DFT matrix
-qft_single_chunk:
-    push rbx
-    push r12
-    push r13
-    push r14
-    push r15
-    push rbp
-    mov rbp, rsp
-    sub rsp, 128                ; Local storage for temp amplitudes
-
-    mov r12, rdi                ; chunk index
-    mov rbx, [state_vectors + r12*8]
-    mov r13, [chunk_states + r12*8]
-
-    ; QFT for qutrits uses ω = exp(2πi/3) as primitive root
-    ; DFT matrix: F[j,k] = ω^(jk) / sqrt(N)
-    
-    ; Calculate 1/sqrt(N)
-    cvtsi2sd xmm15, r13
-    sqrtsd xmm15, xmm15
-    movsd xmm14, [one]
-    divsd xmm14, xmm15          ; xmm14 = 1/sqrt(N)
-
-    ; Process each output basis state
-    xor r14, r14                ; output state j
-.qft_outer:
-    cmp r14, r13
-    jge .qft_complete
-    
-    ; Initialize sum for output j
-    xorpd xmm6, xmm6            ; sum_real
-    xorpd xmm7, xmm7            ; sum_imag
-    
-    ; Sum over all input states k
-    xor r15, r15                ; input state k
-.qft_inner:
-    cmp r15, r13
-    jge .qft_store
-    
-    ; Calculate ω^(jk) where ω = exp(2πi/3)
-    ; For qutrits: jk mod 3 determines phase
-    mov rax, r14
-    imul rax, r15
-    xor rdx, rdx
-    mov rcx, 3
-    div rcx                     ; rdx = (j*k) mod 3
-    
-    ; ω^0 = 1, ω^1 = -1/2 + i√3/2, ω^2 = -1/2 - i√3/2
-    cmp rdx, 0
-    je .omega_0
-    cmp rdx, 1
-    je .omega_1
-    ; else omega_2
-    movsd xmm2, [omega2_real]   ; -0.5
-    movsd xmm3, [omega2_imag]   ; -√3/2
-    jmp .apply_omega
-
-.omega_0:
-    movsd xmm2, [one]
-    xorpd xmm3, xmm3
-    jmp .apply_omega
-
-.omega_1:
-    movsd xmm2, [omega_real]    ; -0.5
-    movsd xmm3, [omega_imag]    ; √3/2
-
-.apply_omega:
-    ; Get input amplitude a[k]
-    mov rax, r15
-    shl rax, 4
-    movsd xmm0, [rbx + rax]     ; a_real
-    movsd xmm1, [rbx + rax + 8] ; a_imag
-    
-    ; Complex multiply: (a + bi)(c + di) = (ac-bd) + i(ad+bc)
-    movsd xmm4, xmm0
-    mulsd xmm4, xmm2            ; a*c
-    movsd xmm5, xmm1
-    mulsd xmm5, xmm3            ; b*d
-    subsd xmm4, xmm5            ; ac - bd
-    
-    movsd xmm8, xmm0
-    mulsd xmm8, xmm3            ; a*d
-    movsd xmm9, xmm1
-    mulsd xmm9, xmm2            ; b*c
-    addsd xmm8, xmm9            ; ad + bc
-    
-    ; Add to sum
-    addsd xmm6, xmm4
-    addsd xmm7, xmm8
-    
-    inc r15
-    jmp .qft_inner
-
-.qft_store:
-    ; Normalize by 1/sqrt(N) and store temporarily
-    mulsd xmm6, xmm14
-    mulsd xmm7, xmm14
-    
-    mov rax, r14
-    shl rax, 4
-    movsd [rbp - 128 + rax], xmm6
-    movsd [rbp - 128 + rax + 8], xmm7
-    
-    inc r14
-    cmp r14, 8                  ; Limit temp storage
-    jl .qft_outer
-
-.qft_complete:
-    ; Copy temp results back to state vector
-    xor r14, r14
-.qft_copy:
-    cmp r14, r13
-    jge .qft_done
-    cmp r14, 8
-    jge .qft_done
-    
-    mov rax, r14
-    shl rax, 4
-    movsd xmm0, [rbp - 128 + rax]
-    movsd xmm1, [rbp - 128 + rax + 8]
-    movsd [rbx + rax], xmm0
-    movsd [rbx + rax + 8], xmm1
-    
-    inc r14
-    jmp .qft_copy
-
-.qft_done:
-    add rsp, 128
-    pop rbp
-    pop r15
-    pop r14
-    pop r13
-    pop r12
-    pop rbx
-    ret
-
-; qft_phase_correction - Apply inter-chunk phase corrections
-; Input: rdi = chunk_a (previous), rsi = chunk_b (current)
-; Applies controlled phase rotations between braided chunks
-qft_phase_correction:
-    push rbx
-    push r12
-    push r13
-    push r14
-    
-    mov r12, rdi                ; chunk_a
-    mov r13, rsi                ; chunk_b
-    
-    mov rbx, [state_vectors + r13*8]
-    mov r14, [chunk_states + r13*8]
-    
-    ; Apply controlled phase based on chunk_a measurement
-    ; This creates the inter-chunk entanglement needed for full QFT
-    xor rcx, rcx
-.phase_loop:
-    cmp rcx, r14
-    jge .phase_done
-    
-    ; Phase angle scales with position: θ = 2π × k / (3^chunk_distance)
-    cvtsi2sd xmm0, rcx
-    mulsd xmm0, [two_pi]
-    cvtsi2sd xmm1, r14
-    mulsd xmm1, [three]
-    divsd xmm0, xmm1
-    
-    ; Calculate phase rotation
-    sub rsp, 16
-    movsd [rsp], xmm0
-    
-    fld qword [rsp]
-    fcos
-    fstp qword [rsp]
-    
-    fld qword [rsp]
-    fsin
-    fstp qword [rsp + 8]
-    
-    movsd xmm2, [rsp]           ; cos
-    movsd xmm3, [rsp + 8]       ; sin
-    add rsp, 16
-    
-    ; Apply to amplitude
-    mov rax, rcx
-    shl rax, 4
-    
-    movsd xmm4, [rbx + rax]
-    movsd xmm5, [rbx + rax + 8]
-    
-    movsd xmm6, xmm4
-    mulsd xmm6, xmm2
-    movsd xmm7, xmm5
-    mulsd xmm7, xmm3
-    subsd xmm6, xmm7
-    
-    mulsd xmm4, xmm3
-    mulsd xmm5, xmm2
-    addsd xmm4, xmm5
-    
-    movsd [rbx + rax], xmm6
-    movsd [rbx + rax + 8], xmm4
-    
-    inc rcx
-    jmp .phase_loop
-
-.phase_done:
-    pop r14
-    pop r13
-    pop r12
-    pop rbx
-    ret
-
-; iqft_single_chunk - Apply inverse QFT to a single chunk
-; Input: rdi = chunk_index
-; Uses conjugate transpose of QFT matrix
-iqft_single_chunk:
-    push rbx
-    push r12
-    push r13
-    push r14
-    push r15
-    push rbp
-    mov rbp, rsp
-    sub rsp, 128
-
-    mov r12, rdi
-    mov rbx, [state_vectors + r12*8]
-    mov r13, [chunk_states + r12*8]
-
-    cvtsi2sd xmm15, r13
-    sqrtsd xmm15, xmm15
-    movsd xmm14, [one]
-    divsd xmm14, xmm15
-
-    xor r14, r14
-.iqft_outer:
-    cmp r14, r13
-    jge .iqft_complete
-    
-    xorpd xmm6, xmm6
-    xorpd xmm7, xmm7
-    
-    xor r15, r15
-.iqft_inner:
-    cmp r15, r13
-    jge .iqft_store
-    
-    ; Use conjugate: ω^(-jk) instead of ω^(jk)
-    mov rax, r14
-    imul rax, r15
-    neg rax
-    xor rdx, rdx
-    mov rcx, 3
-    ; Handle negative modulo
-    add rax, 3000
-    div rcx
-    
-    cmp rdx, 0
-    je .iomega_0
-    cmp rdx, 1
-    je .iomega_1
-    movsd xmm2, [omega_real]    ; Conjugate of ω^2
-    movsd xmm3, [omega_imag]
-    jmp .iapply_omega
-
-.iomega_0:
-    movsd xmm2, [one]
-    xorpd xmm3, xmm3
-    jmp .iapply_omega
-
-.iomega_1:
-    movsd xmm2, [omega2_real]
-    movsd xmm3, [omega2_imag]
-
-.iapply_omega:
-    mov rax, r15
-    shl rax, 4
-    movsd xmm0, [rbx + rax]
-    movsd xmm1, [rbx + rax + 8]
-    
-    movsd xmm4, xmm0
-    mulsd xmm4, xmm2
-    movsd xmm5, xmm1
-    mulsd xmm5, xmm3
-    subsd xmm4, xmm5
-    
-    movsd xmm8, xmm0
-    mulsd xmm8, xmm3
-    movsd xmm9, xmm1
-    mulsd xmm9, xmm2
-    addsd xmm8, xmm9
-    
-    addsd xmm6, xmm4
-    addsd xmm7, xmm8
-    
-    inc r15
-    jmp .iqft_inner
-
-.iqft_store:
-    mulsd xmm6, xmm14
-    mulsd xmm7, xmm14
-    
-    mov rax, r14
-    shl rax, 4
-    movsd [rbp - 128 + rax], xmm6
-    movsd [rbp - 128 + rax + 8], xmm7
-    
-    inc r14
-    cmp r14, 8
-    jl .iqft_outer
-
-.iqft_complete:
-    xor r14, r14
-.iqft_copy:
-    cmp r14, r13
-    jge .iqft_done
-    cmp r14, 8
-    jge .iqft_done
-    
-    mov rax, r14
-    shl rax, 4
-    movsd xmm0, [rbp - 128 + rax]
-    movsd xmm1, [rbp - 128 + rax + 8]
-    movsd [rbx + rax], xmm0
-    movsd [rbx + rax + 8], xmm1
-    
-    inc r14
-    jmp .iqft_copy
-
-.iqft_done:
-    add rsp, 128
-    pop rbp
-    pop r15
-    pop r14
-    pop r13
-    pop r12
-    pop rbx
-    ret
-
-; normalize_chunk - Renormalize chunk amplitudes to sum to 1
-; Input: rdi = chunk_index
-normalize_chunk:
-    push rbx
-    push r12
-    push r13
-
-    mov r12, rdi
-    mov rbx, [state_vectors + r12*8]
-    mov r13, [chunk_states + r12*8]
-
-    ; Calculate total probability
-    xorpd xmm6, xmm6
-    xor rcx, rcx
-.norm_sum:
-    cmp rcx, r13
-    jge .norm_apply
-    
-    mov rax, rcx
-    shl rax, 4
-    movsd xmm0, [rbx + rax]
-    movsd xmm1, [rbx + rax + 8]
-    mulsd xmm0, xmm0
-    mulsd xmm1, xmm1
-    addsd xmm0, xmm1
-    addsd xmm6, xmm0
-    
-    inc rcx
-    jmp .norm_sum
-
-.norm_apply:
-    ; Divide by sqrt(total)
-    sqrtsd xmm6, xmm6
-    ucomisd xmm6, [epsilon]
-    jbe .norm_done              ; Avoid divide by zero
-    
-    xor rcx, rcx
-.norm_div:
-    cmp rcx, r13
-    jge .norm_done
-    
-    mov rax, rcx
-    shl rax, 4
-    movsd xmm0, [rbx + rax]
-    movsd xmm1, [rbx + rax + 8]
-    divsd xmm0, xmm6
-    divsd xmm1, xmm6
-    movsd [rbx + rax], xmm0
-    movsd [rbx + rax + 8], xmm1
-    
-    inc rcx
-    jmp .norm_div
-
-.norm_done:
-    pop r13
-    pop r12
-    pop rbx
-    ret
-
-; ═══════════════════════════════════════════════════════════════════════════════
-; INCLUDE BIGINT LIBRARY FOR 4096-BIT MODULAR ARITHMETIC
-; ═══════════════════════════════════════════════════════════════════════════════
-%include "bigint.asm"
