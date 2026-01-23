@@ -3060,3 +3060,8 @@ normalize_chunk:
     pop r12
     pop rbx
     ret
+
+; ═══════════════════════════════════════════════════════════════════════════════
+; INCLUDE BIGINT LIBRARY FOR 4096-BIT MODULAR ARITHMETIC
+; ═══════════════════════════════════════════════════════════════════════════════
+%include "bigint.asm"
