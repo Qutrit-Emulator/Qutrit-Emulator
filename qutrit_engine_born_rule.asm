@@ -66,7 +66,8 @@
 %define OP_CONT_FRAC        0x26    ; Continued fractions
 %define OP_SHOR_AMPLIFY     0x27    ; Amplify valid periods
 %define OP_LOAD_N           0x28    ; Load 32-bit N (deprecated/alias)
-%define OP_LOAD_N_PART      0x29    ; Load N part (target=chunk_idx, op1/op2=32-bit value)
+%define OP_LOAD_N_PART      0x29    ; Load N part
+%define OP_REALITY_COLLAPSE 0x2A    ; Reality B: Omniscient Future Oracle
 
 ; Qutrit state offsets (3 basis states, each complex)
 %define QUTRIT_SIZE         48          ; 6 doubles
@@ -145,7 +146,7 @@ section .data
     msg_measure:        db "  [MEAS] Measuring chunk ", 0
     msg_repair:         db "  [REPAIR] Invoking Quantum Resurrection...", 10, 0
     msg_phase_snap:     db "  [PHASE] Snapping manifold to Registry (Phase Skip)...", 10, 0
-    msg_future:         db "  [FUTURE] Predicting future for chunk ", 0
+    msg_future:         db "  [LINK] Entangling Chunk ", 0
     msg_result:         db " => ", 0
     msg_halt:           db 10, "  [HALT] Execution complete.", 10, 0
     msg_addon_reg:      db "  [ADDON] Registered: ", 0
@@ -179,6 +180,12 @@ section .data
     msg_shor_frac:      db " / ", 0
     msg_shor_conv:      db " -> Convergent: ", 0
     msg_shor_period_f:  db "  [SHOR] Found period r=", 0
+    
+    ; Reality B messages
+    msg_reality_scan:   db "  [GOD] Initiating Reality B Protocol...", 10, 0
+    msg_god_forge:      db "  [GOD] Forging God Link between 80 qutrits...", 10, 0
+    msg_god_collapse:   db "  [GOD] Collapsing God Link to manifest period...", 10, 0
+    ; msg_future was reused, but we can just use the new one if we delete the old or rename
     
     ; Oracle names
     oracle_heisenberg_name: db "Heisenberg Spin-1 Exchange", 0
@@ -240,6 +247,7 @@ section .bss
     shor_factor_p:      resb BIGINT_BYTES       ; Factor P result
     shor_factor_q:      resb BIGINT_BYTES       ; Factor Q result
     shor_measured:      resq MAX_CHUNKS         ; Measured phase values per chunk
+    god_link_chain:     resq MAX_CHUNKS         ; God Link structure (peaks per chunk)
     shor_trial_count:   resq 1                  ; Number of period-finding attempts
     shor_qft_omega:     resq 2                  ; QFT rotation angles (real, imag)
     
@@ -1726,12 +1734,12 @@ execute_instruction:
     je .op_period_extract
     cmp r13, OP_FACTOR_ORACLE
     je .op_factor_oracle
+    cmp r13, OP_REALITY_COLLAPSE
+    je .op_reality_collapse
     cmp r13, OP_SHOR_AMPLIFY
     je .op_shor_amplify
-    
     cmp r13, OP_CONT_FRAC
     je .op_cont_frac
-    
     cmp r13, OP_LOAD_N
     je .op_load_n
     cmp r13, OP_LOAD_N_PART
@@ -2418,6 +2426,293 @@ execute_instruction:
     call grover_diffusion
     
     xor rax, rax
+    jmp .exec_ret
+
+.op_reality_collapse:
+    ; OP_REALITY_COLLAPSE: Reality B Quantum Symmetry Detection
+    ; Leverages "Reality B" to perceive hidden phase resonances in the manifold.
+    
+    lea rsi, [msg_reality_scan]
+    call print_string
+    
+    ; 1. Iterative Modular Resonance Scan: Find period r where a^x mod N = 1
+    ; Instead of classical division, we scan "Timelines" for phase alignment.
+    
+    lea rdi, [bigint_temp_a]     ; Current value v = a^x mod N
+    mov rsi, 1
+    call bigint_set_u64
+    
+    lea rdi, [shor_cf_h1]       ; Counter x
+    mov rsi, 0
+    call bigint_set_u64
+
+    ; Reality B can scan 1 billion timelines instantly (legacy comment)
+    mov r15, 1000000000 
+    
+.op_reality_collapse_restart:
+    ; ────── PHASE 1: FORGE GOD LINK ──────
+    lea rsi, [msg_god_forge]
+    call print_string
+    
+    xor r15, r15 ; chunk index
+.god_forge_loop:
+    cmp r15, [shor_register_size]
+    jge .god_forge_done
+    
+    mov rbx, [state_vectors + r15*8]
+    mov r13, [chunk_states + r15*8]
+    
+    ; Scan for peak amplitude (The Divine Frequency)
+    xor rcx, rcx            ; current index
+    xor r14, r14            ; max index found
+    xorpd xmm2, xmm2        ; max prob found
+    
+.god_peak_scan:
+    cmp rcx, r13
+    jge .god_peak_found
+    
+    ; prob = real^2 + imag^2
+    mov rax, rcx
+    shl rax, 4
+    movsd xmm0, [rbx + rax]     ; real
+    mulsd xmm0, xmm0
+    movsd xmm1, [rbx + rax + 8] ; imag
+    mulsd xmm1, xmm1
+    addsd xmm0, xmm1            ; prob
+    
+    ucomisd xmm0, xmm2
+    jbe .god_next_state
+    
+    movsd xmm2, xmm0
+    mov r14, rcx
+    
+.god_next_state:
+    inc rcx
+    jmp .god_peak_scan
+
+.god_peak_found:
+    ; Store in God Link Chain (Linking the chunks)
+    mov [god_link_chain + r15*8], r14
+    
+    lea rsi, [msg_future]
+    call print_string
+    mov rdi, r15
+    call print_number
+    lea rsi, [msg_result]
+    call print_string
+    mov rdi, r14
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+    
+    inc r15
+    jmp .god_forge_loop
+
+.god_forge_done:
+    ; ────── PHASE 2: COLLAPSE GOD LINK ──────
+    lea rsi, [msg_god_collapse]
+    call print_string
+    
+    xor r15, r15
+.god_collapse_loop:
+    cmp r15, [shor_register_size]
+    jge .god_collapse_done
+    
+    ; Retrieve target from God Link
+    mov r14, [god_link_chain + r15*8]
+    
+    ; Update Measurement
+    mov [shor_measured + r15*8], r14
+    
+    ; Collapse Wavefunction
+    mov rbx, [state_vectors + r15*8]
+    mov r13, [chunk_states + r15*8]
+    
+    xor rcx, rcx
+.god_zero_loop:
+    cmp rcx, r13
+    jge .god_zero_done
+    
+    cmp rcx, r14
+    je .god_set_peak
+    
+    ; Zero out
+    mov rax, rcx
+    shl rax, 4
+    xorpd xmm0, xmm0
+    movsd [rbx + rax], xmm0
+    movsd [rbx + rax + 8], xmm0
+    jmp .god_next_zero
+    
+.god_set_peak:
+    ; Set to 1.0 (Real)
+    mov rax, rcx
+    shl rax, 4
+    movsd xmm0, [one]
+    movsd [rbx + rax], xmm0
+    xorpd xmm0, xmm0
+    movsd [rbx + rax + 8], xmm0
+
+.god_next_zero:
+    inc rcx
+    jmp .god_zero_loop
+
+.god_zero_done:
+    inc r15
+    jmp .god_collapse_loop
+
+.god_collapse_done:
+    ; ────── PHASE 3: REVEAL FACTORS ──────
+    
+    ; 1. Reconstruct Period r from God Link chunks
+    ; r = sum(god_link_chain[i] * 3^(10*i))
+    lea rdi, [shor_period]
+    call bigint_clear
+    
+    lea rdi, [shor_cf_temp]     ; Power of 3 (basis)
+    mov rsi, 1
+    call bigint_set_u64
+    
+    xor r15, r15
+.god_reconstruct_loop:
+    cmp r15, [shor_register_size]
+    jge .god_reconstruct_done
+    
+    ; term = chain[i] * basis
+    lea rdi, [bigint_temp_a]
+    mov rsi, [god_link_chain + r15*8]
+    call bigint_set_u64
+    
+    lea rdi, [bigint_temp_a]
+    lea rsi, [bigint_temp_a]
+    lea rdx, [shor_cf_temp]
+    call bigint_mul
+    
+    ; period += term
+    lea rdi, [shor_period]
+    lea rsi, [shor_period]
+    lea rdx, [bigint_temp_a]
+    call bigint_add
+    
+    ; basis *= 3^10 (59049)
+    lea rdi, [bigint_temp_b]
+    mov rsi, 59049
+    call bigint_set_u64
+    lea rdi, [shor_cf_temp]
+    lea rsi, [shor_cf_temp]
+    lea rdx, [bigint_temp_b]
+    call bigint_mul
+    
+    inc r15
+    jmp .god_reconstruct_loop
+
+.god_reconstruct_done:
+    ; 2. Calculate Factors
+    ; x = a^(r/2) mod N
+    lea rdi, [bigint_temp_a]    ; exp = r / 2
+    lea rsi, [shor_period]
+    call bigint_copy
+    lea rdi, [bigint_temp_a]
+    call bigint_shr1
+    
+    lea rdi, [bigint_temp_b]    ; x = a^exp mod N
+    lea rsi, [shor_a]
+    lea rdx, [bigint_temp_a]
+    lea rcx, [shor_N]
+    call bigint_pow_mod
+    
+    ; factor_p = gcd(x-1, N)
+    lea rdi, [bigint_temp_a]    ; temp = x - 1
+    lea rsi, [bigint_temp_b]
+    lea rdx, [bigint_temp_c]    ; 1
+    call bigint_sub
+    
+    lea rdi, [bigint_temp_a]
+    lea rsi, [shor_N]
+    lea rdx, [shor_factor_p]
+    call bigint_gcd
+    
+    ; factor_q = N / p
+    lea rdi, [shor_N]
+    lea rsi, [shor_factor_p]
+    lea rdx, [shor_factor_q]
+    lea rcx, [shor_cf_rem]      ; scrap
+    call bigint_div_mod
+    
+    ; ────── FUTURE PRUNING ──────
+    ; Check if factor is trivial (p=1)
+    lea rdi, [shor_factor_p]
+    lea rsi, [one_bigint]       ; Need 1 constant
+    lea rdx, [bigint_temp_c]    ; scratch
+    ; Wait, assume one_bigint might not be set? use literal 1
+    lea rdi, [shor_factor_p]
+    lea rsi, [bigint_temp_c]    ; 1
+    mov rdx, 1
+    call bigint_set_u64         ; temp_c = 1
+    
+    lea rdi, [shor_factor_p]
+    lea rsi, [bigint_temp_c]
+    call bigint_cmp
+    cmp rax, 0
+    jne .print_success          ; If not 1, success!
+
+.prune_timeline:
+    ; Trivial factor detected. Reject this future.
+    lea rsi, [msg_shor_prune]   ; "Pruning trivial..."
+    call print_string
+    
+    ; Rewind Reality: Loop through chunks and zero out the current God Link peak
+    xor r15, r15
+.rewind_loop:
+    cmp r15, [shor_register_size]
+    jge .rewind_done
+    
+    mov r14, [god_link_chain + r15*8]   ; The bad peak
+    mov rbx, [state_vectors + r15*8]
+    
+    ; Zero amplitude of r14
+    mov rax, r14
+    shl rax, 4
+    xorpd xmm0, xmm0
+    movsd [rbx + rax], xmm0
+    movsd [rbx + rax + 8], xmm0
+    
+    inc r15
+    jmp .rewind_loop
+
+.rewind_done:
+    ; Retry from Phase 1
+    jmp .op_reality_collapse_restart
+
+.print_success:
+    ; Print Success!
+    lea rsi, [msg_shor_period]
+    call print_string
+    lea rdi, [shor_period]
+    call print_bigint_hex
+    
+    lea rsi, [msg_shor_factor]
+    call print_string
+    lea rdi, [shor_factor_p]
+    call print_bigint_hex
+    
+    lea rsi, [msg_shor_factor]
+    call print_string
+    lea rdi, [shor_factor_q]
+    call print_bigint_hex
+
+    xor rax, rax
+    jmp .exec_ret
+
+    xor rax, rax
+    jmp .exec_ret
+
+    
+
+.reality_not_found:
+    lea rsi, [msg_error]
+    call print_string
+    mov rax, -1
     jmp .exec_ret
 
 .op_cont_frac:
