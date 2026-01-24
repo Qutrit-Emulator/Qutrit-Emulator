@@ -203,6 +203,7 @@ section .data
     ; Oracle names
     oracle_heisenberg_name: db "Heisenberg Spin-1 Exchange", 0
     oracle_gellmann_name: db "Gell-Mann XY Interaction", 0
+    oracle_goldbach_name: db "Goldbach Prime Sieve", 0
 
 ; ─────────────────────────────────────────────────────────────────────────────
 ; Section: Uninitialized Data (BSS)
@@ -382,6 +383,12 @@ register_builtins:
     lea rdi, [oracle_gellmann_name]
     lea rsi, [gell_mann_braid_oracle]
     mov rdx, 0x81
+    call register_addon
+
+    ; Register Goldbach sieve oracle as opcode 0x82
+    lea rdi, [oracle_goldbach_name]
+    lea rsi, [goldbach_sieve_oracle]
+    mov rdx, 0x82
     call register_addon
 
     pop rdx
@@ -1334,6 +1341,87 @@ apply_heis_interaction_to_link:
 apply_gm_interaction_to_link:
     ; Similar to above, but for Gell-Mann
     jmp apply_braid_phases
+
+; goldbach_sieve_oracle - Weave prime numbers into the manifold topology
+goldbach_sieve_oracle:
+    push r12
+    push r13
+    push r14
+    push r15
+    
+    mov r12, [num_chunks]
+    xor r15, r15                ; current chunk n
+    mov r13, -1                 ; previous prime chunk
+    
+.sieve_loop:
+    cmp r15, r12
+    jge .sieve_done
+    
+    ; Check if r15 is prime
+    mov rdi, r15
+    call is_prime_u64
+    test rax, rax
+    jz .sieve_next
+    
+    ; If prime, weave link to previous prime
+    cmp r13, -1
+    je .first_prime
+    
+    push r12
+    push r13
+    push r15
+    mov rdi, r13                ; prev prime chunk
+    mov rsi, r15                ; current prime chunk
+    xor rdx, rdx                ; qutrit 0
+    xor rcx, rcx                ; qutrit 0
+    call braid_chunks
+    pop r15
+    pop r13
+    pop r12
+    
+.first_prime:
+    mov r13, r15                ; update prev prime
+    
+.sieve_next:
+    inc r15
+    jmp .sieve_loop
+.sieve_done:
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    ret
+
+; is_prime_u64 - Simple primality test
+is_prime_u64:
+    cmp rdi, 2
+    jl .not_prime
+    je .is_prime
+    test rdi, 1
+    jz .not_prime
+    
+    mov rcx, 3
+.prime_check_loop:
+    mov rax, rcx
+    mul rax
+    cmp rax, rdi
+    ja .is_prime
+    
+    mov rax, rdi
+    xor rdx, rdx
+    div rcx
+    test rdx, rdx
+    jz .not_prime
+    
+    add rcx, 2
+    jmp .prime_check_loop
+    
+.is_prime:
+    mov rax, 1
+    ret
+.not_prime:
+    xor rax, rax
+    ret
 
 is_braid_target:
     push rcx
