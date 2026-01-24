@@ -2610,18 +2610,16 @@ execute_instruction:
     jmp .god_collapse_loop_unused
 
 .god_collapse_done:
-    ; ────── PHASE 3: TRUNCATED DIVISION (r = Q/y) ──────
-    ; For huge registers (40k qutrits), y and Q are too big for BigInts.
-    ; But r is small (< 1024 bits typically).
-    ; We approximate r using the most significant chunks of y and Q.
-    
+    ; ────── PHASE 3: TRUNCATED CONTINUED FRACTIONS (v4 Rigorous) ──────
+    ; Extract high-precision window of measurement y and register Q.
+    ; Goal: find h/k such that h/k approx y/Q. k is the period r.
+
     ; 1. Find MSB of measurement y
-    xor r15, r15
     mov rcx, [shor_register_size]
     dec rcx                 ; start from last chunk
 .find_msb_loop:
     cmp rcx, 0
-    jl .prune_timeline      ; All zeros? Unlikely but invalid.
+    jl .prune_timeline      ; All zeros? Invalid.
     mov rax, [god_link_chain + rcx*8]
     test rax, rax
     jnz .msb_found
@@ -2630,65 +2628,55 @@ execute_instruction:
 
 .msb_found:
     ; rcx = index k of MSB
-    ; distance check: if (size - 1 - k) > 512 chunks, r > 3^2000 (roughly), too big
-    mov rax, [shor_register_size]
-    dec rax
-    sub rax, rcx
-    cmp rax, 512
-    jg .prune_timeline
+    %define WINDOW_SIZE 256 ; ~1600 bits
 
-    ; We take a window of W chunks starting at k
-    %define WINDOW_CHUNKS 64 ; ~400-500 bits of precision
-
-    ; 2. Construct Denominator (val_y) from window [k - W + 1, k]
-    lea rdi, [bigint_temp_b] ; val_y
+    ; 2. Construct Numerator (shor_cf_num) from window [k - W + 1, k]
+    lea rdi, [shor_cf_num]
     call bigint_clear
     
     mov r14, rcx            ; k
     mov r13, rcx
-    sub r13, WINDOW_CHUNKS - 1
+    sub r13, WINDOW_SIZE - 1
     cmp r13, 0
     jge .window_start_ok
-    xor r13, r13            ; clamp to 0
+    xor r13, r13            ; clamp
 .window_start_ok:
-    ; r13 = start index for window
+    ; r13 = start index
     
-    ; Construct from high to low for easier BigInt building
     mov r12, r14            ; cursor = k
 .build_y_loop:
     cmp r12, r13
     jl .build_y_done
     
-    ; val_y = val_y * chunk_state[r12] + god_link_chain[r12]
-    lea rdi, [bigint_temp_a] ; temp = chunk_state
+    lea rdi, [bigint_temp_a]
     mov rsi, [chunk_states + r12*8]
     call bigint_set_u64
     
-    lea rdi, [bigint_temp_c] ; temporary product
-    lea rsi, [bigint_temp_b] ; current val_y
-    lea rdx, [bigint_temp_a] ; chunk_state
+    lea rdi, [shor_cf_temp] 
+    lea rsi, [shor_cf_num]
+    lea rdx, [bigint_temp_a]
     call bigint_mul
     
-    lea rdi, [bigint_temp_a] ; digit as bigint
+    lea rdi, [bigint_temp_a]
     call bigint_clear
     mov rax, [god_link_chain + r12*8]
     mov [bigint_temp_a], rax
     
-    lea rdi, [bigint_temp_b] ; new val_y
-    lea rsi, [bigint_temp_c] ; product
-    lea rdx, [bigint_temp_a] ; digit
+    lea rdi, [shor_cf_num]
+    lea rsi, [shor_cf_temp]
+    lea rdx, [bigint_temp_a]
     call bigint_add
     
     dec r12
     jmp .build_y_loop
 
 .build_y_done:
-    ; 3. Construct Numerator (val_Q) = product(chunk_states[i]) for i from start_index to registrar_size-1
-    lea rdi, [shor_period]  ; We'll use this as numerator temp
+    ; 3. Construct Denominator (shor_cf_den) = product of chunk_states[r13...shor_register_size-1]
+    lea rdi, [shor_cf_den]
     call bigint_clear
-    mov qword [shor_period], 1 ; init to 1
+    mov qword [shor_cf_den], 1
     
-    mov r12, r13            ; start_index
+    mov r12, r13
 .build_q_loop:
     cmp r12, [shor_register_size]
     jge .build_q_done
@@ -2697,67 +2685,154 @@ execute_instruction:
     mov rsi, [chunk_states + r12*8]
     call bigint_set_u64
     
-    lea rdi, [bigint_temp_c]
-    lea rsi, [shor_period]
+    lea rdi, [shor_cf_temp]
+    lea rsi, [shor_cf_den]
     lea rdx, [bigint_temp_a]
     call bigint_mul
     
-    lea rdi, [shor_period]
-    lea rsi, [bigint_temp_c]
+    lea rdi, [shor_cf_den]
+    lea rsi, [shor_cf_temp]
     call bigint_copy
     
     inc r12
     jmp .build_q_loop
 
 .build_q_done:
-    ; 4. Divide: r = val_Q / val_y
-    lea rdi, [shor_period]   ; Numerator
-    lea rsi, [bigint_temp_b]  ; Denominator (val_y)
-    lea rdx, [bigint_temp_c]  ; Quotient (r)
-    lea rcx, [bigint_temp_a]  ; Remainder (discard)
-    call bigint_div_mod
+    ; ────── PHASE 4: RUN CONTINUED FRACTIONS ──────
+    ; y / Q = shor_cf_num / shor_cf_den
     
-    lea rdi, [shor_period]
-    lea rsi, [bigint_temp_c]
-    call bigint_copy
-    
-    ; Print reconstructed period
-    lea rsi, [msg_shor_period]
-    call print_string
-    lea rdi, [shor_period]
-    call print_bigint_hex
-    
-    ; ────── PHASE 4: VALIDATE PERIOD (Standard) ──────
-    
-    ; Check if period is zero
-    lea rdi, [shor_period]
+    ; Initialize CF convergents
+    lea rdi, [shor_cf_h0] ; 0
+    call bigint_clear
+    lea rdi, [shor_cf_h1] ; 1
+    mov rsi, 1
+    call bigint_set_u64
+    lea rdi, [shor_cf_k0] ; 1
+    mov rsi, 1
+    call bigint_set_u64
+    lea rdi, [shor_cf_k1] ; 0
+    call bigint_clear
+
+.tcf_loop:
+    ; if den == 0, done
+    lea rdi, [shor_cf_den]
     call bigint_is_zero
     cmp rax, 1
-    je .prune_timeline
+    je .prune_timeline ; Failed to find valid r in all convergents
     
-    ; Check if period is even
-    lea rdi, [shor_period]
+    lea rdi, [shor_cf_num]
+    lea rsi, [shor_cf_den]
+    lea rdx, [shor_cf_q]
+    lea rcx, [shor_cf_rem]
+    call bigint_div_mod
+    
+    ; h_next = q * h1 + h0
+    lea rdi, [shor_cf_temp]
+    lea rsi, [shor_cf_q]
+    lea rdx, [shor_cf_h1]
+    call bigint_mul
+    lea rdi, [shor_cf_temp]
+    lea rsi, [shor_cf_temp]
+    lea rdx, [shor_cf_h0]
+    call bigint_add
+    lea rdi, [shor_cf_h0]
+    lea rsi, [shor_cf_h1]
+    call bigint_copy
+    lea rdi, [shor_cf_h1]
+    lea rsi, [shor_cf_temp]
+    call bigint_copy
+    
+    ; k_next = q * k1 + k0
+    lea rdi, [shor_cf_temp]
+    lea rsi, [shor_cf_q]
+    lea rdx, [shor_cf_k1]
+    call bigint_mul
+    lea rdi, [shor_cf_temp]
+    lea rsi, [shor_cf_temp]
+    lea rdx, [shor_cf_k0]
+    call bigint_add
+    lea rdi, [shor_cf_k0]
+    lea rsi, [shor_cf_k1]
+    call bigint_copy
+    lea rdi, [shor_cf_k1]
+    lea rsi, [shor_cf_temp]
+    call bigint_copy
+    
+    ; Euclidean update
+    lea rdi, [shor_cf_num]
+    lea rsi, [shor_cf_den]
+    call bigint_copy
+    lea rdi, [shor_cf_den]
+    lea rsi, [shor_cf_rem]
+    call bigint_copy
+    
+    ; ──────── Check Convergent as r = k1 ────────
+    lea rdi, [shor_cf_k1]
+    call bigint_is_zero
+    cmp rax, 1
+    je .tcf_loop
+    
+    ; r must be even
+    lea rdi, [shor_cf_k1]
     mov rsi, 0
     call bigint_get_bit
     cmp rax, 1
-    je .prune_timeline
-    
-    ; ────── PHASE 5: CALCULATE FACTORS ──────
+    je .tcf_loop
     
     ; x = a^(r/2) mod N
-    lea rdi, [bigint_temp_a]    ; exp = r / 2
+    lea rdi, [shor_period]
+    lea rsi, [shor_cf_k1]
+    call bigint_copy
+    
+    lea rdi, [bigint_temp_a] ; exp
     lea rsi, [shor_period]
     call bigint_copy
     lea rdi, [bigint_temp_a]
     call bigint_shr1
     
-    lea rdi, [bigint_temp_b]    ; x = a^exp mod N
+    lea rdi, [bigint_temp_b] ; x
     lea rsi, [shor_a]
     lea rdx, [bigint_temp_a]
     lea rcx, [shor_N]
     call bigint_pow_mod
     
-    ; Result 'x' is now in [bigint_temp_b]
+    ; Print trial period
+    lea rsi, [msg_shor_period]
+    call print_string
+    lea rdi, [shor_period]
+    call print_bigint_hex
+    
+    ; Check if x yields factors (Phase 6 logic simplified here or fall through?)
+    ; We'll check x ≠ 1 and x ≠ N-1 here.
+    lea rdi, [bigint_temp_c] ; 1
+    mov rsi, 1
+    call bigint_set_u64
+    lea rdi, [bigint_temp_b] ; x
+    lea rsi, [bigint_temp_c] ; 1
+    call bigint_cmp
+    cmp rax, 0
+    je .tcf_loop ; trivial
+    
+    lea rdi, [bigint_temp_a] ; N
+    lea rsi, [shor_N]
+    call bigint_copy
+    lea rdi, [bigint_temp_a] ; N-1
+    lea rsi, [bigint_temp_a]
+    lea rdx, [bigint_temp_c] ; 1
+    call bigint_sub
+    lea rdi, [bigint_temp_b] ; x
+    lea rsi, [bigint_temp_a] ; N-1
+    call bigint_cmp
+    cmp rax, 0
+    je .tcf_loop ; trivial
+    
+    ; If we got here, x is non-trivial. Let Phase 6 extract factors.
+    jmp .tcf_found_candidate
+
+.tcf_found_candidate:
+    ; ────── PHASE 5: FACTOR EXTRACTION (v4 Fallthrough) ──────
+    ; [bigint_temp_b] contains x.
+    ; Carry on with standard factor extraction on this x.
     
     ; ────── PHASE 6: EXTRACT FACTORS (EXISTING LOGIC) ──────
     
@@ -4181,10 +4256,20 @@ print_bigint_hex:
     mov rdx, rdi            ; Save pointer
     mov rcx, 63             ; Start from top limb (BIGINT_LIMBS - 1)
 
+.hex_skip_zeros:
+    cmp rcx, 0
+    je .hex_start_print
+    mov rax, [rdx + rcx*8]
+    test rax, rax
+    jnz .hex_start_print
+    dec rcx
+    jmp .hex_skip_zeros
+
+.hex_start_print:
 .hex_limb_loop:
-    mov rax, [rdx + rcx*8]  ; Load limb
+    mov rax, [rdx + rcx*8]
     mov rdi, rax
-    call print_hex_64       ; Print 16 digits
+    call print_hex_64
     
     test rcx, rcx
     jz .hex_done
