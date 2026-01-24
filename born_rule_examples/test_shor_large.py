@@ -50,7 +50,7 @@ def generate_shor_large(filename, N, num_chunks, qutrits_per_chunk):
 
 def run_large_shor(N=261980999226229, trials=2):
     num_chunks = 8
-    qutrits_per_chunk = 10
+    qutrits_per_chunk = 4
     qbin_file = 'shor_large.qbin'
     generate_shor_large(qbin_file, N, num_chunks, qutrits_per_chunk)
     
@@ -63,9 +63,9 @@ def run_large_shor(N=261980999226229, trials=2):
         result = subprocess.run(['./qutrit_engine_born_rule', qbin_file], capture_output=True, text=True)
         print(result.stdout)
         
-        matches = re.findall(r'Factor found: (\d+)', result.stdout)
+        matches = re.findall(r'Factor found: (0x[\da-fA-F]+)', result.stdout)
         for f in matches:
-            factors.add(int(f))
+            factors.add(int(f, 16))
             
     if factors:
         print(f"\n✅ SUCCESS: Factors found: {factors}")
