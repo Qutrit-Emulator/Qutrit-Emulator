@@ -2932,12 +2932,19 @@ execute_instruction:
     lea rsi, [msg_reality_scan]
     call print_string
     
-    ; If not in Shor Mode (shor_register_size == 0), just do a peak collapse
-    ; to manifest the ground-state/minimum-energy reality.
+    ; Bypass Shor logic if shor_N is zero
     mov rax, [shor_register_size]
     test rax, rax
-    jnz .reality_shor_mode
+    jz .general_collapse
     
+    lea rdi, [shor_N]
+    call bigint_is_zero
+    test rax, rax
+    jnz .general_collapse       ; bigint_is_zero returns 1 if zero
+    
+    jmp .reality_shor_mode
+
+.general_collapse:
     call manifold_peak_collapse
     xor rax, rax
     jmp .exec_ret
