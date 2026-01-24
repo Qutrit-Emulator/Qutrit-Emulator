@@ -2007,31 +2007,47 @@ execute_instruction:
     call print_string
     mov rdi, r14                ; num_chunks
     call print_number
-    lea rsi, [msg_shor_chunks]
-    call print_string
-    mov rdi, rbx                ; N (lower bits)
-    call print_number
-    lea rsi, [msg_newline]
-    call print_string
     
     ; Store register size
     mov [shor_register_size], r14
     mov qword [shor_trial_count], 0
     
-    ; Initialize N and a as BigInts
+    ; Initialize N and a as BigInts ONLY if a legacy N was provided
+    test rbx, rbx
+    jz .shor_init_no_legacy_N
+    
     lea rdi, [shor_N]
     call bigint_clear
-    lea rdi, [shor_a]
-    call bigint_clear
-    
-    ; Store N (lower 32/64 bits from operand1) and default a=2
     lea rdi, [shor_N]
     mov rsi, rbx
     call bigint_set_u64
     
     lea rdi, [shor_a]
+    call bigint_clear
+    lea rdi, [shor_a]
     mov rsi, 2
     call bigint_set_u64
+
+.shor_init_no_legacy_N:
+    ; Print ACTUAL N from BigInt state
+    lea rsi, [msg_shor_chunks]
+    call print_string
+    lea rdi, [shor_N]
+    call bigint_to_u64
+    mov rdi, rax
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+    
+    ; Ensure a is at least initialized if not already
+    lea rdi, [shor_a]
+    call bigint_is_zero
+    test rax, rax
+    jz .shor_init_a_ok
+    lea rdi, [shor_a]
+    mov rsi, 2
+    call bigint_set_u64
+.shor_init_a_ok:
     
     ; Initialize all chunks with specified qutrits (default 10)
     mov r15, rcx
