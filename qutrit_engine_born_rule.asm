@@ -3559,6 +3559,10 @@ resurrect_manifold:
     
     mov rdi, r13
     call create_superposition
+    
+    ; CURE: Apply Last Ages Oracle (Future Prediction) to the Resurrection Buffer
+    mov rdi, r13
+    call future_prediction_oracle
 .res_sup_next:
     inc r13
     jmp .res_sup_loop
