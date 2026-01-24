@@ -959,8 +959,14 @@ measure_chunk:
     addsd xmm6, xmm0            ; current_sum += |amp|^2
 
     ucomisd xmm6, [rbp - 8]
-    jae .found_state            ; if current_sum >= target, this is our state
+    jb .next_prob               ; if current_sum < target, continue
     
+    ; Ensure we don't select a zero-amplitude state if there's a better one
+    xorpd xmm1, xmm1
+    ucomisd xmm0, xmm1          ; xmm0 still has |amp|^2
+    ja .found_state             ; only select if |amp|^2 > 0
+    
+.next_prob:
     inc rcx
     jmp .prob_loop
 
@@ -2041,12 +2047,22 @@ execute_instruction:
     lea rsi, [msg_newline]
     call print_string
     
-    xor r15, r15                ; anyon counter
+    ; Spacing: Op2 (rcx) defines the stride. Default to 1.
+    mov r12, rcx
+    test r12, r12
+    jnz .init_anyon_stride_ok
+    mov r12, 1
+.init_anyon_stride_ok:
+    
+    xor r15, r15                ; current_chunk
+    xor r13, r13                ; anyon counter
 .init_anyon_loop:
-    cmp r15, r14
+    cmp r13, r14
     jge .init_anyon_done
     
     push r14
+    push r13
+    push r12
     push r15
     push rbx
     mov rdi, r15
@@ -2056,9 +2072,12 @@ execute_instruction:
     call create_superposition
     pop rbx
     pop r15
+    pop r12
+    pop r13
     pop r14
     
-    inc r15
+    add r15, r12                ; apply stride
+    inc r13
     jmp .init_anyon_loop
 .init_anyon_done:
     xor rax, rax
@@ -3856,12 +3875,6 @@ resurrect_manifold:
 .res_sup_loop:
     cmp r13, r12
     jge .res_sup_done
-    
-    ; Braid-awareness: Skip superposition for braid targets
-    mov rdi, r13
-    call is_braid_target
-    test rax, rax
-    jnz .res_sup_next
     
     mov rdi, r13
     call create_superposition
