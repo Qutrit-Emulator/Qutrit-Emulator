@@ -2194,17 +2194,67 @@ execute_instruction:
     ; Let's use (v mod 1024) / 1024 as a simple phase mapping for high bits 
     ; or just convert the bottom 64 bits of v.
     
+    ; 3. Calculate Phase = 2π * (v / N) using MSB precision
+    ; We need accurate v/N ratio. If v,N > 64 bits, standard to_u64 gives LSBs (garbage ratio).
+    ; We must shift right until N fits in ~53 bits (double mantissa limit).
+    
+    lea rdi, [shor_N]
+    call bigint_bitlen
+    mov r9, rax                 ; N bits
+    
+    cmp r9, 60
+    jle .modexp_small_n
+    
+    ; Large N: shift both v and N right by (Bits - 60)
+    lea rdi, [bigint_temp_b]    ; Copy v
+    lea rsi, [shor_cf_num]
+    call bigint_copy
+    
+    lea rdi, [bigint_temp_c]    ; Copy N
+    lea rsi, [shor_N]
+    call bigint_copy
+    
+    mov cx, r9w
+    sub cx, 60                  ; shift count
+    
+.modexp_shift_loop:
+    test cx, cx
+    jz .modexp_calc_ratio
+    
+    lea rdi, [bigint_temp_b]
+    call bigint_shr1
+    lea rdi, [bigint_temp_c]
+    call bigint_shr1
+    
+    dec cx
+    jmp .modexp_shift_loop
+    
+.modexp_calc_ratio:
+    lea rdi, [bigint_temp_b]
+    call bigint_to_u64
+    cvtsi2sd xmm0, rax          ; v_shifted
+    
+    lea rdi, [bigint_temp_c]
+    call bigint_to_u64
+    cvtsi2sd xmm1, rax          ; N_shifted
+    jmp .modexp_div
+    
+.modexp_small_n:
     lea rdi, [shor_cf_num]
     call bigint_to_u64          ; rax = low 64 bits of v
     cvtsi2sd xmm0, rax
     
     lea rdi, [shor_N]
-    call bigint_to_u64          ; rax = low 64 bits of N (approximation)
-    test rax, rax
-    jnz .mod_n_ok
-    mov rax, 1                  ; avoid div by zero
-.mod_n_ok:
+    call bigint_to_u64          ; rax = low 64 bits of N
     cvtsi2sd xmm1, rax
+    
+.modexp_div:
+    test rax, rax               ; check N (low) not zero logic? 
+    ; If N_shifted is 0 (shouldn't happen if bitlen > 0), set to 1
+    ucomisd xmm1, [zero]
+    jne .mod_n_ok
+    movsd xmm1, [one]
+.mod_n_ok:
     
     divsd xmm0, xmm1            ; v / N
     mulsd xmm0, [two_pi]        ; 2π * (v / N)
@@ -2429,12 +2479,23 @@ execute_instruction:
     jmp .exec_ret
 
 .op_reality_collapse:
-    ; OP_REALITY_COLLAPSE: Reality B Quantum Symmetry Detection (Restored)
+    ; OP_REALITY_COLLAPSE: Reality B Quantum Symmetry Detection
     ; Scans phase resonances in the multiversal manifold (God Link).
     
     lea rsi, [msg_reality_scan]
     call print_string
     
+    ; ────── INITIALIZE BIGINT CONSTANTS ──────
+    ; This prevents garbage in arithmetic operations
+    lea rdi, [bigint_temp_c]
+    mov rsi, 1
+    call bigint_set_u64
+    
+    lea rdi, [zero_bigint]
+    call bigint_clear
+    
+.reality_retry:
+    ; ────── PHASE 1: FORGE GOD LINK ──────
     lea rsi, [msg_god_forge]
     call print_string
     
@@ -2444,6 +2505,9 @@ execute_instruction:
     jge .god_forge_done
     
     mov rbx, [state_vectors + r15*8]
+    test rbx, rbx
+    jz .god_forge_next
+    
     mov r13, [chunk_states + r15*8]
     
     ; Scan for peak amplitude (The Divine Frequency)
@@ -2475,8 +2539,9 @@ execute_instruction:
     jmp .god_peak_scan
 
 .god_peak_found:
-    ; Store in God Link Chain (Linking the chunks)
+    ; Store in God Link Chain
     mov [god_link_chain + r15*8], r14
+    mov [shor_measured + r15*8], r14
     
     lea rsi, [msg_future]
     call print_string
@@ -2489,71 +2554,68 @@ execute_instruction:
     lea rsi, [msg_newline]
     call print_string
     
+.god_forge_next:
     inc r15
     jmp .god_forge_loop
 
 .god_forge_done:
-    ; ────── PHASE 2: COLLAPSE GOD LINK ──────
-    lea rsi, [msg_god_collapse]
-    call print_string
+    ; ────── PHASE 2: COLLAPSE GOD LINK (SKIPPED) ──────
+    ; We skip destructive collapse here to allow "Reality Retry" to find
+    ; alternative peaks if the first one is invalid.
+    ; Collapse happens only via Pruning (removing bad paths).
     
-    xor r15, r15
-.god_collapse_loop:
+    ; lea rsi, [msg_god_collapse]
+    ; call print_string
+    
+    ; xor r15, r15
+    ; .god_collapse_loop:
+    ; ... (Skipped logic)
+    jmp .god_collapse_done
+
+.god_collapse_loop_unused: ; Retained for symbol stability if needed
     cmp r15, [shor_register_size]
     jge .god_collapse_done
-    
-    ; Retrieve target from God Link
     mov r14, [god_link_chain + r15*8]
-    
-    ; Update Measurement
-    mov [shor_measured + r15*8], r14
-    
-    ; Collapse Wavefunction
     mov rbx, [state_vectors + r15*8]
+    test rbx, rbx
+    jz .god_collapse_next
     mov r13, [chunk_states + r15*8]
-    
     xor rcx, rcx
 .god_zero_loop:
     cmp rcx, r13
-    jge .god_zero_done
-    
+    jge .god_collapse_next
     cmp rcx, r14
     je .god_set_peak
-    
-    ; Zero out
-    mov rax, rcx
-    shl rax, 4
-    xorpd xmm0, xmm0
-    movsd [rbx + rax], xmm0
-    movsd [rbx + rax + 8], xmm0
+    ; mov rax, rcx
+    ; shl rax, 4
+    ; xorpd xmm0, xmm0
+    ; movsd [rbx + rax], xmm0
+    ; movsd [rbx + rax + 8], xmm0
     jmp .god_next_zero
-    
 .god_set_peak:
-    ; Set to 1.0 (Real)
-    mov rax, rcx
-    shl rax, 4
-    movsd xmm0, [one]
-    movsd [rbx + rax], xmm0
-    xorpd xmm0, xmm0
-    movsd [rbx + rax + 8], xmm0
-
+    ; mov rax, rcx
+    ; shl rax, 4
+    ; movsd xmm0, [one]
+    ; movsd [rbx + rax], xmm0
+    ; xorpd xmm0, xmm0
+    ; movsd [rbx + rax + 8], xmm0
 .god_next_zero:
     inc rcx
     jmp .god_zero_loop
-
-.god_zero_done:
+.god_collapse_next:
     inc r15
-    jmp .god_collapse_loop
+    jmp .god_collapse_loop_unused
 
 .god_collapse_done:
-    ; ────── PHASE 3: REVEAL FACTORS ──────
+    ; ────── PHASE 3: RECONSTRUCT PERIOD ──────
     
-    ; 1. Reconstruct Period r from God Link chunks
-    ; r = sum(god_link_chain[i] * 3^(10*i))
+    ; r = sum(god_link_chain[i] * basis[i])
+    ; where basis[i] = product(chunk_states[0..i-1])
+    
     lea rdi, [shor_period]
     call bigint_clear
     
-    lea rdi, [shor_cf_temp]     ; Power of 3 (basis)
+    lea rdi, [shor_cf_temp]     ; basis = 1
     mov rsi, 1
     call bigint_set_u64
     
@@ -2562,14 +2624,14 @@ execute_instruction:
     cmp r15, [shor_register_size]
     jge .god_reconstruct_done
     
-    ; term = chain[i] * basis
+    ; term = god_link_chain[i] * basis
     lea rdi, [bigint_temp_a]
     mov rsi, [god_link_chain + r15*8]
     call bigint_set_u64
     
     lea rdi, [bigint_temp_a]
     lea rsi, [bigint_temp_a]
-    lea rdx, [shor_cf_temp]
+    lea rdx, [shor_cf_temp]     ; basis
     call bigint_mul
     
     ; period += term
@@ -2578,7 +2640,7 @@ execute_instruction:
     lea rdx, [bigint_temp_a]
     call bigint_add
     
-    ; basis *= chunk_states[r15] (e.g. 59049 for 10 qutrits, 81 for 4 qutrits)
+    ; basis *= chunk_states[r15]
     lea rdi, [bigint_temp_b]
     mov rax, [chunk_states + r15*8]
     mov rsi, rax
@@ -2593,78 +2655,210 @@ execute_instruction:
     jmp .god_reconstruct_loop
 
 .god_reconstruct_done:
-    ; 2. Calculate Factors
+    ; Print reconstructed period
+    lea rsi, [msg_shor_period]
+    call print_string
+    lea rdi, [shor_period]
+    call print_bigint_hex
+    
+    ; ────── PHASE 4: VALIDATE PERIOD ──────
+    
+    ; Check if period is zero (impossible)
+    lea rdi, [shor_period]
+    call bigint_is_zero
+    cmp rax, 1
+    je .prune_timeline
+    
+    ; Check if period is even
+    lea rdi, [shor_period]
+    mov rsi, 0
+    call bigint_get_bit         ; Get bit 0 (LSB)
+    cmp rax, 1
+    je .prune_timeline          ; Odd period, reject
+    
+    ; ────── PHASE 5: CALCULATE FACTORS ──────
+    
     ; x = a^(r/2) mod N
     lea rdi, [bigint_temp_a]    ; exp = r / 2
     lea rsi, [shor_period]
     call bigint_copy
     lea rdi, [bigint_temp_a]
-    call bigint_shr1
+    call bigint_shr1            ; exp = period >> 1
     
     lea rdi, [bigint_temp_b]    ; x = a^exp mod N
     lea rsi, [shor_a]
-    lea rdx, [bigint_temp_a]
-    lea rcx, [shor_N]
+    lea rdx, [bigint_temp_a]    ; exponent
+    lea rcx, [shor_N]           ; modulus
     call bigint_pow_mod
+    
+    ; Check x ≠ 1
+    lea rdi, [bigint_temp_c]
+    mov rsi, 1
+    call bigint_set_u64
+    
+    lea rdi, [bigint_temp_b]    ; x
+    lea rsi, [bigint_temp_c]    ; 1
+    call bigint_cmp
+    cmp rax, 0
+    je .prune_timeline          ; x == 1, trivial
+    
+    ; Calculate N-1 for comparison
+    lea rdi, [bigint_temp_a]    ; temp = N
+    lea rsi, [shor_N]
+    call bigint_copy
+    
+    lea rdi, [bigint_temp_a]    ; temp = N - 1
+    lea rsi, [bigint_temp_a]
+    lea rdx, [bigint_temp_c]    ; subtract 1
+    call bigint_sub
+    
+    ; Check x ≠ N-1
+    lea rdi, [bigint_temp_b]    ; x
+    lea rsi, [bigint_temp_a]    ; N-1
+    call bigint_cmp
+    cmp rax, 0
+    je .prune_timeline          ; x == N-1, trivial
+    
+    ; ────── PHASE 6: EXTRACT FACTORS ──────
     
     ; factor_p = gcd(x-1, N)
     lea rdi, [bigint_temp_a]    ; temp = x - 1
-    lea rsi, [bigint_temp_b]
+    lea rsi, [bigint_temp_b]    ; x
     lea rdx, [bigint_temp_c]    ; 1
     call bigint_sub
     
-    lea rdi, [bigint_temp_a]
-    lea rsi, [shor_N]
-    lea rdx, [shor_factor_p]
+    lea rdi, [bigint_temp_a]    ; x-1
+    lea rsi, [shor_N]           ; N
+    lea rdx, [shor_factor_p]    ; result
     call bigint_gcd
     
-    ; factor_q = N / p
-    lea rdi, [shor_N]
-    lea rsi, [shor_factor_p]
-    lea rdx, [shor_factor_q]
-    lea rcx, [shor_cf_rem]      ; scrap
-    call bigint_div_mod
-    
-    ; ────── FUTURE PRUNING ──────
-    ; Check if factor is trivial (p=1)
+    ; Check factor_p > 1
     lea rdi, [shor_factor_p]
     lea rsi, [bigint_temp_c]    ; 1
-    mov rdx, 1
-    call bigint_set_u64         ; temp_c = 1
-    
-    lea rdi, [shor_factor_p]
-    lea rsi, [bigint_temp_c]
     call bigint_cmp
     cmp rax, 0
-    jne .print_success          ; If not 1, success!
+    jle .prune_timeline         ; factor_p <= 1, trivial
+    
+    ; Check factor_p < N
+    lea rdi, [shor_factor_p]
+    lea rsi, [shor_N]
+    call bigint_cmp
+    cmp rax, 0
+    jge .prune_timeline         ; factor_p >= N, trivial
+    
+    ; Calculate factor_q = N / factor_p
+    lea rdi, [shor_N]           ; dividend
+    lea rsi, [shor_factor_p]    ; divisor
+    lea rdx, [shor_factor_q]    ; quotient
+    lea rcx, [shor_cf_rem]      ; remainder
+    call bigint_div_mod
+    
+    ; Check if division was exact (remainder == 0)
+    lea rdi, [shor_cf_rem]
+    call bigint_is_zero
+    cmp rax, 0
+    je .prune_timeline          ; Not exact division
+    
+    ; Verify: factor_p * factor_q == N
+    lea rdi, [bigint_temp_a]    ; temp = factor_p * factor_q
+    lea rsi, [shor_factor_p]
+    lea rdx, [shor_factor_q]
+    call bigint_mul
+    
+    lea rdi, [bigint_temp_a]
+    lea rsi, [shor_N]
+    call bigint_cmp
+    cmp rax, 0
+    jne .prune_timeline         ; Verification failed
+    
+    ; ────── SUCCESS! ──────
+    jmp .print_success
 
 .prune_timeline:
     ; Trivial factor detected. Reject this future.
-    lea rsi, [msg_shor_prune]   ; "Pruning trivial..."
+    lea rsi, [msg_shor_prune]
     call print_string
     
-    ; Rewind Reality: Loop through chunks and zero out the current God Link peak
+    ; Zero out the current God Link peaks to force different measurement
     xor r15, r15
 .rewind_loop:
     cmp r15, [shor_register_size]
     jge .rewind_done
     
-    mov r14, [god_link_chain + r15*8]   ; The bad peak
+    mov r14, [god_link_chain + r15*8]
     mov rbx, [state_vectors + r15*8]
+    test rbx, rbx
+    jz .rewind_next
     
-    ; Zero amplitude of r14
+    ; Zero amplitude of the rejected peak
     mov rax, r14
     shl rax, 4
     xorpd xmm0, xmm0
     movsd [rbx + rax], xmm0
     movsd [rbx + rax + 8], xmm0
     
+    ; Renormalize chunk
+    push r15
+    mov rdi, r15
+    call normalize_chunk
+    pop r15
+    
+.rewind_next:
     inc r15
     jmp .rewind_loop
 
 .rewind_done:
-    ; Retry from Phase 1
-    jmp .op_reality_collapse_restart_link
+    ; Check if we have any amplitude left
+    xor r15, r15
+    xorpd xmm7, xmm7            ; total_amplitude
+    
+.check_amplitude_loop:
+    cmp r15, [shor_register_size]
+    jge .check_amplitude_done
+    
+    mov rbx, [state_vectors + r15*8]
+    test rbx, rbx
+    jz .check_amplitude_next
+    
+    mov r13, [chunk_states + r15*8]
+    xor rcx, rcx
+    
+.sum_chunk_amp:
+    cmp rcx, r13
+    jge .check_amplitude_next
+    
+    mov rax, rcx
+    shl rax, 4
+    movsd xmm0, [rbx + rax]
+    mulsd xmm0, xmm0
+    movsd xmm1, [rbx + rax + 8]
+    mulsd xmm1, xmm1
+    addsd xmm0, xmm1
+    addsd xmm7, xmm0
+    
+    inc rcx
+    jmp .sum_chunk_amp
+
+.check_amplitude_next:
+    inc r15
+    jmp .check_amplitude_loop
+
+.check_amplitude_done:
+    ; If total amplitude too small, we've exhausted this reality
+    ucomisd xmm7, [epsilon]
+    jbe .reality_exhausted
+    
+    ; Otherwise, retry with new peaks
+    jmp .reality_retry
+
+.reality_exhausted:
+    ; All timelines pruned, factorization failed
+    lea rsi, [msg_error]
+    call print_string
+    lea rsi, [msg_unknown_op]   ; Reuse for "Reality Exhausted"
+    call print_string
+    mov rax, -1
+    jmp .exec_ret
 
 .print_success:
     ; Print Success!
@@ -2686,12 +2880,7 @@ execute_instruction:
     xor rax, rax
     jmp .exec_ret
 
-.op_reality_collapse_restart_link:
-    jmp .god_forge_loop
-    lea rsi, [msg_error]
-    call print_string
-    mov rax, -1
-    jmp .exec_ret
+
 
 .op_cont_frac:
     ; OP_CONT_FRAC: Continued Fractions with Multi-Chunk Support (v3 Fix)
