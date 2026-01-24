@@ -982,6 +982,12 @@ measure_chunk:
 
 .collapse_done:
     mov [measured_values + r12*8], r14
+    
+    ; Spooky Action: Propagate collapse to all braided partners
+    mov rdi, r12
+    mov rsi, r14
+    call propagate_knot_collapse
+    
     mov rax, r14
 
     add rsp, 32
@@ -1146,9 +1152,107 @@ braid_chunks:
     ret
 
 ; is_braid_target - Check if a chunk is the target (b) of any braid link
+; propagate_knot_collapse - Propagate a measurement collapse to all braided partners
+; Input: rdi = source_chunk, rsi = measured_state
+propagate_knot_collapse:
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+    push rbp
+    mov rbp, rsp
+    sub rsp, 2064               ; 2048 (mask) + 16 (args)
+    
+    ; Save arguments early
+    mov [rbp - 2056], rdi       ; source_chunk
+    mov [rbp - 2064], rsi       ; measured_state
+    
+    ; Clear visited mask (2048 bytes)
+    lea rdi, [rbp - 2048]
+    mov rcx, 256                ; 256 * 8 = 2048 bytes
+    xor rax, rax
+    rep stosq
+    
+    ; Mark source_chunk as visited
+    mov rax, [rbp - 2056]
+    bts [rbp - 2048], rax
+
+    ; Propagation Loop
+.prop_pass:
+    xor r15, r15                ; changed_flag = 0
+    xor r13, r13                ; link_index
+    mov r14, [num_braid_links]
+    
+.scan_links:
+    cmp r13, r14
+    jge .pass_done
+    
+    mov rdi, [braid_link_a + r13*8]
+    mov rsi, [braid_link_b + r13*8]
+    
+    ; Case 1: A is visited, B is not
+    mov rax, rdi
+    bt [rbp - 2048], rax
+    jnc .case2
+    mov rax, rsi
+    bt [rbp - 2048], rax
+    jc .next_link               ; Both visited
+    
+    ; Force B to state and mark visited
+    push rsi
+    mov rdi, rsi
+    mov rsi, [rbp - 2064]       ; measured_state
+    call force_state
+    pop rsi
+    mov rax, rsi
+    bts [rbp - 2048], rax
+    mov r15, 1                  ; changed = 1
+    jmp .next_link
+
+.case2:
+    ; Case 2: B is visited, A is not
+    mov rax, rsi
+    bt [rbp - 2048], rax
+    jnc .next_link
+    mov rax, rdi
+    bt [rbp - 2048], rax
+    jc .next_link
+    
+    ; Force A to state and mark visited
+    push rdi
+    mov rsi, [rbp - 2064]       ; measured_state
+    call force_state
+    pop rdi
+    mov rax, rdi
+    bts [rbp - 2048], rax
+    mov r15, 1                  ; changed = 1
+
+.next_link:
+    inc r13
+    jmp .scan_links
+
+.pass_done:
+    test r15, r15
+    jnz .prop_pass              ; repeat if changes made
+    
+    mov rsp, rbp                ; Clean cleanup
+    pop rbp
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
 is_braid_target:
     push rcx
     push rdx
+    
+    ; ALPHA NODE EXCEPTION: Chunk 0 is always grounded
+    cmp rdi, 0
+    je .not_target
+    
     mov rcx, [num_braid_links]
     xor rdx, rdx
 .scan_braid:
