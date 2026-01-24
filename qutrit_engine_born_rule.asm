@@ -779,6 +779,8 @@ create_superposition:
 
     mov r12, rdi
     mov rbx, [state_vectors + r12*8]
+    test rbx, rbx
+    jz .sup_done                ; Safety check: ignore uninitialized chunks
     mov r13, [chunk_states + r12*8]
 
     ; Calculate 1/sqrt(total_states)
@@ -1143,6 +1145,29 @@ braid_chunks:
     pop rbx
     ret
 
+; is_braid_target - Check if a chunk is the target (b) of any braid link
+is_braid_target:
+    push rcx
+    push rdx
+    mov rcx, [num_braid_links]
+    xor rdx, rdx
+.scan_braid:
+    cmp rdx, rcx
+    jge .not_target
+    cmp rdi, [braid_link_b + rdx*8]
+    je .is_target
+    inc rdx
+    jmp .scan_braid
+.is_target:
+    mov rax, 1
+    jmp .is_done
+.not_target:
+    xor rax, rax
+.is_done:
+    pop rdx
+    pop rcx
+    ret
+
 ; apply_braid_phases - Apply entanglement phases between braided chunks
 ; Input: rdi=chunk_a, rsi=chunk_b, rdx=qutrit_a, rcx=qutrit_b
 ; This creates ACTUAL entanglement by:
@@ -1164,7 +1189,11 @@ apply_braid_phases:
     mov r15, rcx                ; qutrit position in b
 
     mov rbx, [state_vectors + r12*8]    ; state_vector_a
+    test rbx, rbx
+    jz .exit_braid                      ; Safety check
     mov r10, [state_vectors + r13*8]    ; state_vector_b
+    test r10, r10
+    jz .exit_braid                      ; Safety check
     mov rcx, [chunk_states + r12*8]     ; num_states_a
     mov r11, [chunk_states + r13*8]     ; num_states_b
 
@@ -1292,6 +1321,7 @@ apply_braid_phases:
     inc r8
     jmp .braid_outer
 
+.exit_braid:
 .braid_done:
     add rsp, 32
     pop rbp
@@ -1805,6 +1835,21 @@ execute_instruction:
     lea rsi, [msg_phase_snap]
     call print_string
     call resurrect_manifold
+    
+    ; Reality Proofing: Apply Future Oracle to all active chunks
+    ; This ensures constraints like "Last Ages" persist globally.
+    mov r12, [num_chunks]
+    xor r15, r15
+.snap_proof_loop:
+    cmp r15, r12
+    jge .snap_proof_done
+    mov rdi, r15
+    call future_prediction_oracle
+    inc r15
+    jmp .snap_proof_loop
+.snap_proof_done:
+
+    call manifold_peak_collapse      ; Spooky Action: Lock to peak reality
     xor rax, rax
     jmp .exec_ret
 
@@ -3375,6 +3420,91 @@ execute_instruction:
 ; ═══════════════════════════════════════════════════════════════════════════════
 
 ; resurrect_manifold - Restore entanglement/superposition from the Registry
+; force_state - Force a chunk into a specific basis state
+; Input: rdi = chunk index, rsi = state index
+force_state:
+    push rbx
+    push rcx
+    push rdx
+    mov rbx, [state_vectors + rdi*8]
+    test rbx, rbx
+    jz .force_done
+    mov rcx, [chunk_states + rdi*8]
+    xor rdx, rdx
+.zero_loop:
+    cmp rdx, rcx
+    jge .set_peak
+    mov rax, rdx
+    shl rax, 4
+    xorpd xmm0, xmm0
+    movsd [rbx + rax], xmm0
+    movsd [rbx + rax + 8], xmm0
+    inc rdx
+    jmp .zero_loop
+.set_peak:
+    mov rax, rsi
+    shl rax, 4
+    movsd xmm0, [one]
+    movsd [rbx + rax], xmm0
+    xorpd xmm0, xmm0
+    movsd [rbx + rax + 8], xmm0
+.force_done:
+    pop rdx
+    pop rcx
+    pop rbx
+    ret
+
+; manifold_peak_collapse - Collapse all active chunks to their peak probability state
+manifold_peak_collapse:
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+    mov r12, [num_chunks]
+    xor r13, r13                ; chunk loop
+.mpc_chunk_loop:
+    cmp r13, r12
+    jge .mpc_done
+    mov rbx, [state_vectors + r13*8]
+    test rbx, rbx
+    jz .mpc_next_chunk
+    mov r14, [chunk_states + r13*8]
+    xor rcx, rcx                ; index
+    xor r15, r15                ; max_index
+    xorpd xmm2, xmm2            ; max_prob
+.mpc_scan_loop:
+    cmp rcx, r14
+    jge .mpc_collapse
+    mov rax, rcx
+    shl rax, 4
+    movsd xmm0, [rbx + rax]
+    movsd xmm1, [rbx + rax + 8]
+    mulsd xmm0, xmm0
+    mulsd xmm1, xmm1
+    addsd xmm0, xmm1
+    ucomisd xmm0, xmm2
+    jbe .mpc_scan_next
+    movsd xmm2, xmm0
+    mov r15, rcx
+.mpc_scan_next:
+    inc rcx
+    jmp .mpc_scan_loop
+.mpc_collapse:
+    mov rdi, r13
+    mov rsi, r15
+    call force_state
+.mpc_next_chunk:
+    inc r13
+    jmp .mpc_chunk_loop
+.mpc_done:
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
 resurrect_manifold:
     push rbx
     push r12
@@ -3391,6 +3521,8 @@ resurrect_manifold:
     jge .res_reset_done
     
     mov rbx, [state_vectors + r13*8]
+    test rbx, rbx               ; Safety check
+    jz .res_skip_reset
     mov r14, [chunk_states + r13*8]
     
     ; Zero out the entire state vector
@@ -3408,6 +3540,7 @@ resurrect_manifold:
     movsd xmm1, [one]
     movsd [rbx], xmm1
     
+.res_skip_reset:
     inc r13
     jmp .res_reset_loop
 
@@ -3417,8 +3550,16 @@ resurrect_manifold:
 .res_sup_loop:
     cmp r13, r12
     jge .res_sup_done
+    
+    ; Braid-awareness: Skip superposition for braid targets
+    mov rdi, r13
+    call is_braid_target
+    test rax, rax
+    jnz .res_sup_next
+    
     mov rdi, r13
     call create_superposition
+.res_sup_next:
     inc r13
     jmp .res_sup_loop
 
