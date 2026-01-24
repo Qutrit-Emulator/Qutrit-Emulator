@@ -172,6 +172,7 @@ section .data
     msg_shor_chunks2:   db " chunks", 10, 0
     msg_shor_period:    db "  [SHOR] Period candidate r=", 0
     msg_shor_factor:    db "  [SHOR] Factor found: ", 0
+    msg_hex_prefix:     db "0x", 0
     msg_shor_amplify:   db "  [SHOR] Amplifying non-trivial periods (Reality B)", 10, 0
     msg_shor_prune:     db "  [SHOR] Pruning trivial period paths", 10, 0
     msg_shor_contfrac:  db "  [SHOR] Continued Fractions: y/Q = ", 0
@@ -2033,11 +2034,7 @@ execute_instruction:
     lea rsi, [msg_shor_chunks]
     call print_string
     lea rdi, [shor_N]
-    call bigint_to_u64
-    mov rdi, rax
-    call print_number
-    lea rsi, [msg_newline]
-    call print_string
+    call print_bigint_hex
     
     ; Ensure a is at least initialized if not already
     lea rdi, [shor_a]
@@ -3616,5 +3613,66 @@ pow_mod_u64:
     pop rdx
     pop rcx
     pop rbx
+    ret
+
+; print_bigint_hex - Print BigInt in hex (low 64 bits only)
+; Input: rdi = pointer to BigInt
+print_bigint_hex:
+    push rdi
+    push rax
+    push rsi
+    
+    lea rsi, [msg_hex_prefix]
+    call print_string
+    
+    mov rax, [rdi] ; low 64 bits
+    mov rdi, rax
+    call print_hex_64
+    
+    lea rsi, [msg_newline]
+    call print_string
+    
+    pop rsi
+    pop rax
+    pop rdi
+    ret
+
+; print_hex_64 - Print 64-bit integer in hex
+print_hex_64:
+    push rax
+    push rbx
+    push rcx
+    push rdx
+    push rdi
+    
+    mov rbx, rdi
+    mov rcx, 16 ; 16 digits
+.hex_loop:
+    rol rbx, 4
+    mov rax, rbx
+    and rax, 0x0F
+    cmp al, 10
+    jl .hex_digit
+    add al, 'A' - 10
+    jmp .hex_store
+.hex_digit:
+    add al, '0'
+.hex_store:
+    push rcx
+    push rsi
+    mov [output_buffer], al
+    mov byte [output_buffer+1], 0
+    lea rsi, [output_buffer]
+    call print_string
+    pop rsi
+    pop rcx
+    dec rcx
+    jnz .hex_loop
+    
+    pop rdi
+    pop rdx
+    pop rcx
+    pop rbx
+    pop rax
     ret
 %include "bigint.asm"
