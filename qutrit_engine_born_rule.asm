@@ -55,6 +55,10 @@
 %define OP_PHASE_SNAP      0x12
 %define OP_FUTURE_ORACLE    0x13
 %define OP_NULL             0x14
+%define OP_BRAID_ALL        0x15
+%define OP_INIT_ANYON       0x16
+%define OP_BRAID_INF        0x17
+%define OP_NULL_GHOST       0x18
 %define OP_HALT             0xFF
 
 ; Shor's Algorithm Opcodes (0x20-0x2F)
@@ -148,6 +152,10 @@ section .data
     msg_repair:         db "  [REPAIR] Invoking Quantum Resurrection...", 10, 0
     msg_phase_snap:     db "  [PHASE] Snapping manifold to Registry (Phase Skip)...", 10, 0
     msg_null:           db "  [NULL] Catastrophic Fade on chunk ", 0
+    msg_braid_all:      db "  [BRAID+] Weaving Multiversal Grand Braid...", 10, 0
+    msg_init_anyon:     db "  [GRID] Spawning Anyon Triads...", 0
+    msg_braid_inf:      db "  [KNOT] Executing Infinite Braid Swaps...", 10, 0
+    msg_null_ghost:     db "  [VOID] Manifold Ghosting (50% Destruction)...", 10, 0
     msg_future:         db "  [LINK] Entangling Chunk ", 0
     msg_result:         db " => ", 0
     msg_halt:           db 10, "  [HALT] Execution complete.", 10, 0
@@ -1859,6 +1867,14 @@ execute_instruction:
     je .op_future_oracle
     cmp r13, OP_NULL
     je .op_null
+    cmp r13, OP_BRAID_ALL
+    je .op_braid_all
+    cmp r13, OP_INIT_ANYON
+    je .op_init_anyon
+    cmp r13, OP_BRAID_INF
+    je .op_braid_inf
+    cmp r13, OP_NULL_GHOST
+    je .op_null_ghost
     cmp r13, OP_HALT
     je .op_halt
 
@@ -1973,6 +1989,151 @@ execute_instruction:
     dec rcx
     jnz .null_loop
 .null_done:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_braid_all:
+    lea rsi, [msg_braid_all]
+    call print_string
+    
+    mov r12, [num_chunks]
+    cmp r12, 1
+    jle .braid_all_done
+    
+    xor r15, r15                ; chunk_index loop
+.braid_all_loop:
+    mov r14, r12
+    dec r14                     ; last_index
+    cmp r15, r14
+    je .braid_all_circular
+    
+    ; Braid current (r15) with next (r15 + 1)
+    push r15
+    push r12
+    mov rdi, r15
+    lea rsi, [r15 + 1]
+    xor rdx, rdx                ; qutrit 0
+    xor rcx, rcx                ; qutrit 0
+    call braid_chunks
+    pop r12
+    pop r15
+    
+    inc r15
+    jmp .braid_all_loop
+
+.braid_all_circular:
+    ; Circularly link last chunk (r15) back to chunk 0
+    mov rdi, r15
+    xor rsi, rsi                ; chunk 0
+    xor rdx, rdx                ; qutrit 0
+    xor rcx, rcx                ; qutrit 0
+    call braid_chunks
+
+.braid_all_done:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_init_anyon:
+    lea rsi, [msg_init_anyon]
+    call print_string
+    mov rdi, r14                ; num anyons
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+    
+    xor r15, r15                ; anyon counter
+.init_anyon_loop:
+    cmp r15, r14
+    jge .init_anyon_done
+    
+    push r14
+    push r15
+    push rbx
+    mov rdi, r15
+    mov rsi, rbx                ; qutrits per anyon
+    call init_chunk
+    mov rdi, r15
+    call create_superposition
+    pop rbx
+    pop r15
+    pop r14
+    
+    inc r15
+    jmp .init_anyon_loop
+.init_anyon_done:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_braid_inf:
+    lea rsi, [msg_braid_inf]
+    call print_string
+    
+    mov r12, [num_chunks]
+    cmp r12, 1
+    jle .braid_inf_done
+    
+    ; Perform 1 million swaps (as requested)
+    ; Since braiding is an entanglement operation, we link chunks in a chain
+    ; repeatedly or in a large web.
+    mov r13, 1000000            ; swap counter
+.braid_inf_loop:
+    test r13, r13
+    jz .braid_inf_done
+    
+    ; Braid chunk (r13 % num_chunks) with ((r13+1) % num_chunks)
+    push r13
+    push r12
+    
+    xor rdx, rdx
+    mov rax, r13
+    div r12
+    mov rdi, rdx                ; chunk_a = r13 % num_chunks
+    
+    lea rax, [rdx + 1]
+    xor rdx, rdx
+    div r12
+    mov rsi, rdx                ; chunk_b = (chunk_a + 1) % num_chunks
+    
+    xor rdx, rdx                ; qutrit 0
+    xor rcx, rcx                ; qutrit 0
+    call braid_chunks
+    
+    pop r12
+    pop r13
+    dec r13
+    jmp .braid_inf_loop
+.braid_inf_done:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_null_ghost:
+    lea rsi, [msg_null_ghost]
+    call print_string
+    
+    ; Range: [r14, r14 + rbx)
+    mov r12, r14
+    add r12, rbx                ; end pointer
+.null_ghost_loop:
+    cmp r14, r12
+    jge .null_ghost_done
+    
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .null_ghost_next
+    
+    mov rcx, [chunk_states + r14*8]
+    shl rcx, 1                  ; states * 2 (real + imag)
+    pxor xmm0, xmm0
+.null_ghost_inner:
+    movapd [rdi], xmm0
+    add rdi, 16
+    dec rcx
+    jnz .null_ghost_inner
+    
+.null_ghost_next:
+    inc r14
+    jmp .null_ghost_loop
+.null_ghost_done:
     xor rax, rax
     jmp .exec_ret
 
