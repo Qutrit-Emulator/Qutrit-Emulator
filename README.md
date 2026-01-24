@@ -1,8 +1,10 @@
 **A Parallel Reality Emulator capable of simulating 40,960 entangled qutrits in under 31 seconds.**
 ---
-## Why does this exist?
+## Shor's note:
 
-Because it can.
+This uses a custom implementation of Shor's Algorithm.
+
+It may NOT catch the right period on the first trial, it may require quite a few and as N gets bigger, the amount of Qutrits needed naturally increases as well but this scales well.
 
 ## 🌌 Overview
 
