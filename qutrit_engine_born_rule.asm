@@ -27,9 +27,9 @@
 
 %define MAX_CHUNK_SIZE      14          ; Max qutrits per chunk (3^14 = 4,782,969)
 %define MAX_STATES          4782969     ; 3^14
-%define MAX_CHUNKS          4096        ; Support 4096 chunks
+%define MAX_CHUNKS          16384       ; Support 16k chunks (needed for 40k qutrits)
 %define MAX_ADDONS          32          ; Max registered add-ons
-%define MAX_BRAID_LINKS     4096        ; Keep high braid links
+%define MAX_BRAID_LINKS     16384       ; Keep high braid links
 
 %define STATE_BYTES         16          ; Complex amplitude: 8 (real) + 8 (imag)
 
@@ -164,6 +164,9 @@ section .data
     msg_bell_pass:      db "  ✓ BELL TEST PASSED - Entanglement verified!", 10, 0
     msg_bell_fail:      db "  ✗ BELL TEST FAILED - No entanglement detected", 10, 0
     msg_percent:        db "%", 10, 0
+    
+    msg_debug_div:      db "[DEBUG] Starting Sym Div", 10, 0
+    msg_debug_pow:      db "[DEBUG] Starting Sym Pow", 10, 0
     
     ; Shor's algorithm messages
     msg_shor_init:      db "  [SHOR] Initializing ", 0
@@ -2607,63 +2610,126 @@ execute_instruction:
     jmp .god_collapse_loop_unused
 
 .god_collapse_done:
-    ; ────── PHASE 3: RECONSTRUCT PERIOD ──────
+    ; ────── PHASE 3: TRUNCATED DIVISION (r = Q/y) ──────
+    ; For huge registers (40k qutrits), y and Q are too big for BigInts.
+    ; But r is small (< 1024 bits typically).
+    ; We approximate r using the most significant chunks of y and Q.
     
-    ; r = sum(god_link_chain[i] * basis[i])
-    ; where basis[i] = product(chunk_states[0..i-1])
-    
-    lea rdi, [shor_period]
+    ; 1. Find MSB of measurement y
+    xor r15, r15
+    mov rcx, [shor_register_size]
+    dec rcx                 ; start from last chunk
+.find_msb_loop:
+    cmp rcx, 0
+    jl .prune_timeline      ; All zeros? Unlikely but invalid.
+    mov rax, [god_link_chain + rcx*8]
+    test rax, rax
+    jnz .msb_found
+    dec rcx
+    jmp .find_msb_loop
+
+.msb_found:
+    ; rcx = index k of MSB
+    ; distance check: if (size - 1 - k) > 512 chunks, r > 3^2000 (roughly), too big
+    mov rax, [shor_register_size]
+    dec rax
+    sub rax, rcx
+    cmp rax, 512
+    jg .prune_timeline
+
+    ; We take a window of W chunks starting at k
+    %define WINDOW_CHUNKS 64 ; ~400-500 bits of precision
+
+    ; 2. Construct Denominator (val_y) from window [k - W + 1, k]
+    lea rdi, [bigint_temp_b] ; val_y
     call bigint_clear
     
-    lea rdi, [shor_cf_temp]     ; basis = 1
-    mov rsi, 1
+    mov r14, rcx            ; k
+    mov r13, rcx
+    sub r13, WINDOW_CHUNKS - 1
+    cmp r13, 0
+    jge .window_start_ok
+    xor r13, r13            ; clamp to 0
+.window_start_ok:
+    ; r13 = start index for window
+    
+    ; Construct from high to low for easier BigInt building
+    mov r12, r14            ; cursor = k
+.build_y_loop:
+    cmp r12, r13
+    jl .build_y_done
+    
+    ; val_y = val_y * chunk_state[r12] + god_link_chain[r12]
+    lea rdi, [bigint_temp_a] ; temp = chunk_state
+    mov rsi, [chunk_states + r12*8]
     call bigint_set_u64
     
-    xor r15, r15
-.god_reconstruct_loop:
-    cmp r15, [shor_register_size]
-    jge .god_reconstruct_done
-    
-    ; term = god_link_chain[i] * basis
-    lea rdi, [bigint_temp_a]
-    mov rsi, [god_link_chain + r15*8]
-    call bigint_set_u64
-    
-    lea rdi, [bigint_temp_a]
-    lea rsi, [bigint_temp_a]
-    lea rdx, [shor_cf_temp]     ; basis
+    lea rdi, [bigint_temp_c] ; temporary product
+    lea rsi, [bigint_temp_b] ; current val_y
+    lea rdx, [bigint_temp_a] ; chunk_state
     call bigint_mul
     
-    ; period += term
-    lea rdi, [shor_period]
-    lea rsi, [shor_period]
-    lea rdx, [bigint_temp_a]
+    lea rdi, [bigint_temp_a] ; digit as bigint
+    call bigint_clear
+    mov rax, [god_link_chain + r12*8]
+    mov [bigint_temp_a], rax
+    
+    lea rdi, [bigint_temp_b] ; new val_y
+    lea rsi, [bigint_temp_c] ; product
+    lea rdx, [bigint_temp_a] ; digit
     call bigint_add
     
-    ; basis *= chunk_states[r15]
-    lea rdi, [bigint_temp_b]
-    mov rax, [chunk_states + r15*8]
-    mov rsi, rax
+    dec r12
+    jmp .build_y_loop
+
+.build_y_done:
+    ; 3. Construct Numerator (val_Q) = product(chunk_states[i]) for i from start_index to registrar_size-1
+    lea rdi, [shor_period]  ; We'll use this as numerator temp
+    call bigint_clear
+    mov qword [shor_period], 1 ; init to 1
+    
+    mov r12, r13            ; start_index
+.build_q_loop:
+    cmp r12, [shor_register_size]
+    jge .build_q_done
+    
+    lea rdi, [bigint_temp_a]
+    mov rsi, [chunk_states + r12*8]
     call bigint_set_u64
     
-    lea rdi, [shor_cf_temp]
-    lea rsi, [shor_cf_temp]
-    lea rdx, [bigint_temp_b]
+    lea rdi, [bigint_temp_c]
+    lea rsi, [shor_period]
+    lea rdx, [bigint_temp_a]
     call bigint_mul
     
-    inc r15
-    jmp .god_reconstruct_loop
+    lea rdi, [shor_period]
+    lea rsi, [bigint_temp_c]
+    call bigint_copy
+    
+    inc r12
+    jmp .build_q_loop
 
-.god_reconstruct_done:
+.build_q_done:
+    ; 4. Divide: r = val_Q / val_y
+    lea rdi, [shor_period]   ; Numerator
+    lea rsi, [bigint_temp_b]  ; Denominator (val_y)
+    lea rdx, [bigint_temp_c]  ; Quotient (r)
+    lea rcx, [bigint_temp_a]  ; Remainder (discard)
+    call bigint_div_mod
+    
+    lea rdi, [shor_period]
+    lea rsi, [bigint_temp_c]
+    call bigint_copy
+    
     ; Print reconstructed period
     lea rsi, [msg_shor_period]
     call print_string
     lea rdi, [shor_period]
     call print_bigint_hex
     
-    ; ────── PHASE 4: VALIDATE PERIOD ──────
+    ; ────── PHASE 4: VALIDATE PERIOD (Standard) ──────
     
-    ; Check if period is zero (impossible)
+    ; Check if period is zero
     lea rdi, [shor_period]
     call bigint_is_zero
     cmp rax, 1
@@ -2672,9 +2738,9 @@ execute_instruction:
     ; Check if period is even
     lea rdi, [shor_period]
     mov rsi, 0
-    call bigint_get_bit         ; Get bit 0 (LSB)
+    call bigint_get_bit
     cmp rax, 1
-    je .prune_timeline          ; Odd period, reject
+    je .prune_timeline
     
     ; ────── PHASE 5: CALCULATE FACTORS ──────
     
@@ -2683,16 +2749,20 @@ execute_instruction:
     lea rsi, [shor_period]
     call bigint_copy
     lea rdi, [bigint_temp_a]
-    call bigint_shr1            ; exp = period >> 1
+    call bigint_shr1
     
     lea rdi, [bigint_temp_b]    ; x = a^exp mod N
     lea rsi, [shor_a]
-    lea rdx, [bigint_temp_a]    ; exponent
-    lea rcx, [shor_N]           ; modulus
+    lea rdx, [bigint_temp_a]
+    lea rcx, [shor_N]
     call bigint_pow_mod
     
+    ; Result 'x' is now in [bigint_temp_b]
+    
+    ; ────── PHASE 6: EXTRACT FACTORS (EXISTING LOGIC) ──────
+    
     ; Check x ≠ 1
-    lea rdi, [bigint_temp_c]
+    lea rdi, [bigint_temp_c] ; 1
     mov rsi, 1
     call bigint_set_u64
     
@@ -2719,8 +2789,6 @@ execute_instruction:
     cmp rax, 0
     je .prune_timeline          ; x == N-1, trivial
     
-    ; ────── PHASE 6: EXTRACT FACTORS ──────
-    
     ; factor_p = gcd(x-1, N)
     lea rdi, [bigint_temp_a]    ; temp = x - 1
     lea rsi, [bigint_temp_b]    ; x
@@ -2736,8 +2804,29 @@ execute_instruction:
     lea rdi, [shor_factor_p]
     lea rsi, [bigint_temp_c]    ; 1
     call bigint_cmp
+    call bigint_cmp
     cmp rax, 0
-    jle .prune_timeline         ; factor_p <= 1, trivial
+    jg .factor_p_good           ; factor_p > 1, use it
+    
+    ; Try gcd(x+1, N)
+    lea rdi, [bigint_temp_a]    ; temp = x + 1
+    lea rsi, [bigint_temp_b]    ; x
+    lea rdx, [bigint_temp_c]    ; 1
+    call bigint_add
+    
+    lea rdi, [bigint_temp_a]    ; x+1
+    lea rsi, [shor_N]           ; N
+    lea rdx, [shor_factor_p]    ; result
+    call bigint_gcd
+    
+    ; Check again
+    lea rdi, [shor_factor_p]
+    lea rsi, [bigint_temp_c]    ; 1
+    call bigint_cmp
+    cmp rax, 0
+    jle .prune_timeline         ; Both failed
+    
+.factor_p_good:
     
     ; Check factor_p < N
     lea rdi, [shor_factor_p]
@@ -2785,7 +2874,7 @@ execute_instruction:
     cmp r15, [shor_register_size]
     jge .rewind_done
     
-    mov r14, [god_link_chain + r15*8]
+    mov r14, [shor_measured + r15*8]   ; Use preserved measurement
     mov rbx, [state_vectors + r15*8]
     test rbx, rbx
     jz .rewind_next
