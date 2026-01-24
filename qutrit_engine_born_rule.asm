@@ -2435,6 +2435,17 @@ execute_instruction:
     lea rsi, [msg_reality_scan]
     call print_string
     
+    ; DEBUG: Print loaded N
+    lea rsi, [msg_shor_chunks] ; Reuse "N=" string or part of it? 
+    ; msg_shor_chunks: db "-chunk quantum register for N=", 0
+    ; Let's add a clean label for N= if needed, or just use what we have.
+    ; msg_shor_modexp: db " [SHOR] Applying method..."
+    ; I'll append a generic "N=" print.
+    lea rsi, [msg_shor_chunks] ; this ends with "N="
+    call print_string
+    lea rdi, [shor_N]
+    call print_bigint_hex
+    
     ; 1. Iterative Modular Resonance Scan: Find period r where a^x mod N = 1
     ; Instead of classical division, we scan "Timelines" for phase alignment.
     
@@ -3916,17 +3927,31 @@ print_bigint_hex:
     push rdi
     push rax
     push rsi
+    push rcx
+    push rdx
     
     lea rsi, [msg_hex_prefix]
     call print_string
     
-    mov rax, [rdi] ; low 64 bits
+    mov rdx, rdi            ; Save pointer
+    mov rcx, 63             ; Start from top limb (BIGINT_LIMBS - 1)
+
+.hex_limb_loop:
+    mov rax, [rdx + rcx*8]  ; Load limb
     mov rdi, rax
-    call print_hex_64
+    call print_hex_64       ; Print 16 digits
     
+    test rcx, rcx
+    jz .hex_done
+    dec rcx
+    jmp .hex_limb_loop
+
+.hex_done:
     lea rsi, [msg_newline]
     call print_string
     
+    pop rdx
+    pop rcx
     pop rsi
     pop rax
     pop rdi
