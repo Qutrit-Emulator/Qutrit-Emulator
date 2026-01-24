@@ -54,6 +54,7 @@
 %define OP_REPAIR           0x11
 %define OP_PHASE_SNAP      0x12
 %define OP_FUTURE_ORACLE    0x13
+%define OP_NULL             0x14
 %define OP_HALT             0xFF
 
 ; Shor's Algorithm Opcodes (0x20-0x2F)
@@ -146,6 +147,7 @@ section .data
     msg_measure:        db "  [MEAS] Measuring chunk ", 0
     msg_repair:         db "  [REPAIR] Invoking Quantum Resurrection...", 10, 0
     msg_phase_snap:     db "  [PHASE] Snapping manifold to Registry (Phase Skip)...", 10, 0
+    msg_null:           db "  [NULL] Catastrophic Fade on chunk ", 0
     msg_future:         db "  [LINK] Entangling Chunk ", 0
     msg_result:         db " => ", 0
     msg_halt:           db 10, "  [HALT] Execution complete.", 10, 0
@@ -1855,6 +1857,8 @@ execute_instruction:
     je .op_addon
     cmp r13, OP_FUTURE_ORACLE
     je .op_future_oracle
+    cmp r13, OP_NULL
+    je .op_null
     cmp r13, OP_HALT
     je .op_halt
 
@@ -1932,6 +1936,43 @@ execute_instruction:
     lea rsi, [msg_repair]
     call print_string
     call resurrect_manifold
+    
+    ; Unified Cure Logic (matches OP_PHASE_SNAP)
+    mov r12, [num_chunks]
+    xor r15, r15
+.repair_proof_loop:
+    cmp r15, r12
+    jge .repair_proof_done
+    mov rdi, r15
+    call future_prediction_oracle
+    inc r15
+    jmp .repair_proof_loop
+.repair_proof_done:
+    call manifold_peak_collapse
+    
+    xor rax, rax
+    jmp .exec_ret
+
+.op_null:
+    lea rsi, [msg_null]
+    call print_string
+    mov rdi, r14
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+
+    mov rbx, [state_vectors + r14*8]
+    test rbx, rbx
+    jz .null_done
+    mov rcx, [chunk_states + r14*8]
+    shl rcx, 1                  ; states * 2 (real + imag)
+    pxor xmm0, xmm0
+.null_loop:
+    movapd [rbx], xmm0
+    add rbx, 16
+    dec rcx
+    jnz .null_loop
+.null_done:
     xor rax, rax
     jmp .exec_ret
 
