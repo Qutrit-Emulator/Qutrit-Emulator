@@ -108,6 +108,7 @@ section .data
     three:              dq 3.0
     minus_one:          dq -1.0
     epsilon:            dq 1.0e-15
+    two_pow_64:         dq 1.8446744073709551616e19
 
     ; Qutrit Hadamard matrix (3x3 complex): H = (1/√3) * [[1,1,ω²],[1,ω,ω],[ω²,ω,1]]
     ; where ω = exp(2πi/3)
@@ -2056,7 +2057,7 @@ execute_instruction:
     ; Avoid Standard OP_BRAID (0x09) and OP_PHASE_SNAP (0x12) if they were already handled
     cmp r13, 0x09
     je .op_reality_collapse
-    cmp r13, 0x12
+    cmp r13, OP_BRAID_ALL       ; 0x15
     je .op_braid_all
     
     cmp r13, OP_UNBRAID
@@ -2810,68 +2811,79 @@ execute_instruction:
     
     ; 3. Calculate Phase = 2π * (v / N) using MSB precision
     ; We need accurate v/N ratio. If v,N > 64 bits, standard to_u64 gives LSBs (garbage ratio).
-    ; We must shift right until N fits in ~53 bits (double mantissa limit).
-    
+    ; 3. Use top 128 bits of both v and N for high-precision ratio
+    ; Find top limb index I = (bitlen - 1) / 64
     lea rdi, [shor_N]
     call bigint_bitlen
     mov r9, rax                 ; N bits
+    dec rax
+    shr rax, 6
+    mov r10, rax                ; r10 = index I
     
-    cmp r9, 60
-    jle .modexp_small_n
+    ; Ratio = (v[I]*2^64 + v[I-1]) / (N[I]*2^64 + N[I-1])
     
-    ; Large N: shift both v and N right by (Bits - 60)
-    lea rdi, [bigint_temp_b]    ; Copy v
-    lea rsi, [shor_cf_num]
-    call bigint_copy
+    ; --- Load N (128-bit) ---
+    lea r11, [shor_N]
+    mov rax, [r11 + r10*8]
+    push rax
+    fild qword [rsp]
+    test rax, rax
+    jns .n_high_pos
+    fadd qword [two_pow_64]
+.n_high_pos:
+    fmul qword [two_pow_64]
     
-    lea rdi, [bigint_temp_c]    ; Copy N
-    lea rsi, [shor_N]
-    call bigint_copy
+    test r10, r10
+    jz .n_no_low
+    mov rax, [r11 + r10*8 - 8]
+    mov [rsp], rax
+    fild qword [rsp]
+    test rax, rax
+    jns .n_low_pos
+    fadd qword [two_pow_64]
+.n_low_pos:
+    faddp
+    jmp .n_val_ok
+.n_no_low:
+    ; (already has high * 2^64, but if I=0, we should have used the limb as-is)
+    fdiv qword [two_pow_64]     ; correction
+.n_val_ok:
     
-    mov cx, r9w
-    sub cx, 60                  ; shift count
+    ; --- Load v (128-bit) ---
+    lea r11, [shor_cf_num]
+    mov rax, [r11 + r10*8]
+    mov [rsp], rax
+    fild qword [rsp]
+    test rax, rax
+    jns .v_high_pos
+    fadd qword [two_pow_64]
+.v_high_pos:
+    fmul qword [two_pow_64]
     
-.modexp_shift_loop:
-    test cx, cx
-    jz .modexp_calc_ratio
+    test r10, r10
+    jz .v_no_low
+    mov rax, [r11 + r10*8 - 8]
+    mov [rsp], rax
+    fild qword [rsp]
+    test rax, rax
+    jns .v_low_pos
+    fadd qword [two_pow_64]
+.v_low_pos:
+    faddp
+    jmp .v_val_ok
+.v_no_low:
+    fdiv qword [two_pow_64]
+.v_val_ok:
     
-    lea rdi, [bigint_temp_b]
-    call bigint_shr1
-    lea rdi, [bigint_temp_c]
-    call bigint_shr1
+    pop rax
     
-    dec cx
-    jmp .modexp_shift_loop
+    fdivp st1, st0              ; ST(0) = v / N
+    fmul qword [two_pi]         ; ST(0) = angle
     
-.modexp_calc_ratio:
-    lea rdi, [bigint_temp_b]
-    call bigint_to_u64
-    cvtsi2sd xmm0, rax          ; v_shifted
-    
-    lea rdi, [bigint_temp_c]
-    call bigint_to_u64
-    cvtsi2sd xmm1, rax          ; N_shifted
-    jmp .modexp_div
-    
-.modexp_small_n:
-    lea rdi, [shor_cf_num]
-    call bigint_to_u64          ; rax = low 64 bits of v
-    cvtsi2sd xmm0, rax
-    
-    lea rdi, [shor_N]
-    call bigint_to_u64          ; rax = low 64 bits of N
-    cvtsi2sd xmm1, rax
-    
-.modexp_div:
-    test rax, rax               ; check N (low) not zero logic? 
-    ; If N_shifted is 0 (shouldn't happen if bitlen > 0), set to 1
-    ucomisd xmm1, [zero]
-    jne .mod_n_ok
-    movsd xmm1, [one]
-.mod_n_ok:
-    
-    divsd xmm0, xmm1            ; v / N
-    mulsd xmm0, [two_pi]        ; 2π * (v / N)
+    sub rsp, 8
+    fstp qword [rsp]
+    movsd xmm0, [rsp]
+    add rsp, 8
     
     ; Calculate sin and cos
     sub rsp, 16
@@ -3323,8 +3335,8 @@ execute_instruction:
 
 .msb_found:
     ; rcx = index k of MSB
-    %define WINDOW_SIZE 256 ; ~1600 bits
-
+    %define WINDOW_SIZE 512 ; Upgraded to 3200 bits
+    
     ; 2. Construct Numerator (shor_cf_num) from window [k - W + 1, k]
     lea rdi, [shor_cf_num]
     call bigint_clear
