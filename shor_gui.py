@@ -13,6 +13,8 @@ OP_LOAD_N_PART      = 0x29
 OP_SHOR_INIT        = 0x20
 OP_MOD_EXP          = 0x21
 OP_QFT              = 0x22
+OP_FACTOR_ORACLE    = 0x25
+OP_SHOR_AMPLIFY     = 0x27
 OP_REALITY_COLLAPSE = 0x2A
 
 class ShorFactoringGUI:
@@ -117,10 +119,15 @@ class ShorFactoringGUI:
         # 4. Apply QFT
         instructions.append(self.pack_instruction(OP_QFT))
 
-        # 5. Reality Collapse (Factor Extraction)
+        # 5. Reality B Enhancements: Prune trivial factors and amplify valid periods
+        # We target the last chunk or the register generally as per engine logic
+        instructions.append(self.pack_instruction(OP_FACTOR_ORACLE, target=num_chunks - 1))
+        instructions.append(self.pack_instruction(OP_SHOR_AMPLIFY, target=num_chunks - 1))
+
+        # 6. Reality Collapse (God Link Protocol)
         instructions.append(self.pack_instruction(OP_REALITY_COLLAPSE))
 
-        # 6. Halt
+        # 7. Halt
         instructions.append(self.pack_instruction(OP_HALT))
 
         return b"".join(instructions)
