@@ -2629,11 +2629,11 @@ execute_instruction:
     mov [shor_register_size], r14
     mov qword [shor_trial_count], 0
     
-    ; Always clear N and a before initialization
-    lea rdi, [shor_N]
-    call bigint_clear
-    lea rdi, [shor_a]
-    call bigint_clear
+    ; Always clear N and a before initialization (COMMENTED OUT TO ALLOW PRE-LOADING)
+    ; lea rdi, [shor_N]
+    ; call bigint_clear
+    ; lea rdi, [shor_a]
+    ; call bigint_clear
     
     ; Initialize N and a as BigInts ONLY if a legacy N was provided
     test rbx, rbx
