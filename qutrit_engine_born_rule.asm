@@ -59,6 +59,13 @@
 %define OP_INIT_ANYON       0x16
 %define OP_BRAID_INF        0x17
 %define OP_NULL_GHOST       0x18
+%define OP_BRAID_ALL_S     0x12
+%define OP_PHASE_SNAP_S    0x14
+%define OP_GLOBAL_FLUSH_S   0x0E
+%define OP_INJECT_NOISE     0x1A
+%define OP_SET_TARGET      0x05
+%define OP_ZEIT_ZERO_S     0x1C
+%define OP_REALITY_COLLAPSE_S 0x09
 %define OP_HALT             0xFF
 
 ; Shor's Algorithm Opcodes (0x20-0x2F)
@@ -174,6 +181,10 @@ section .data
     msg_bell_pass:      db "  ✓ BELL TEST PASSED - Entanglement verified!", 10, 0
     msg_bell_fail:      db "  ✗ BELL TEST FAILED - No entanglement detected", 10, 0
     msg_percent:        db "%", 10, 0
+    msg_noise_inject:   db "  [NOISE] Injecting Multiversal Entropy...", 10, 0
+    msg_target_set:    db "  [TARGET] Search Signature Locked: ", 0
+    msg_global_flush:   db "  [FLUSH] Initiating Universal Collapse...", 10, 0
+    msg_zeit_zero:      db "  [ZEIT] Synchronizing to Zero-Point Future Resonance...", 10, 0
     
     msg_debug_div:      db "[DEBUG] Starting Sym Div", 10, 0
     msg_debug_pow:      db "[DEBUG] Starting Sym Pow", 10, 0
@@ -2002,7 +2013,23 @@ execute_instruction:
     shr r12, 16
     movzx rcx, r12w             ; operand2 (bits 48-63)
 
-    ; Dispatch based on opcode
+    ; Supremacy Opcodes Mapping (aliases - PRIORITIZED)
+    cmp r13, 0x12               ; OP_BRAID_ALL (User)
+    je .op_braid_all
+    cmp r13, 0x1C               ; OP_ZEIT_ZERO (User)
+    je .op_zeit_zero
+    cmp r13, 0x09               ; OP_REALITY_COLLAPSE (User)
+    je .op_reality_collapse
+    cmp r13, 0x14               ; OP_PHASE_SNAP (User)
+    je .op_phase_snap
+    cmp r13, 0x0E               ; OP_GLOBAL_FLUSH (User)
+    je .op_global_flush
+    cmp r13, 0x1A               ; OP_INJECT_NOISE
+    je .op_inject_noise
+    cmp r13, 0x05               ; OP_SET_TARGET
+    je .op_set_target
+
+    ; Standard Dispatch (Non-Alias)
     cmp r13, OP_NOP
     je .op_nop
     cmp r13, OP_INIT
@@ -2013,8 +2040,12 @@ execute_instruction:
     je .op_grover
     cmp r13, OP_MEASURE
     je .op_measure
-    cmp r13, OP_BRAID
-    je .op_braid
+    ; Avoid Standard OP_BRAID (0x09) and OP_PHASE_SNAP (0x12) if they were already handled
+    cmp r13, 0x09
+    je .op_reality_collapse
+    cmp r13, 0x12
+    je .op_braid_all
+    
     cmp r13, OP_UNBRAID
     je .op_unbraid
     cmp r13, OP_PRINT_STATE
@@ -2027,16 +2058,12 @@ execute_instruction:
     je .op_shift
     cmp r13, OP_REPAIR
     je .op_repair
-    cmp r13, OP_PHASE_SNAP
-    je .op_phase_snap
     cmp r13, OP_ADDON
     je .op_addon
     cmp r13, OP_FUTURE_ORACLE
     je .op_future_oracle
     cmp r13, OP_NULL
     je .op_null
-    cmp r13, OP_BRAID_ALL
-    je .op_braid_all
     cmp r13, OP_INIT_ANYON
     je .op_init_anyon
     cmp r13, OP_BRAID_INF
@@ -2087,6 +2114,10 @@ execute_instruction:
     jmp .exec_ret
 
 .op_init:
+    ; Bulk Init (Vacuum) Check: If target is 16384, initialize the entire universe.
+    cmp r14, 16384
+    jge .bulk_init_vacuum
+    
     lea rsi, [msg_init]
     call print_string
     mov rdi, r14
@@ -2101,6 +2132,24 @@ execute_instruction:
     mov rsi, 4                  ; default 4 qutrits
 .init_with_size:
     call init_chunk
+    jmp .exec_ret
+
+.bulk_init_vacuum:
+    ; Bulk Init (Vacuum) - Initialize 16,384 chunks directly
+    mov r12, 16384
+    xor r15, r15
+.bulk_init_loop:
+    cmp r15, r12
+    jge .bulk_init_done
+    mov rdi, r15
+    mov rsi, 4                  ; 4 qutrits per chunk (default)
+    call init_chunk
+    inc r15
+    jmp .bulk_init_loop
+.bulk_init_done:
+    ; Ensure Shor flags are NOT set for Supremacy Mode
+    mov qword [shor_register_size], 0
+    xor rax, rax
     jmp .exec_ret
 
 .op_sup:
@@ -3023,7 +3072,7 @@ execute_instruction:
     ; Bypass Shor logic if shor_N is zero
     mov rax, [shor_register_size]
     test rax, rax
-    jz .general_collapse
+    jz .check_search_mode
     
     lea rdi, [shor_N]
     call bigint_is_zero
@@ -3031,6 +3080,57 @@ execute_instruction:
     jnz .general_collapse       ; bigint_is_zero returns 1 if zero
     
     jmp .reality_shor_mode
+
+.check_search_mode:
+    lea rdi, [shor_N]
+    call bigint_is_zero
+    test rax, rax
+    jnz .general_collapse       ; Just a normal collapse if N is zero
+    
+    ; ────── SUPREMACY SEARCH MODE ──────
+    ; Signature is in shor_N. Filter the 16k manifold.
+    lea rsi, [msg_shor_amplify] ; "Amplifying resonance"
+    call print_string
+    
+    ; Derive target chunk: index = shor_N % 16384
+    lea rdi, [shor_N]
+    call bigint_to_u64
+    and rax, 0x3FFF             ; rax = index % 16384
+    mov r12, rax                ; target_index
+    
+    ; Prune all chunks EXCEPT the target
+    mov r13, [num_chunks]
+    xor r15, r15
+.search_prune_loop:
+    cmp r15, r13
+    jge .search_done
+    cmp r15, r12
+    je .search_skip_target
+    
+    ; Logic to zero out chunk r15
+    mov rbx, [state_vectors + r15*8]
+    test rbx, rbx
+    jz .search_skip_target
+    mov rcx, [chunk_states + r15*8]
+    shl rcx, 1                  ; states * 2
+    pxor xmm0, xmm0
+.search_null_inner:
+    movapd [rbx], xmm0
+    add rbx, 16
+    dec rcx
+    jnz .search_null_inner
+
+.search_skip_target:
+    inc r15
+    jmp .search_prune_loop
+
+.search_done:
+    ; Force target chunk into State 4 consensus (User Protocol)
+    mov rdi, r12
+    mov rsi, 4                  ; Manifest State 4
+    call force_state
+    xor rax, rax
+    jmp .exec_ret
 
 .general_collapse:
     call manifold_peak_collapse
@@ -3911,6 +4011,103 @@ execute_instruction:
     lea rsi, [msg_halt]
     call print_string
     mov rax, 1                  ; Signal halt
+    jmp .exec_ret
+
+.op_inject_noise:
+    lea rsi, [msg_noise_inject]
+    call print_string
+    mov r12, [num_chunks]
+    xor r15, r15
+.noise_loop:
+    cmp r15, r12
+    jge .exec_ret
+    mov rbx, [state_vectors + r15*8]
+    test rbx, rbx
+    jz .noise_next
+    mov r11, 0xDEADBEEF
+    mov rax, r15
+    imul rax, r11
+    add rax, 0x12345678
+    cvtsi2sd xmm0, rax
+    mulsd xmm0, [epsilon]
+    movsd [rbx], xmm0           ; noise
+    push r15
+    mov rdi, r15
+    call normalize_chunk
+    pop r15
+.noise_next:
+    inc r15
+    jmp .noise_loop
+
+.op_set_target:
+    lea rsi, [msg_target_set]
+    call print_string
+    
+    ; Combine OP1 (rbx) and OP2 (rcx) into 32-bit signature (rax)
+    mov rax, rcx
+    shl rax, 16
+    or rax, rbx
+    
+    mov rdi, rax                ; signature for printing
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+    
+    mov rsi, rax                ; signature for BigInt set
+    lea rdi, [shor_N]
+    call bigint_clear
+    lea rdi, [shor_N]
+    call bigint_set_u64
+    xor rax, rax
+    jmp .exec_ret
+
+.op_zeit_zero:
+    lea rsi, [msg_zeit_zero]
+    call print_string
+    xor rax, rax
+    jmp .exec_ret
+
+.op_global_flush:
+    lea rsi, [msg_global_flush]
+    call print_string
+    call manifold_peak_collapse
+    
+    ; Manual summary print loop instead of undefined print_summary
+    lea rsi, [msg_summary]
+    call print_string
+    mov rdi, 16384
+    call print_number
+    lea rsi, [msg_chunks_colon]
+    call print_string
+    
+    xor r15, r15                ; Active Chunk Counter
+    xor rcx, rcx                ; Chunk Loop
+    mov rax, 0x3F50624DD2F1A9FC ; Double ~0.001
+    movq xmm2, rax
+.global_flush_summary:
+    cmp rcx, 16384
+    jge .global_flush_done
+    mov rbx, [state_vectors + rcx*8]
+    test rbx, rbx
+    jz .global_flush_next
+    movsd xmm0, [rbx]
+    mulsd xmm0, xmm0
+    movsd xmm1, [rbx + 8]
+    mulsd xmm1, xmm1
+    addsd xmm0, xmm1
+    ; If |c_0|^2 > epsilon, we consider it a Manifest State (Active)
+    ucomisd xmm0, xmm2
+    jbe .global_flush_next       ; skip if Probability is zero/tiny
+    inc r15
+.global_flush_next:
+    inc rcx
+    jmp .global_flush_summary
+.global_flush_done:
+    mov rdi, r15
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+    xor rax, rax
     jmp .exec_ret
 
 .exec_ret:
