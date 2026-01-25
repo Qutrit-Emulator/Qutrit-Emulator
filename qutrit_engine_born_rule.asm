@@ -219,7 +219,8 @@ section .data
     msg_sym_snap:       db " → Consensus(4) ℵ_final", 0
     msg_sym_zeit:       db " @ Zeit(0)", 0
     msg_sym_flush:      db " ⤓ Buffer", 0
-    msg_god_forge:      db "  [GOD] Forging God Link between 80 qutrits...", 10, 0
+    msg_god_forge_prefix: db "  [GOD] Forging God Link between ", 0
+    msg_god_forge_suffix: db " qutrits...", 10, 0
     msg_god_collapse:   db "  [GOD] Collapsing God Link to manifest period...", 10, 0
     ; msg_future was reused, but we can just use the new one if we delete the old or rename
     
@@ -3177,7 +3178,22 @@ execute_instruction:
     
 .reality_retry:
     ; ────── PHASE 1: FORGE GOD LINK ──────
-    lea rsi, [msg_god_forge]
+    ; Calculate total qutrits in the Shor register
+    xor r15, r15                ; chunk loop
+    xor r14, r14                ; total qutrits count
+.god_count_loop:
+    cmp r15, [shor_register_size]
+    jge .god_count_done
+    add r14, [chunk_sizes + r15*8]
+    inc r15
+    jmp .god_count_loop
+.god_count_done:
+
+    lea rsi, [msg_god_forge_prefix]
+    call print_string
+    mov rdi, r14
+    call print_number
+    lea rsi, [msg_god_forge_suffix]
     call print_string
     
     xor r15, r15 ; chunk index
