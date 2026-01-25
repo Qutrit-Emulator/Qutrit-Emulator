@@ -208,6 +208,17 @@ section .data
     
     ; Reality B messages
     msg_reality_scan:   db "  [GOD] Initiating Reality B Protocol...", 10, 0
+    
+    ; Symbolic Equation Messages
+    msg_equation_header: db 10, "  [IDENTITY] Computational Task Equation:", 10, "  Σ: ", 0
+    msg_sym_init:       db "ℵ_vacuum", 0
+    msg_sym_noise:      db " ⊕ Noise", 0
+    msg_sym_target:     db " ∩ Target", 0
+    msg_sym_braid:      db " ⊗ GrandBraid", 0
+    msg_sym_collapse:   db " | MultiversalFilter", 0
+    msg_sym_snap:       db " → Consensus(4) ℵ_final", 0
+    msg_sym_zeit:       db " @ Zeit(0)", 0
+    msg_sym_flush:      db " ⤓ Buffer", 0
     msg_god_forge:      db "  [GOD] Forging God Link between 80 qutrits...", 10, 0
     msg_god_collapse:   db "  [GOD] Collapsing God Link to manifest period...", 10, 0
     ; msg_future was reused, but we can just use the new one if we delete the old or rename
@@ -2371,8 +2382,20 @@ execute_instruction:
 .op_phase_snap:
     lea rsi, [msg_phase_snap]
     call print_string
+    
+    ; Bypass resurrection in Search Mode to preserve pruned results
+    mov rax, [shor_register_size]
+    test rax, rax
+    jnz .do_resurrect
+    lea rdi, [shor_N]
+    call bigint_is_zero
+    test rax, rax               ; returns 1 if zero
+    jz .skip_resurrect          ; if NOT zero, it is a search
+    
+.do_resurrect:
     call resurrect_manifold
     
+.skip_resurrect:
     ; Reality Proofing: Apply Future Oracle to all active chunks
     ; This ensures constraints like "Last Ages" persist globally.
     mov r12, [num_chunks]
@@ -4137,14 +4160,46 @@ execute_instruction:
     movsd xmm1, [rbx + 8]
     mulsd xmm1, xmm1
     addsd xmm0, xmm1
-    ; If |c_0|^2 > epsilon, we consider it a Manifest State (Active)
-    ucomisd xmm0, xmm2
-    jbe .global_flush_next       ; skip if Probability is zero/tiny
+    ; Check if chunk is non-zero (Total Prob > epsilon)
+    ; AND check if it's NOT in vacuum (P(0) < 1.0 - epsilon)
+    
+    ; Total Prob Check (approximate via state 0 and state 4)
+    movsd xmm3, [rbx]           ; Real0
+    mulsd xmm3, xmm3            ; P(0) real part squared
+    movsd xmm4, [rbx + 8]       ; Imag0
+    mulsd xmm4, xmm4
+    addsd xmm3, xmm4            ; xmm3 = P(0)
+    
+    movsd xmm5, [rbx + 64]      ; Real4
+    mulsd xmm5, xmm5
+    movsd xmm6, [rbx + 72]      ; Imag4
+    mulsd xmm6, xmm6
+    addsd xmm5, xmm6            ; xmm5 = P(4)
+    
+    ; Load epsilon for vacuum check
+    mov rax, 0x3FECCCCCCCCCCCCD ; 0.9
+    movq xmm4, rax
+    ucomisd xmm3, xmm4
+    ja .global_flush_next       ; skip if P(0) > 0.9 (still vacuum)
+    
+    ; Check if chunk is NOT pruned (P(0) + P(4) > 0.001)
+    addsd xmm3, xmm5            ; P(0) + P(4)
+    mov rax, 0x3F50624DD2F1A9FC ; 0.001
+    movq xmm4, rax
+    ucomisd xmm3, xmm4
+    jbe .global_flush_next      ; skip if P(0)+P(4) is tiny (pruned)
+    
     inc r15
 .global_flush_next:
     inc rcx
     jmp .global_flush_summary
 .global_flush_done:
+    ; Print Success Message if a resonance was found
+    test r15, r15
+    jz .flush_msg
+    lea rsi, [msg_bell_pass]    ; "✓ BELL TEST PASSED" - borrow for success if needed
+    ; Actually, let's just print a custom one if available or just use the number
+.flush_msg:
     mov rdi, r15
     call print_number
     lea rsi, [msg_newline]
@@ -4332,9 +4387,146 @@ resurrect_manifold:
     ret
 
 ; execute_program - Execute loaded program
+; ═══════════════════════════════════════════════════════════════════════════════
+; SYMBOLIC IDENTITY
+; ═══════════════════════════════════════════════════════════════════════════════
+
+print_computational_equation:
+    push rbx
+    push r12
+    push r13
+    push r14
+    
+    lea rsi, [msg_equation_header]
+    call print_string
+    
+    mov r12, [program_ptr]
+    mov r13, [program_end]
+    
+.eq_loop:
+    cmp r12, r13
+    jge .eq_done
+    
+    mov rdi, [r12]              ; full instruction
+    mov r14, rdi                ; save for unpacking
+    
+    movzx rax, r14w             ; opcode
+    shr r14, 16
+    movzx r10, r14w             ; target (use r10 for temp)
+    shr r14, 16
+    movzx rbx, r14w             ; op1
+    shr r14, 16
+    movzx rcx, r14w             ; op2
+    
+    cmp rax, 0x01
+    je .p_init
+    cmp rax, 0x1A
+    je .p_noise
+    cmp rax, 0x05
+    je .p_target
+    cmp rax, 0x12
+    je .p_braid
+    cmp rax, 0x1C
+    je .p_zeit
+    cmp rax, 0x09
+    je .p_collapse
+    cmp rax, 0x14
+    je .p_snap
+    cmp rax, 0x0E
+    je .p_flush
+    
+    jmp .p_next
+
+.p_init:     lea rsi, [msg_sym_init]
+    call print_string
+    jmp .p_next
+.p_noise:    lea rsi, [msg_sym_noise]
+    call print_string
+    jmp .p_next
+.p_target:   lea rsi, [msg_sym_target]
+    call print_string
+    lea rsi, [msg_hex_prefix]
+    call print_string
+    mov rdi, rbx                ; low
+    movzx rax, cx               ; high
+    shl rax, 16
+    or rdi, rax
+    call print_hex
+    jmp .p_next
+.p_braid:    lea rsi, [msg_sym_braid]
+    call print_string
+    jmp .p_next
+.p_zeit:     lea rsi, [msg_sym_zeit]
+    call print_string
+    jmp .p_next
+.p_collapse: lea rsi, [msg_sym_collapse]
+    call print_string
+    jmp .p_next
+.p_snap:     lea rsi, [msg_sym_snap]
+    call print_string
+    jmp .p_next
+.p_flush:    lea rsi, [msg_sym_flush]
+    call print_string
+    jmp .p_next
+
+.p_next:
+    add r12, 8
+    jmp .eq_loop
+
+.eq_done:
+    lea rsi, [msg_newline]
+    call print_string
+    lea rsi, [msg_newline]
+    call print_string
+    
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+; print_hex - Print u64 in hex (no prefix)
+print_hex:
+    push rax
+    push rbx
+    push rcx
+    push rdx
+    push rsi
+    push rdi
+    mov rax, rdi
+    lea rsi, [output_buffer + 31]
+    mov byte [rsi], 0
+    dec rsi
+    mov rcx, 8
+.hex_loop:
+    mov rdx, rax
+    and rdx, 0xF
+    add dl, '0'
+    cmp dl, '9'
+    jbe .store
+    add dl, 7
+.store:
+    mov [rsi], dl
+    dec rsi
+    shr rax, 4
+    dec rcx
+    jnz .hex_loop
+    inc rsi
+    call print_string
+    pop rdi
+    pop rsi
+    pop rdx
+    pop rcx
+    pop rbx
+    pop rax
+    ret
+
 execute_program:
     push rbx
     push r12
+    
+    ; Present the symbolic identity of the program before execution
+    call print_computational_equation
 
     mov r12, [program_ptr]
 
