@@ -83,24 +83,26 @@ class ShorFactoringGUI:
     def generate_qbin(self, n, num_chunks, qutrits_per_chunk):
         instructions = []
         
-        # 1. Load N in 32-bit parts
-        # N is up to 4096 bits in the engine, but we only need a few parts for this N
+        # 1. Manually clear N and a first (using SET_TARGET for N, which clears it)
+        # target=0 for shor_N in SET_TARGET, op1=0, op2=0 to set to 0
+        OP_SET_TARGET = 0x05
+        instructions.append(self.pack_instruction(OP_SET_TARGET, target=0, op1=0, op2=0))
+        instructions.append(self.pack_instruction(OP_SET_TARGET, target=1, op1=0, op2=0)) # shor_a
+
+        # 2. Load N in 32-bit parts using OP_LOAD_N_PART
         temp_n = n
         part_idx = 0
         while temp_n > 0:
             part = temp_n & 0xFFFFFFFF
             op1 = part & 0xFFFF
             op2 = (part >> 16) & 0xFFFF
-            
-            opcode = OP_LOAD_N if part_idx == 0 else OP_LOAD_N_PART
-            instructions.append(self.pack_instruction(opcode, target=part_idx, op1=op1, op2=op2))
-            
+            instructions.append(self.pack_instruction(OP_LOAD_N_PART, target=part_idx, op1=op1, op2=op2))
             temp_n >>= 32
             part_idx += 1
-
-        # 2. Initialize Shor's registers
-        # Target = num_chunks, Op1 = N_lower_16 (legacy), Op2 = qutrits_per_chunk
-        instructions.append(self.pack_instruction(OP_SHOR_INIT, target=num_chunks, op1=(n & 0xFFFF), op2=qutrits_per_chunk))
+            
+        # 3. Initialize Shor's registers (will now print the pre-loaded N)
+        # Target = num_chunks, Op1 = 0 (avoid legacy loading), Op2 = qutrits_per_chunk
+        instructions.append(self.pack_instruction(OP_SHOR_INIT, target=num_chunks, op1=0, op2=qutrits_per_chunk))
 
         # 3. Apply Modular Exponentiation for each chunk
         for i in range(num_chunks):
