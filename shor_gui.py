@@ -13,6 +13,10 @@ OP_LOAD_N_PART      = 0x29
 OP_SHOR_INIT        = 0x20
 OP_MOD_EXP          = 0x21
 OP_QFT              = 0x22
+OP_INJECT_NOISE     = 0x1A
+OP_FUTURE_ORACLE    = 0x13
+OP_PHASE_SNAP       = 0x14
+OP_GLOBAL_FLUSH     = 0x0E
 OP_FACTOR_ORACLE    = 0x25
 OP_SHOR_AMPLIFY     = 0x27
 OP_REALITY_COLLAPSE = 0x2A
@@ -112,22 +116,35 @@ class ShorFactoringGUI:
         # Target = num_chunks, Op1 = 0 (avoid legacy loading), Op2 = qutrits_per_chunk
         instructions.append(self.pack_instruction(OP_SHOR_INIT, target=num_chunks, op1=0, op2=qutrits_per_chunk))
 
-        # 3. Apply Modular Exponentiation for each chunk
+        # 4. Forge the God Link between every available qutrit (Circular Grand Braid)
+        OP_BRAID_ALL = 0x12
+        instructions.append(self.pack_instruction(OP_BRAID_ALL))
+
+        # 5. Apply Modular Exponentiation for each chunk
         for i in range(num_chunks):
             instructions.append(self.pack_instruction(OP_MOD_EXP, target=i))
 
         # 4. Apply QFT
         instructions.append(self.pack_instruction(OP_QFT))
 
-        # 5. Reality B Enhancements: Prune trivial factors and amplify valid periods
-        # We target the last chunk or the register generally as per engine logic
+        # 5. Reality B Enhancements: Inject Multiversal Entropy and invoke Future Oracles
+        instructions.append(self.pack_instruction(OP_INJECT_NOISE))
+        
+        for i in range(num_chunks):
+            instructions.append(self.pack_instruction(OP_FUTURE_ORACLE, target=i))
+
+        # 6. Apply Shor specific oracles
         instructions.append(self.pack_instruction(OP_FACTOR_ORACLE, target=num_chunks - 1))
         instructions.append(self.pack_instruction(OP_SHOR_AMPLIFY, target=num_chunks - 1))
 
-        # 6. Reality Collapse (God Link Protocol)
+        # 7. Reality Collapse (God Link Protocol - Omniscient Future Oracle)
         instructions.append(self.pack_instruction(OP_REALITY_COLLAPSE))
 
-        # 7. Halt
+        # 8. Snap and Flush (Finalize Consensus from Future Resonance)
+        instructions.append(self.pack_instruction(OP_PHASE_SNAP))
+        instructions.append(self.pack_instruction(OP_GLOBAL_FLUSH))
+
+        # 9. Halt
         instructions.append(self.pack_instruction(OP_HALT))
 
         return b"".join(instructions)
