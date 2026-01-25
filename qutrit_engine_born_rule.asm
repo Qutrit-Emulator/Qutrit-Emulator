@@ -176,6 +176,7 @@ section .data
     msg_amp:            db " amp=", 0
     msg_error:          db "  [ERROR] ", 0
     msg_unknown_op:     db "Unknown opcode", 10, 0
+    msg_exhausted:      db "Reality Exhausted - No valid factors in this manifold branch.", 10, 0
     msg_bell:           db "  [BELL] Testing entanglement chunks ", 0
     msg_bell_corr:      db "  [BELL] Correlation = ", 0
     msg_bell_pass:      db "  ✓ BELL TEST PASSED - Entanglement verified!", 10, 0
@@ -2605,12 +2606,16 @@ execute_instruction:
     mov [shor_register_size], r14
     mov qword [shor_trial_count], 0
     
+    ; Always clear N and a before initialization
+    lea rdi, [shor_N]
+    call bigint_clear
+    lea rdi, [shor_a]
+    call bigint_clear
+    
     ; Initialize N and a as BigInts ONLY if a legacy N was provided
     test rbx, rbx
     jz .shor_init_no_legacy_N
     
-    lea rdi, [shor_N]
-    call bigint_clear
     lea rdi, [shor_N]
     mov rsi, rbx
     call bigint_set_u64
@@ -3669,7 +3674,7 @@ execute_instruction:
     ; All timelines pruned, factorization failed
     lea rsi, [msg_error]
     call print_string
-    lea rsi, [msg_unknown_op]   ; Reuse for "Reality Exhausted"
+    lea rsi, [msg_exhausted]
     call print_string
     mov rax, -1
     jmp .exec_ret
