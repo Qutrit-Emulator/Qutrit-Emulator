@@ -8,6 +8,7 @@ import threading
 
 # Opcodes from qutrit_engine_born_rule.asm
 OP_HALT             = 0xFF
+OP_LOAD_N           = 0x28
 OP_LOAD_N_PART      = 0x29
 OP_SHOR_INIT        = 0x20
 OP_MOD_EXP          = 0x21
@@ -90,7 +91,10 @@ class ShorFactoringGUI:
             part = temp_n & 0xFFFFFFFF
             op1 = part & 0xFFFF
             op2 = (part >> 16) & 0xFFFF
-            instructions.append(self.pack_instruction(OP_LOAD_N_PART, target=part_idx, op1=op1, op2=op2))
+            
+            opcode = OP_LOAD_N if part_idx == 0 else OP_LOAD_N_PART
+            instructions.append(self.pack_instruction(opcode, target=part_idx, op1=op1, op2=op2))
+            
             temp_n >>= 32
             part_idx += 1
 
