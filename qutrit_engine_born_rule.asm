@@ -4016,6 +4016,21 @@ execute_instruction:
 .op_inject_noise:
     lea rsi, [msg_noise_inject]
     call print_string
+    
+    ; Load user-defined parameters from BigInt registers if available
+    ; multiplier (r11) from shor_N, increment (r10) from shor_a
+    mov r11, [shor_N]
+    test r11, r11
+    jnz .got_multiplier
+    mov r11, 0xDEADBEEF         ; default
+.got_multiplier:
+
+    mov r10, [shor_a]
+    test r10, r10
+    jnz .got_increment
+    mov r10, 0x12345678         ; default
+.got_increment:
+
     mov r12, [num_chunks]
     xor r15, r15
 .noise_loop:
@@ -4024,10 +4039,11 @@ execute_instruction:
     mov rbx, [state_vectors + r15*8]
     test rbx, rbx
     jz .noise_next
-    mov r11, 0xDEADBEEF
+    
     mov rax, r15
     imul rax, r11
-    add rax, 0x12345678
+    add rax, r10
+    
     cvtsi2sd xmm0, rax
     mulsd xmm0, [epsilon]
     movsd [rbx], xmm0           ; noise
@@ -4040,23 +4056,44 @@ execute_instruction:
     jmp .noise_loop
 
 .op_set_target:
-    lea rsi, [msg_target_set]
-    call print_string
-    
     ; Combine OP1 (rbx) and OP2 (rcx) into 32-bit signature (rax)
     mov rax, rcx
     shl rax, 16
     or rax, rbx
+    mov rsi, rax                ; save for BigInt set
+
+    ; Decide which register to set based on Target (r14)
+    cmp r14, 1
+    je .set_increment
     
-    mov rdi, rax                ; signature for printing
+    lea rsi, [msg_target_set]
+    call print_string
+    mov rdi, rax
     call print_number
     lea rsi, [msg_newline]
     call print_string
     
-    mov rsi, rax                ; signature for BigInt set
+    mov rsi, rax
     lea rdi, [shor_N]
+    jmp .do_bigint_set
+
+.set_increment:
+    lea rsi, [msg_shor_modexp]  ; Borrow a message or use generic
+    ; msg_shor_modexp is "Applying modexp", maybe use something else
+    ; For now, just print the value
+    mov rdi, rax
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+    
+    mov rsi, rax
+    lea rdi, [shor_a]
+
+.do_bigint_set:
+    push rsi
     call bigint_clear
-    lea rdi, [shor_N]
+    pop rsi
+    ; rdi is already set to shor_N or shor_a
     call bigint_set_u64
     xor rax, rax
     jmp .exec_ret
