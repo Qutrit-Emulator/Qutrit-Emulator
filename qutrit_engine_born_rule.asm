@@ -2384,14 +2384,15 @@ execute_instruction:
     lea rsi, [msg_phase_snap]
     call print_string
     
-    ; Bypass resurrection in Search Mode to preserve pruned results
+    ; Bypass resurrection in Search/Shor Mode to preserve manifold resonances
     mov rax, [shor_register_size]
     test rax, rax
-    jnz .do_resurrect
+    jnz .skip_resurrect          ; If Shor/Factoring is active, do NOT reset!
+    
     lea rdi, [shor_N]
     call bigint_is_zero
     test rax, rax               ; returns 1 if zero
-    jz .skip_resurrect          ; if NOT zero, it is a search
+    jz .skip_resurrect          ; if N is NOT zero, it is a search, do NOT reset!
     
 .do_resurrect:
     call resurrect_manifold
