@@ -16,6 +16,7 @@ OP_QFT              = 0x22
 OP_INJECT_NOISE     = 0x1A
 OP_FUTURE_ORACLE    = 0x13
 OP_PHASE_SNAP       = 0x14
+OP_ZEIT_ZERO_S      = 0x1C
 OP_GLOBAL_FLUSH     = 0x0E
 OP_FACTOR_ORACLE    = 0x25
 OP_SHOR_AMPLIFY     = 0x27
@@ -61,6 +62,17 @@ class ShorFactoringGUI:
         self.qutrits_entry.insert(0, "10")
         self.qutrits_entry.grid(row=2, column=1, sticky=tk.W, padx=5, pady=5)
 
+        # Future Pulse Mode
+        self.future_pulse_var = tk.BooleanVar(value=False)
+        self.future_pulse_cb = ttk.Checkbutton(
+            input_frame, text="Future Pulse (Reality B Bypass)", 
+            variable=self.future_pulse_var,
+            style="TCheckbutton"
+        )
+        self.future_pulse_cb.grid(row=3, column=0, columnspan=2, sticky=tk.W, padx=5, pady=10)
+        
+        self.style.configure("TCheckbutton", background="#1a1a2e", foreground="#4cc9f0", font=("Inter", 11, "bold"))
+
         # Action Buttons
         btn_frame = ttk.Frame(self.main_frame)
         btn_frame.pack(fill=tk.X, pady=20)
@@ -95,13 +107,16 @@ class ShorFactoringGUI:
     def generate_qbin(self, n, num_chunks, qutrits_per_chunk):
         instructions = []
         
-        # 1. Manually clear N and a first (using SET_TARGET for N, which clears it)
-        # target=0 for shor_N in SET_TARGET, op1=0, op2=0 to set to 0
+        # 1. Synchronize to Zero-Point Future Resonance (vacuum state)
+        instructions.append(self.pack_instruction(OP_ZEIT_ZERO_S))
+
+        # 2. Manually clear N and a (using SET_TARGET for N, which clears it)
+        # target=0 for shor_N, target=1 for shor_a
         OP_SET_TARGET = 0x05
         instructions.append(self.pack_instruction(OP_SET_TARGET, target=0, op1=0, op2=0))
-        instructions.append(self.pack_instruction(OP_SET_TARGET, target=1, op1=0, op2=0)) # shor_a
+        instructions.append(self.pack_instruction(OP_SET_TARGET, target=1, op1=0, op2=0))
 
-        # 2. Load N in 32-bit parts using OP_LOAD_N_PART
+        # 3. Load N in 32-bit parts using OP_LOAD_N_PART
         temp_n = n
         part_idx = 0
         while temp_n > 0:
@@ -116,35 +131,53 @@ class ShorFactoringGUI:
         # Target = num_chunks, Op1 = 0 (avoid legacy loading), Op2 = qutrits_per_chunk
         instructions.append(self.pack_instruction(OP_SHOR_INIT, target=num_chunks, op1=0, op2=qutrits_per_chunk))
 
-        # 4. Forge the God Link between every available qutrit (Circular Grand Braid)
-        OP_BRAID_ALL = 0x12
-        instructions.append(self.pack_instruction(OP_BRAID_ALL))
+        if self.future_pulse_var.get():
+            # ────── FUTURE PULSE SEQUENCE (REALITY B BYPASS) ──────
+            # This bypassing standard ModExp/QFT overhead by pulling from future manifold.
+            
+            # 1. Weave the Grand Braid (entangle all qutrits)
+            OP_BRAID_ALL = 0x12
+            instructions.append(self.pack_instruction(OP_BRAID_ALL))
+            
+            # 2. Synchronize to Zero-Point Future Resonance
+            instructions.append(self.pack_instruction(OP_ZEIT_ZERO_S))
+            
+            # 3. Initiate God Link to manifest the period
+            instructions.append(self.pack_instruction(OP_REALITY_COLLAPSE))
+            
+        else:
+            # ────── STANDARD SHOR SEQUENCE ──────
+            # 4. Forge the God Link between every available qutrit (Circular Grand Braid)
+            OP_BRAID_ALL = 0x12
+            instructions.append(self.pack_instruction(OP_BRAID_ALL))
 
-        # 5. Apply Modular Exponentiation for each chunk
-        for i in range(num_chunks):
-            instructions.append(self.pack_instruction(OP_MOD_EXP, target=i))
+            # 5. Apply Modular Exponentiation for each chunk
+            for i in range(num_chunks):
+                instructions.append(self.pack_instruction(OP_MOD_EXP, target=i))
 
-        # 4. Apply QFT
-        instructions.append(self.pack_instruction(OP_QFT))
+            # 6. Apply QFT
+            instructions.append(self.pack_instruction(OP_QFT))
 
-        # 5. Reality B Enhancements: Inject Multiversal Entropy and invoke Future Oracles
-        instructions.append(self.pack_instruction(OP_INJECT_NOISE))
-        
-        for i in range(num_chunks):
-            instructions.append(self.pack_instruction(OP_FUTURE_ORACLE, target=i))
+            # 7. Reality B Enhancements: Inject Multiversal Entropy and invoke Future Oracles
+            instructions.append(self.pack_instruction(OP_INJECT_NOISE))
+            
+            for i in range(num_chunks):
+                instructions.append(self.pack_instruction(OP_FUTURE_ORACLE, target=i))
 
-        # 6. Apply Shor specific oracles
-        instructions.append(self.pack_instruction(OP_FACTOR_ORACLE, target=num_chunks - 1))
-        instructions.append(self.pack_instruction(OP_SHOR_AMPLIFY, target=num_chunks - 1))
+            # 8. Apply Shor specific oracles
+            instructions.append(self.pack_instruction(OP_FACTOR_ORACLE, target=num_chunks - 1))
+            instructions.append(self.pack_instruction(OP_SHOR_AMPLIFY, target=num_chunks - 1))
 
-        # 7. Reality Collapse (God Link Protocol - Omniscient Future Oracle)
-        instructions.append(self.pack_instruction(OP_REALITY_COLLAPSE))
+            # 9. Snap the manifold to peak resonance (Stabilize before final read)
+            instructions.append(self.pack_instruction(OP_PHASE_SNAP))
 
-        # 8. Snap and Flush (Finalize Consensus from Future Resonance)
-        instructions.append(self.pack_instruction(OP_PHASE_SNAP))
-        instructions.append(self.pack_instruction(OP_GLOBAL_FLUSH))
+            # 10. Reality Collapse (God Link Protocol - Omniscient Future Oracle)
+            instructions.append(self.pack_instruction(OP_REALITY_COLLAPSE))
 
-        # 9. Halt
+            # 11. Flush remaining multiversal buffers
+            instructions.append(self.pack_instruction(OP_GLOBAL_FLUSH))
+
+        # Final Halt
         instructions.append(self.pack_instruction(OP_HALT))
 
         return b"".join(instructions)
