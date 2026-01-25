@@ -74,6 +74,12 @@ class ShorFactoringGUI:
 
     def log(self, message):
         self.log_area.insert(tk.END, message + "\n")
+        
+        # Limit to most recent 10,000 lines
+        num_lines = int(self.log_area.index('end-1c').split('.')[0])
+        if num_lines > 10000:
+            self.log_area.delete('1.0', f'{num_lines - 10000}.0')
+            
         self.log_area.see(tk.END)
 
     def pack_instruction(self, opcode, target=0, op1=0, op2=0):
