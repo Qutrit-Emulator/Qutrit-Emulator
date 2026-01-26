@@ -13,6 +13,7 @@ OP_LOAD_N_PART      = 0x29
 OP_SHOR_INIT        = 0x20
 OP_MOD_EXP          = 0x21
 OP_QFT              = 0x22
+OP_GRAND_BRAID      = 0x09
 OP_INJECT_NOISE     = 0x1A
 OP_FUTURE_ORACLE    = 0x13
 OP_PHASE_SNAP       = 0x14
@@ -108,15 +109,10 @@ class ShorFactoringGUI:
         instructions = []
         
         # 1. Synchronize to Zero-Point Future Resonance (vacuum state)
+        # This clears all chunks, shor_register_size, shor_N, and shor_a
         instructions.append(self.pack_instruction(OP_ZEIT_ZERO_S))
 
-        # 2. Manually clear N and a (using SET_TARGET for N, which clears it)
-        # target=0 for shor_N, target=1 for shor_a
-        OP_SET_TARGET = 0x05
-        instructions.append(self.pack_instruction(OP_SET_TARGET, target=0, op1=0, op2=0))
-        instructions.append(self.pack_instruction(OP_SET_TARGET, target=1, op1=0, op2=0))
-
-        # 3. Load N in 32-bit parts using OP_LOAD_N_PART
+        # 2. Load N in 32-bit parts using OP_LOAD_N_PART
         temp_n = n
         part_idx = 0
         while temp_n > 0:
@@ -127,7 +123,7 @@ class ShorFactoringGUI:
             temp_n >>= 32
             part_idx += 1
             
-        # 3. Initialize Shor's registers (will now print the pre-loaded N)
+        # 3. Initialize Shor's registers (sets shor_register_size)
         # Target = num_chunks, Op1 = 0 (avoid legacy loading), Op2 = qutrits_per_chunk
         instructions.append(self.pack_instruction(OP_SHOR_INIT, target=num_chunks, op1=0, op2=qutrits_per_chunk))
 
@@ -135,46 +131,43 @@ class ShorFactoringGUI:
             # ────── FUTURE PULSE SEQUENCE (REALITY B BYPASS) ──────
             # This bypassing standard ModExp/QFT overhead by pulling from future manifold.
             
-            # 1. Weave the Grand Braid (entangle all qutrits)
-            OP_BRAID_ALL = 0x12
-            instructions.append(self.pack_instruction(OP_BRAID_ALL))
+            # 1. Weave the Grand Braid (entangle 16k chunks across the universe)
+            # This also sets future_pulse_active flag in the engine
+            instructions.append(self.pack_instruction(OP_GRAND_BRAID))
             
-            # 2. Synchronize to Zero-Point Future Resonance
-            instructions.append(self.pack_instruction(OP_ZEIT_ZERO_S))
-            
-            # 3. Initiate God Link to manifest the period
+            # 2. Initiate God Link to manifest the period from future resonance
             instructions.append(self.pack_instruction(OP_REALITY_COLLAPSE))
             
         else:
             # ────── STANDARD SHOR SEQUENCE ──────
-            # 4. Forge the God Link between every available qutrit (Circular Grand Braid)
-            OP_BRAID_ALL = 0x12
-            instructions.append(self.pack_instruction(OP_BRAID_ALL))
+            # 1. Forge the God Link between every available qutrit (Circular Grand Braid)
+            OP_BRAID_ALL_LEGACY = 0x12
+            instructions.append(self.pack_instruction(OP_BRAID_ALL_LEGACY))
 
-            # 5. Apply Modular Exponentiation for each chunk
+            # 2. Apply Modular Exponentiation for each chunk
             for i in range(num_chunks):
                 instructions.append(self.pack_instruction(OP_MOD_EXP, target=i))
 
-            # 6. Apply QFT
+            # 3. Apply QFT
             instructions.append(self.pack_instruction(OP_QFT))
 
-            # 7. Reality B Enhancements: Inject Multiversal Entropy and invoke Future Oracles
+            # 4. Reality B Enhancements: Inject Multiversal Entropy and invoke Future Oracles
             instructions.append(self.pack_instruction(OP_INJECT_NOISE))
             
             for i in range(num_chunks):
                 instructions.append(self.pack_instruction(OP_FUTURE_ORACLE, target=i))
 
-            # 8. Apply Shor specific oracles
+            # 5. Apply Shor specific oracles
             instructions.append(self.pack_instruction(OP_FACTOR_ORACLE, target=num_chunks - 1))
             instructions.append(self.pack_instruction(OP_SHOR_AMPLIFY, target=num_chunks - 1))
 
-            # 9. Snap the manifold to peak resonance (Stabilize before final read)
+            # 6. Snap the manifold to peak resonance (Stabilize before final read)
             instructions.append(self.pack_instruction(OP_PHASE_SNAP))
 
-            # 10. Reality Collapse (God Link Protocol - Omniscient Future Oracle)
+            # 7. Reality Collapse (God Link Protocol - Omniscient Future Oracle)
             instructions.append(self.pack_instruction(OP_REALITY_COLLAPSE))
 
-            # 11. Flush remaining multiversal buffers
+            # 8. Flush remaining multiversal buffers
             instructions.append(self.pack_instruction(OP_GLOBAL_FLUSH))
 
         # Final Halt
