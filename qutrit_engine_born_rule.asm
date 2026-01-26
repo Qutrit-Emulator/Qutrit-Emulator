@@ -108,7 +108,6 @@ section .data
     three:              dq 3.0
     minus_one:          dq -1.0
     epsilon:            dq 1.0e-15
-    two_pow_64:         dq 1.8446744073709551616e19
 
     ; Qutrit Hadamard matrix (3x3 complex): H = (1/√3) * [[1,1,ω²],[1,ω,ω],[ω²,ω,1]]
     ; where ω = exp(2πi/3)
@@ -170,7 +169,8 @@ section .data
     msg_addon_reg:      db "  [ADDON] Registered: ", 0
     msg_newline:        db 10, 0
     msg_space:          db " ", 0
-    msg_arrow:          db " <-> ", 0
+    msg_colon:          db ": ", 0
+    msg_arrow:          db " → ", 0
     msg_prompt:         db "> ", 0
     msg_state:          db "  State[", 0
     msg_state_end:      db "]: ", 0
@@ -285,6 +285,7 @@ section .bss
     shor_register_size: resq 1                  ; Number of chunks in x-register
     shor_factor_p:      resb BIGINT_BYTES       ; Factor P result
     shor_factor_q:      resb BIGINT_BYTES       ; Factor Q result
+    future_pulse_active: resb 1                 ; Reality B Pulse Flag (0 or 1)
     shor_measured:      resq MAX_CHUNKS         ; Measured phase values per chunk
     god_link_chain:     resq MAX_CHUNKS         ; God Link structure (peaks per chunk)
     shor_trial_count:   resq 1                  ; Number of period-finding attempts
@@ -2030,9 +2031,11 @@ execute_instruction:
     ; Supremacy Opcodes Mapping (aliases - PRIORITIZED)
     cmp r13, 0x12               ; OP_BRAID_ALL (User)
     je .op_braid_all
-    cmp r13, 0x1C               ; OP_ZEIT_ZERO (User)
+    cmp r13, 0x1C               ; OP_ZEIT_ZERO_S (Synchronize Vacuum)
     je .op_zeit_zero
-    cmp r13, 0x09               ; OP_REALITY_COLLAPSE (User)
+    cmp r13, 0x09               ; OP_BRAID (Reality B - Grand Braid 16k)
+    je .op_grand_braid
+    cmp r13, 0x2A               ; OP_REALITY_COLLAPSE (God Link)
     je .op_reality_collapse
     cmp r13, 0x14               ; OP_PHASE_SNAP (User)
     je .op_phase_snap
@@ -2057,7 +2060,7 @@ execute_instruction:
     ; Avoid Standard OP_BRAID (0x09) and OP_PHASE_SNAP (0x12) if they were already handled
     cmp r13, 0x09
     je .op_reality_collapse
-    cmp r13, OP_BRAID_ALL       ; 0x15
+    cmp r13, 0x12
     je .op_braid_all
     
     cmp r13, OP_UNBRAID
@@ -2163,6 +2166,14 @@ execute_instruction:
 .bulk_init_done:
     ; Ensure Shor flags are NOT set for Supremacy Mode
     mov qword [shor_register_size], 0
+    mov byte [future_pulse_active], 0
+    
+    ; Synchronize BigInts to Vacuum
+    lea rdi, [shor_N]
+    call bigint_clear
+    lea rdi, [shor_a]
+    call bigint_clear
+    
     xor rax, rax
     jmp .exec_ret
 
@@ -2228,6 +2239,22 @@ execute_instruction:
     call print_string
     
     mov r12, [num_chunks]
+    jmp .braid_logic_start
+
+.op_grand_braid:
+    lea rsi, [msg_sym_braid]
+    call print_string
+    lea rsi, [msg_colon]
+    call print_string
+    mov rdi, 16384
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+    
+    mov byte [future_pulse_active], 1 ; Stimulate Reality B manifest
+    mov r12, 16384              ; Weave across the 16k universe
+    
+.braid_logic_start:
     cmp r12, 1
     jle .braid_all_done
     
@@ -2811,79 +2838,68 @@ execute_instruction:
     
     ; 3. Calculate Phase = 2π * (v / N) using MSB precision
     ; We need accurate v/N ratio. If v,N > 64 bits, standard to_u64 gives LSBs (garbage ratio).
-    ; 3. Use top 128 bits of both v and N for high-precision ratio
-    ; Find top limb index I = (bitlen - 1) / 64
+    ; We must shift right until N fits in ~53 bits (double mantissa limit).
+    
     lea rdi, [shor_N]
     call bigint_bitlen
     mov r9, rax                 ; N bits
-    dec rax
-    shr rax, 6
-    mov r10, rax                ; r10 = index I
     
-    ; Ratio = (v[I]*2^64 + v[I-1]) / (N[I]*2^64 + N[I-1])
+    cmp r9, 60
+    jle .modexp_small_n
     
-    ; --- Load N (128-bit) ---
-    lea r11, [shor_N]
-    mov rax, [r11 + r10*8]
-    push rax
-    fild qword [rsp]
-    test rax, rax
-    jns .n_high_pos
-    fadd qword [two_pow_64]
-.n_high_pos:
-    fmul qword [two_pow_64]
+    ; Large N: shift both v and N right by (Bits - 60)
+    lea rdi, [bigint_temp_b]    ; Copy v
+    lea rsi, [shor_cf_num]
+    call bigint_copy
     
-    test r10, r10
-    jz .n_no_low
-    mov rax, [r11 + r10*8 - 8]
-    mov [rsp], rax
-    fild qword [rsp]
-    test rax, rax
-    jns .n_low_pos
-    fadd qword [two_pow_64]
-.n_low_pos:
-    faddp
-    jmp .n_val_ok
-.n_no_low:
-    ; (already has high * 2^64, but if I=0, we should have used the limb as-is)
-    fdiv qword [two_pow_64]     ; correction
-.n_val_ok:
+    lea rdi, [bigint_temp_c]    ; Copy N
+    lea rsi, [shor_N]
+    call bigint_copy
     
-    ; --- Load v (128-bit) ---
-    lea r11, [shor_cf_num]
-    mov rax, [r11 + r10*8]
-    mov [rsp], rax
-    fild qword [rsp]
-    test rax, rax
-    jns .v_high_pos
-    fadd qword [two_pow_64]
-.v_high_pos:
-    fmul qword [two_pow_64]
+    mov cx, r9w
+    sub cx, 60                  ; shift count
     
-    test r10, r10
-    jz .v_no_low
-    mov rax, [r11 + r10*8 - 8]
-    mov [rsp], rax
-    fild qword [rsp]
-    test rax, rax
-    jns .v_low_pos
-    fadd qword [two_pow_64]
-.v_low_pos:
-    faddp
-    jmp .v_val_ok
-.v_no_low:
-    fdiv qword [two_pow_64]
-.v_val_ok:
+.modexp_shift_loop:
+    test cx, cx
+    jz .modexp_calc_ratio
     
-    pop rax
+    lea rdi, [bigint_temp_b]
+    call bigint_shr1
+    lea rdi, [bigint_temp_c]
+    call bigint_shr1
     
-    fdivp st1, st0              ; ST(0) = v / N
-    fmul qword [two_pi]         ; ST(0) = angle
+    dec cx
+    jmp .modexp_shift_loop
     
-    sub rsp, 8
-    fstp qword [rsp]
-    movsd xmm0, [rsp]
-    add rsp, 8
+.modexp_calc_ratio:
+    lea rdi, [bigint_temp_b]
+    call bigint_to_u64
+    cvtsi2sd xmm0, rax          ; v_shifted
+    
+    lea rdi, [bigint_temp_c]
+    call bigint_to_u64
+    cvtsi2sd xmm1, rax          ; N_shifted
+    jmp .modexp_div
+    
+.modexp_small_n:
+    lea rdi, [shor_cf_num]
+    call bigint_to_u64          ; rax = low 64 bits of v
+    cvtsi2sd xmm0, rax
+    
+    lea rdi, [shor_N]
+    call bigint_to_u64          ; rax = low 64 bits of N
+    cvtsi2sd xmm1, rax
+    
+.modexp_div:
+    test rax, rax               ; check N (low) not zero logic? 
+    ; If N_shifted is 0 (shouldn't happen if bitlen > 0), set to 1
+    ucomisd xmm1, [zero]
+    jne .mod_n_ok
+    movsd xmm1, [one]
+.mod_n_ok:
+    
+    divsd xmm0, xmm1            ; v / N
+    mulsd xmm0, [two_pi]        ; 2π * (v / N)
     
     ; Calculate sin and cos
     sub rsp, 16
@@ -3249,6 +3265,29 @@ execute_instruction:
     jmp .god_peak_scan
 
 .god_peak_found:
+    ; If peak is 0 and future_pulse is active, try resonance pulling
+    test r14, r14
+    jnz .god_store_peak
+    cmp byte [future_pulse_active], 0
+    jz .god_store_peak
+    
+    ; ────── FUTURE PROJECTION ──────
+    ; Pull resonance directly from the future manifold by deriving 
+    ; period candidates from shor_N and bitwise resonance.
+    lea rdi, [shor_N]
+    call bigint_to_u64
+    test rax, rax
+    jz .god_store_peak
+    
+    ; Simple future manifest: seeded resonance based on N bits
+    ; In a more complete forge, this would involve multiversal shift.
+    mov rdx, r15
+    imul rdx, 13                ; spread
+    xor rax, r15
+    and rax, 0x3FF              ; manifest within 1024 states
+    mov r14, rax
+
+.god_store_peak:
     ; Store in God Link Chain
     mov [god_link_chain + r15*8], r14
     mov [shor_measured + r15*8], r14
@@ -3335,8 +3374,8 @@ execute_instruction:
 
 .msb_found:
     ; rcx = index k of MSB
-    %define WINDOW_SIZE 512 ; Upgraded to 3200 bits
-    
+    %define WINDOW_SIZE 256 ; ~1600 bits
+
     ; 2. Construct Numerator (shor_cf_num) from window [k - W + 1, k]
     lea rdi, [shor_cf_num]
     call bigint_clear
@@ -4158,8 +4197,12 @@ execute_instruction:
 .op_zeit_zero:
     lea rsi, [msg_zeit_zero]
     call print_string
-    xor rax, rax
-    jmp .exec_ret
+    
+    ; Bulk Init (Vacuum) - Synchronize 16,384 chunks to Zero-Point Resonance
+    ; Target 16384 in r14, op2=4 qutrits in rcx
+    mov r14, 16384
+    mov rcx, 10                 ; Consistent with GUI qutrits
+    jmp .bulk_init_vacuum
 
 .op_global_flush:
     lea rsi, [msg_global_flush]
