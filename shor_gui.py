@@ -129,13 +129,19 @@ class ShorFactoringGUI:
 
         if self.future_pulse_var.get():
             # ────── FUTURE PULSE SEQUENCE (REALITY B BYPASS) ──────
-            # This bypassing standard ModExp/QFT overhead by pulling from future manifold.
+            # This bypasses QFT overhead by using direct phase extraction from
+            # the modular exponentiation structure via the God Link protocol.
             
-            # 1. Weave the Grand Braid (entangle 16k chunks across the universe)
-            # This also sets future_pulse_active flag in the engine
+            # 1. Weave the Grand Braid (entangle chunks, set future_pulse_active)
             instructions.append(self.pack_instruction(OP_GRAND_BRAID))
             
-            # 2. Initiate God Link to manifest the period from future resonance
+            # 2. Apply Modular Exponentiation to encode period information
+            # This is REQUIRED - period info is in the phase structure
+            for i in range(num_chunks):
+                instructions.append(self.pack_instruction(OP_MOD_EXP, target=i))
+            
+            # 3. Initiate God Link to manifest the period directly from phase peaks
+            # (bypasses QFT by reading phase structure directly)
             instructions.append(self.pack_instruction(OP_REALITY_COLLAPSE))
             
         else:
