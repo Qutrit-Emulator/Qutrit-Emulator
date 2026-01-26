@@ -3265,27 +3265,74 @@ execute_instruction:
     jmp .god_peak_scan
 
 .god_peak_found:
-    ; If peak is 0 and future_pulse is active, try resonance pulling
+    ; If peak is 0 and future_pulse is active, divine the period from phase
     test r14, r14
     jnz .god_store_peak
     cmp byte [future_pulse_active], 0
     jz .god_store_peak
     
-    ; ────── FUTURE PROJECTION ──────
-    ; Pull resonance directly from the future manifold by deriving 
-    ; period candidates from shor_N and bitwise resonance.
-    lea rdi, [shor_N]
-    call bigint_to_u64
-    test rax, rax
-    jz .god_store_peak
+    ; ────── DIVINE PERIOD FROM PHASE STRUCTURE ──────
+    ; After modexp, amplitudes are uniform but phases encode period info.
+    ; Find states with significant phase rotation (|imag| > threshold)
+    ; The spacing between such states hints at the period.
     
-    ; Simple future manifest: seeded resonance based on N bits
-    ; In a more complete forge, this would involve multiversal shift.
-    mov rdx, r15
-    imul rdx, 13                ; spread
-    xor rax, r15
-    and rax, 0x3FF              ; manifest within 1024 states
+    ; Scan for first two states with notable phase rotation
+    mov rcx, 1                  ; start from state 1 (skip 0)
+    xor r14, r14                ; first phase state found
+    xor r8, r8                  ; second phase state found
+    
+.divine_phase_scan:
+    cmp rcx, r13
+    jge .divine_analyze
+    
+    mov rax, rcx
+    shl rax, 4
+    movsd xmm0, [rbx + rax + 8] ; imaginary component
+    mulsd xmm0, xmm0            ; imag^2
+    
+    ; Check if imag^2 > 0.0001 (significant phase)
+    movsd xmm1, [epsilon]       ; use epsilon as threshold
+    ucomisd xmm0, xmm1
+    jbe .divine_phase_next
+    
+    ; Found a state with phase rotation
+    test r14, r14
+    jnz .divine_got_second
+    mov r14, rcx                ; first state with phase
+    jmp .divine_phase_next
+    
+.divine_got_second:
+    test r8, r8
+    jnz .divine_phase_next
+    mov r8, rcx                 ; second state with phase
+    
+.divine_phase_next:
+    inc rcx
+    jmp .divine_phase_scan
+    
+.divine_analyze:
+    ; If we found two phase states, period = difference
+    test r14, r14
+    jz .divine_fallback
+    test r8, r8
+    jz .divine_use_first
+    
+    ; Period candidate = r8 - r14 (spacing between phase-rotated states)
+    mov rax, r8
+    sub rax, r14
+    cmp rax, 2
+    jl .divine_use_first
     mov r14, rax
+    jmp .god_store_peak
+    
+.divine_use_first:
+    ; Use the first phase state index as period hint
+    jmp .god_store_peak
+    
+.divine_fallback:
+    ; No phase structure found - try chunk_states[0]/2 as default period
+    mov r14, [chunk_states]
+    shr r14, 1                  ; div by 2
 
 .god_store_peak:
     ; Store in God Link Chain
@@ -3356,6 +3403,160 @@ execute_instruction:
     jmp .god_collapse_loop_unused
 
 .god_collapse_done:
+    ; ────── REALITY B DIRECT FACTOR CHECK ──────
+    ; When future_pulse_active is set, try divined periods directly
+    cmp byte [future_pulse_active], 0
+    jz .standard_cf_path
+    
+    lea rsi, [msg_shor_period]
+    call print_string
+    
+    ; Try each divined period from god_link_chain
+    xor r15, r15                ; chunk index
+.reality_b_try_loop:
+    cmp r15, [shor_register_size]
+    jge .prune_timeline         ; All tried, none worked
+    
+    mov rax, [god_link_chain + r15*8]
+    cmp rax, 2                  ; Skip if period < 2
+    jl .reality_b_next_chunk
+    
+    ; Period must be even
+    test rax, 1
+    jnz .reality_b_next_chunk
+    
+    ; Store period candidate
+    lea rdi, [shor_period]
+    mov rsi, rax
+    call bigint_set_u64
+    
+    ; Print the divine period
+    push r15
+    lea rdi, [shor_period]
+    call print_bigint_hex
+    
+    ; x = a^(r/2) mod N
+    lea rdi, [bigint_temp_a]    ; exp = r/2
+    lea rsi, [shor_period]
+    call bigint_copy
+    lea rdi, [bigint_temp_a]
+    call bigint_shr1
+    
+    lea rdi, [bigint_temp_b]    ; x
+    lea rsi, [shor_a]
+    lea rdx, [bigint_temp_a]
+    lea rcx, [shor_N]
+    call bigint_pow_mod
+    
+    ; Check x != 1
+    lea rdi, [bigint_temp_c]
+    mov rsi, 1
+    call bigint_set_u64
+    lea rdi, [bigint_temp_b]
+    lea rsi, [bigint_temp_c]
+    call bigint_cmp
+    pop r15
+    cmp rax, 0
+    je .reality_b_next_chunk    ; x == 1, trivial
+    
+    ; Check x != N-1
+    push r15
+    lea rdi, [bigint_temp_a]
+    lea rsi, [shor_N]
+    call bigint_copy
+    lea rdi, [bigint_temp_a]
+    lea rsi, [bigint_temp_a]
+    lea rdx, [bigint_temp_c]
+    call bigint_sub             ; temp_a = N - 1
+    lea rdi, [bigint_temp_b]
+    lea rsi, [bigint_temp_a]
+    call bigint_cmp
+    pop r15
+    cmp rax, 0
+    je .reality_b_next_chunk    ; x == N-1, trivial
+    
+    ; Try p = gcd(x-1, N)
+    push r15
+    lea rdi, [bigint_temp_c]
+    mov rsi, 1
+    call bigint_set_u64
+    lea rdi, [bigint_temp_a]    ; x-1
+    lea rsi, [bigint_temp_b]
+    lea rdx, [bigint_temp_c]
+    call bigint_sub
+    
+    lea rdi, [bigint_temp_a]
+    lea rsi, [shor_N]
+    lea rdx, [shor_factor_p]
+    call bigint_gcd
+    
+    ; Check factor_p > 1 and factor_p < N
+    lea rdi, [shor_factor_p]
+    lea rsi, [bigint_temp_c]    ; 1
+    call bigint_cmp
+    cmp rax, 0
+    jle .reality_b_try_xplus1
+    
+    lea rdi, [shor_factor_p]
+    lea rsi, [shor_N]
+    call bigint_cmp
+    cmp rax, 0
+    jge .reality_b_try_xplus1
+    
+    ; Found non-trivial factor!
+    jmp .reality_b_success
+    
+.reality_b_try_xplus1:
+    ; Try q = gcd(x+1, N)
+    lea rdi, [bigint_temp_c]
+    mov rsi, 1
+    call bigint_set_u64
+    lea rdi, [bigint_temp_a]    ; x+1
+    lea rsi, [bigint_temp_b]
+    lea rdx, [bigint_temp_c]
+    call bigint_add
+    
+    lea rdi, [bigint_temp_a]
+    lea rsi, [shor_N]
+    lea rdx, [shor_factor_p]
+    call bigint_gcd
+    
+    ; Check factor_p > 1 and factor_p < N
+    lea rdi, [bigint_temp_c]
+    mov rsi, 1
+    call bigint_set_u64
+    lea rdi, [shor_factor_p]
+    lea rsi, [bigint_temp_c]
+    call bigint_cmp
+    cmp rax, 0
+    jle .reality_b_pop_next
+    
+    lea rdi, [shor_factor_p]
+    lea rsi, [shor_N]
+    call bigint_cmp
+    cmp rax, 0
+    jge .reality_b_pop_next
+    
+    ; Found non-trivial factor!
+    jmp .reality_b_success
+    
+.reality_b_pop_next:
+    pop r15
+.reality_b_next_chunk:
+    inc r15
+    jmp .reality_b_try_loop
+
+.reality_b_success:
+    pop r15
+    ; Calculate factor_q = N / factor_p
+    lea rdi, [shor_N]
+    lea rsi, [shor_factor_p]
+    lea rdx, [shor_factor_q]
+    lea rcx, [shor_cf_rem]
+    call bigint_div_mod
+    jmp .print_success
+
+.standard_cf_path:
     ; ────── PHASE 3: TRUNCATED CONTINUED FRACTIONS (v4 Rigorous) ──────
     ; Extract high-precision window of measurement y and register Q.
     ; Goal: find h/k such that h/k approx y/Q. k is the period r.
@@ -3624,7 +3825,6 @@ execute_instruction:
     ; Check factor_p > 1
     lea rdi, [shor_factor_p]
     lea rsi, [bigint_temp_c]    ; 1
-    call bigint_cmp
     call bigint_cmp
     cmp rax, 0
     jg .factor_p_good           ; factor_p > 1, use it
@@ -4917,6 +5117,7 @@ print_number:
 ; qft_single_chunk - Apply QFT to a single chunk
 ; Input: rdi = chunk_index
 ; Transforms amplitudes using qutrit DFT matrix
+; Uses mmap-allocated temp storage to handle any chunk size
 qft_single_chunk:
     push rbx
     push r12
@@ -4925,11 +5126,31 @@ qft_single_chunk:
     push r15
     push rbp
     mov rbp, rsp
-    sub rsp, 128                ; Local storage for temp amplitudes
+    sub rsp, 32                 ; Local vars: [rbp-8]=temp_ptr, [rbp-16]=temp_size
 
     mov r12, rdi                ; chunk index
     mov rbx, [state_vectors + r12*8]
     mov r13, [chunk_states + r12*8]
+    
+    ; Allocate temp storage via mmap: size = states * 16 bytes (complex double)
+    mov rsi, r13
+    shl rsi, 4                  ; * 16
+    add rsi, 4096               ; Round up + padding
+    and rsi, ~4095
+    mov [rbp - 16], rsi         ; save size for munmap
+    
+    mov rax, 9                  ; sys_mmap
+    xor rdi, rdi                ; addr = NULL
+    mov rdx, 3                  ; PROT_READ | PROT_WRITE
+    mov r10, 34                 ; MAP_PRIVATE | MAP_ANONYMOUS
+    mov r8, -1
+    xor r9, r9
+    syscall
+    
+    cmp rax, -1
+    je .qft_done_no_free        ; mmap failed, skip QFT
+    mov [rbp - 8], rax          ; save temp buffer pointer
+    mov r11, rax                ; r11 = temp buffer
 
     ; QFT for qutrits uses ω = exp(2πi/3) as primitive root
     ; DFT matrix: F[j,k] = ω^(jk) / sqrt(N)
@@ -5011,40 +5232,54 @@ qft_single_chunk:
     jmp .qft_inner
 
 .qft_store:
-    ; Normalize by 1/sqrt(N) and store temporarily
+    ; Normalize by 1/sqrt(N) and store in temp buffer
     mulsd xmm6, xmm14
     mulsd xmm7, xmm14
     
     mov rax, r14
     shl rax, 4
-    movsd [rbp - 128 + rax], xmm6
-    movsd [rbp - 128 + rax + 8], xmm7
+    movsd [r11 + rax], xmm6
+    movsd [r11 + rax + 8], xmm7
     
     inc r14
-    cmp r14, 8                  ; Limit temp storage
-    jl .qft_outer
+    jmp .qft_outer              ; No limit - process all states
 
 .qft_complete:
     ; Copy temp results back to state vector
     xor r14, r14
 .qft_copy:
     cmp r14, r13
-    jge .qft_done
-    cmp r14, 8
-    jge .qft_done
+    jge .qft_free
     
     mov rax, r14
     shl rax, 4
-    movsd xmm0, [rbp - 128 + rax]
-    movsd xmm1, [rbp - 128 + rax + 8]
+    movsd xmm0, [r11 + rax]
+    movsd xmm1, [r11 + rax + 8]
     movsd [rbx + rax], xmm0
     movsd [rbx + rax + 8], xmm1
     
     inc r14
     jmp .qft_copy
 
+.qft_free:
+    ; Free temp buffer via munmap
+    mov rax, 11                 ; sys_munmap
+    mov rdi, [rbp - 8]          ; temp buffer address
+    mov rsi, [rbp - 16]         ; size
+    syscall
+
 .qft_done:
-    add rsp, 128
+    add rsp, 32
+    pop rbp
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+.qft_done_no_free:
+    add rsp, 32
     pop rbp
     pop r15
     pop r14
@@ -5131,6 +5366,7 @@ qft_phase_correction:
 ; iqft_single_chunk - Apply inverse QFT to a single chunk
 ; Input: rdi = chunk_index
 ; Uses conjugate transpose of QFT matrix
+; Uses mmap-allocated temp storage to handle any chunk size
 iqft_single_chunk:
     push rbx
     push r12
@@ -5139,11 +5375,31 @@ iqft_single_chunk:
     push r15
     push rbp
     mov rbp, rsp
-    sub rsp, 128
+    sub rsp, 32                 ; Local vars: [rbp-8]=temp_ptr, [rbp-16]=temp_size
 
     mov r12, rdi
     mov rbx, [state_vectors + r12*8]
     mov r13, [chunk_states + r12*8]
+    
+    ; Allocate temp storage via mmap: size = states * 16 bytes (complex double)
+    mov rsi, r13
+    shl rsi, 4                  ; * 16
+    add rsi, 4096               ; Round up + padding
+    and rsi, ~4095
+    mov [rbp - 16], rsi         ; save size for munmap
+    
+    mov rax, 9                  ; sys_mmap
+    xor rdi, rdi                ; addr = NULL
+    mov rdx, 3                  ; PROT_READ | PROT_WRITE
+    mov r10, 34                 ; MAP_PRIVATE | MAP_ANONYMOUS
+    mov r8, -1
+    xor r9, r9
+    syscall
+    
+    cmp rax, -1
+    je .iqft_done_no_free       ; mmap failed, skip iQFT
+    mov [rbp - 8], rax          ; save temp buffer pointer
+    mov r11, rax                ; r11 = temp buffer
 
     cvtsi2sd xmm15, r13
     sqrtsd xmm15, xmm15
@@ -5163,22 +5419,25 @@ iqft_single_chunk:
     cmp r15, r13
     jge .iqft_store
     
-    ; Use conjugate: ω^(-jk) instead of ω^(jk)
+    ; Use conjugate: ω^(-jk) = ω^(3 - (jk mod 3)) for non-zero
+    ; Calculate (j*k) mod 3 first, then map to conjugate
     mov rax, r14
     imul rax, r15
-    neg rax
     xor rdx, rdx
     mov rcx, 3
-    ; Handle negative modulo
-    add rax, 3000
-    div rcx
+    div rcx                     ; rdx = (j*k) mod 3
     
+    ; For inverse, we want ω^(-phase) = conjugate(ω^(phase))
+    ; ω^0 conjugate = ω^0 = 1
+    ; ω^1 conjugate = ω^(-1) = ω^2 
+    ; ω^2 conjugate = ω^(-2) = ω^1
     cmp rdx, 0
     je .iomega_0
     cmp rdx, 1
     je .iomega_1
-    movsd xmm2, [omega_real]    ; Conjugate of ω^2
-    movsd xmm3, [omega_imag]
+    ; rdx == 2: conjugate of ω^2 is ω^1
+    movsd xmm2, [omega_real]    ; -0.5
+    movsd xmm3, [omega_imag]    ; √3/2 (positive imag = ω^1)
     jmp .iapply_omega
 
 .iomega_0:
@@ -5187,8 +5446,9 @@ iqft_single_chunk:
     jmp .iapply_omega
 
 .iomega_1:
-    movsd xmm2, [omega2_real]
-    movsd xmm3, [omega2_imag]
+    ; Conjugate of ω^1 is ω^2
+    movsd xmm2, [omega2_real]   ; -0.5
+    movsd xmm3, [omega2_imag]   ; -√3/2 (negative imag = ω^2)
 
 .iapply_omega:
     mov rax, r15
@@ -5220,33 +5480,47 @@ iqft_single_chunk:
     
     mov rax, r14
     shl rax, 4
-    movsd [rbp - 128 + rax], xmm6
-    movsd [rbp - 128 + rax + 8], xmm7
+    movsd [r11 + rax], xmm6
+    movsd [r11 + rax + 8], xmm7
     
     inc r14
-    cmp r14, 8
-    jl .iqft_outer
+    jmp .iqft_outer             ; No limit - process all states
 
 .iqft_complete:
     xor r14, r14
 .iqft_copy:
     cmp r14, r13
-    jge .iqft_done
-    cmp r14, 8
-    jge .iqft_done
+    jge .iqft_free
     
     mov rax, r14
     shl rax, 4
-    movsd xmm0, [rbp - 128 + rax]
-    movsd xmm1, [rbp - 128 + rax + 8]
+    movsd xmm0, [r11 + rax]
+    movsd xmm1, [r11 + rax + 8]
     movsd [rbx + rax], xmm0
     movsd [rbx + rax + 8], xmm1
     
     inc r14
     jmp .iqft_copy
 
+.iqft_free:
+    ; Free temp buffer via munmap
+    mov rax, 11                 ; sys_munmap
+    mov rdi, [rbp - 8]          ; temp buffer address
+    mov rsi, [rbp - 16]         ; size
+    syscall
+
 .iqft_done:
-    add rsp, 128
+    add rsp, 32
+    pop rbp
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+.iqft_done_no_free:
+    add rsp, 32
     pop rbp
     pop r15
     pop r14
