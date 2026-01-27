@@ -53,6 +53,11 @@
 %define OP_REPAIR           0x11
 %define OP_CHUNK_SWAP       0x12        ; Teleport Chunk (Time Travel)
 %define OP_IF               0x15        ; Conditional Execution (Classical Control)
+%define OP_DUMP_HEX         0x16        ; Dump Measured Values as Hex string
+%define OP_STORE_LO         0x17        ; Store low 32 bits into measured_values
+%define OP_STORE_HI         0x18        ; Store high 32 bits into measured_values
+%define OP_EXPORT_WEIGHTS    0x19        ; Export measured_values to a file
+%define OP_IMPORT_WEIGHTS    0x1A        ; Import measured_values from a file
 %define OP_HALT             0xFF
 
 ; Qutrit state offsets (3 basis states, each complex)
@@ -113,6 +118,8 @@ section .data
     ; Powers of 3 lookup
     powers_of_3:
         dq 1, 3, 9, 27, 81, 243, 729, 2187, 6561, 19683, 59049
+        dq 177147, 531441, 1594323, 4782969, 14348907, 43046721
+        dq 129140163, 387420489, 1162261467, 3486784401
 
     ; Messages
     msg_banner:         db 10, "══════════════════════════════════════════════════", 10
@@ -133,6 +140,8 @@ section .data
     msg_result:         db " => ", 0
     msg_halt:           db 10, "  [HALT] Execution complete.", 10, 0
     msg_addon_reg:      db "  [ADDON] Registered: ", 0
+    msg_swap:           db "  [SWAP] Chunks ", 0
+    msg_shift:          db "  [X] Shift gate on chunk ", 0
     msg_newline:        db 10, 0
     msg_space:          db " ", 0
     msg_arrow:          db " <-> ", 0
@@ -142,11 +151,15 @@ section .data
     msg_amp:            db " amp=", 0
     msg_error:          db "  [ERROR] ", 0
     msg_unknown_op:     db "Unknown opcode", 10, 0
+    msg_dump_hex:       db "  [DUMP] Hex data: ", 0
     msg_bell:           db "  [BELL] Testing entanglement chunks ", 0
     msg_bell_corr:      db "  [BELL] Correlation = ", 0
     msg_bell_pass:      db "  ✓ BELL TEST PASSED - Entanglement verified!", 10, 0
     msg_bell_fail:      db "  ✗ BELL TEST FAILED - No entanglement detected", 10, 0
     msg_percent:        db "%", 10, 0
+    weights_filename:   db "mastered.weights", 0
+    msg_export:         db "  [EXPORT] Weights saved to mastered.weights", 10, 0
+    msg_import:         db "  [IMPORT] Weights loaded from mastered.weights", 10, 0
     
     ; Oracle names
     oracle_heisenberg_name: db "Heisenberg Spin-1 Exchange", 0
@@ -2090,6 +2103,16 @@ execute_instruction:
     je .op_chunk_swap
     cmp r13, OP_IF
     je .op_if
+    cmp r13, OP_DUMP_HEX
+    je .op_dump_hex
+    cmp r13, OP_STORE_LO
+    je .op_store_lo
+    cmp r13, OP_STORE_HI
+    je .op_store_hi
+    cmp r13, OP_EXPORT_WEIGHTS
+    je .op_export_weights
+    cmp r13, OP_IMPORT_WEIGHTS
+    je .op_import_weights
     cmp r13, OP_ADDON
     je .op_addon
     cmp r13, OP_HALT
@@ -2109,6 +2132,61 @@ execute_instruction:
 
 .op_nop:
     xor rax, rax
+    jmp .exec_ret
+
+.op_export_weights:
+    ; sys_open("mastered.weights", O_WRONLY|O_CREAT|O_TRUNC, 0644)
+    mov rax, 2
+    lea rdi, [weights_filename]
+    mov rsi, 577                ; O_WRONLY | O_CREAT | O_TRUNC
+    mov rdx, 0o644
+    syscall
+    
+    test rax, rax
+    js .exec_ret
+    mov r13, rax                ; fd
+    
+    ; sys_write(fd, measured_values, size)
+    mov rax, 1
+    mov rdi, r13
+    lea rsi, [measured_values]
+    mov rdx, MAX_CHUNKS * 8
+    syscall
+    
+    ; sys_close(fd)
+    mov rax, 3
+    mov rdi, r13
+    syscall
+    
+    lea rsi, [msg_export]
+    call print_string
+    jmp .exec_ret
+
+.op_import_weights:
+    ; sys_open("mastered.weights", O_RDONLY)
+    mov rax, 2
+    lea rdi, [weights_filename]
+    xor rsi, rsi                ; O_RDONLY
+    syscall
+    
+    test rax, rax
+    js .exec_ret
+    mov r13, rax                ; fd
+    
+    ; sys_read(fd, measured_values, size)
+    mov rax, 0
+    mov rdi, r13
+    lea rsi, [measured_values]
+    mov rdx, MAX_CHUNKS * 8
+    syscall
+    
+    ; sys_close(fd)
+    mov rax, 3
+    mov rdi, r13
+    syscall
+    
+    lea rsi, [msg_import]
+    call print_string
     jmp .exec_ret
 
 .op_init:
@@ -2441,6 +2519,13 @@ execute_instruction:
     ; OP_SHIFT (0x10) - Cyclic X-Gate (0->1, 1->2, 2->0)
     ; Input: r14 = target chunk
     
+    lea rsi, [msg_shift]
+    call print_string
+    mov rdi, r14
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+
     mov rbx, [state_vectors + r14*8]
     
     ; Load amplitudes
@@ -2599,6 +2684,17 @@ execute_instruction:
 
 .op_chunk_swap:
     ; Swap Chunk A (r14) and Chunk B (rbx)
+    lea rsi, [msg_swap]
+    call print_string
+    mov rdi, r14
+    call print_number
+    lea rsi, [msg_arrow]
+    call print_string
+    mov rdi, rbx
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+
     cmp r14, MAX_CHUNKS
     jge .exec_ret
     cmp rbx, MAX_CHUNKS
@@ -2625,6 +2721,9 @@ execute_instruction:
     xor rax, rax
     jmp .exec_ret
 
+.op_dump_hex_jump:
+    jmp .op_dump_hex
+
 .op_addon:
     mov rdi, r13                ; opcode
     mov rsi, r14                ; chunk
@@ -2633,10 +2732,63 @@ execute_instruction:
     call call_addon
     jmp .exec_ret
 
+.op_dump_hex:
+    ; Input: op1 = start_chunk, op2 = num_chunks
+    mov r12, rbx                ; start_chunk (op1)
+    mov r13, rcx                ; num_chunks (op2)
+    
+    lea rsi, [msg_dump_hex]
+    call print_string
+    
+.dump_loop:
+    test r13, r13
+    jz .dump_done
+    
+    mov rdi, [measured_values + r12*8]
+    call print_hex_qword
+    
+    inc r12
+    dec r13
+    jmp .dump_loop
+
+.dump_done:
+    lea rsi, [msg_newline]
+    call print_string
+    jmp .exec_ret
+
+    jmp .exec_ret
+
 .op_halt:
     lea rsi, [msg_halt]
     call print_string
     mov rax, 1                  ; Signal halt
+    jmp .exec_ret
+
+.op_store_lo:
+    ; r14 = chunk, rbx = op1 (low 16), rcx = op2 (mid 16)
+    shl rcx, 16
+    or rbx, rcx                 ; rbx now has 32-bit value
+    
+    mov rdx, [measured_values + r14*8]
+    mov rax, 0xFFFFFFFF
+    not rax
+    and rdx, rax                ; clear low 32 bits
+    or rdx, rbx
+    mov [measured_values + r14*8], rdx
+    jmp .exec_ret
+
+.op_store_hi:
+    ; r14 = chunk, rbx = op1 (low 16), rcx = op2 (mid 16)
+    shl rcx, 16
+    or rbx, rcx                 ; rbx now has 32-bit value
+    mov rax, rbx
+    shl rax, 32                 ; shift to high 32 bits
+    
+    mov rdx, [measured_values + r14*8]
+    mov rsi, 0xFFFFFFFF         ; low 32 mask
+    and rdx, rsi                ; clear high 32 bits
+    or rdx, rax
+    mov [measured_values + r14*8], rdx
     jmp .exec_ret
 
 .exec_ret:
@@ -2960,6 +3112,50 @@ print_number:
     inc rsi
     call print_string
 
+    pop rsi
+    pop rdx
+    pop rcx
+    pop rbx
+    pop rax
+    ret
+
+; print_hex_qword - Print 64-bit number as hex
+; Input: rdi = number
+print_hex_qword:
+    push rax
+    push rbx
+    push rcx
+    push rdx
+    push rsi
+    push rdi
+
+    mov rax, rdi
+    mov rdx, rax
+    mov rcx, 16                 ; 16 nibbles
+.hex_loop:
+    rol rdx, 4                  ; Get high nibble
+    mov rax, rdx
+    and rax, 0xF
+    cmp al, 10
+    jl .hex_digit
+    add al, 'a' - 10 - '0'
+.hex_digit:
+    add al, '0'
+    mov [output_buffer], al
+    push rdx
+    push rcx
+    mov rsi, output_buffer
+    mov rdx, 1
+    mov rax, 1
+    mov rdi, 1
+    syscall
+    pop rcx
+    pop rdx
+    
+    dec rcx
+    jnz .hex_loop
+
+    pop rdi
     pop rsi
     pop rdx
     pop rcx
