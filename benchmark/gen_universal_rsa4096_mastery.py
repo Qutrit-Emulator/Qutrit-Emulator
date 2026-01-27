@@ -12,6 +12,7 @@ def make_instr(opcode, target=0, op1=0, op2=0):
 OP_INIT           = 0x01
 OP_MEASURE        = 0x07
 OP_BRAID          = 0x09
+OP_SHIFT           = 0x10
 OP_CHUNK_SWAP     = 0x12
 OP_EXPORT_WEIGHTS = 0x19
 OP_HALT           = 0xFF
@@ -42,11 +43,15 @@ print("Step 2: Braiding factor segments across time.")
 for i in range(NUM_LIMBS):
     program += make_instr(OP_BRAID, target=100+i, op1=200+i)
 
-# 3. Apply Universal Oracle to Future
-# This shifts the future state to |2> (Mastered Logic)
-print("Step 3: Applying Universal Oracle to Future slots to induce convergence.")
+# 3. Apply Universal Oracle and Convergence to Future
+# The Universal Oracle marks the logic, but we need to SHIFT to the |2> state
+# to ensure the "Mastered" logic is what we measure.
+print("Step 3: Inducing Universal Logic Convergence in Future slots.")
 for i in range(NUM_LIMBS):
     program += make_instr(OP_ORACLE, target=200+i, op1=ORACLE_UNIVERSAL_ID)
+    # Shift from |0> -> |1> -> |2>
+    program += make_instr(OP_SHIFT, target=200+i)
+    program += make_instr(OP_SHIFT, target=200+i)
 
 # 4. Prophetic Teleportation
 # Pull the converged logic from Future to Present
