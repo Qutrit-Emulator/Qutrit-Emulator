@@ -1,0 +1,481 @@
+; ═══════════════════════════════════════════════════════════════════════════════
+; CUSTOM ORACLES - External Qutrit Oracle Add-ons
+; ═══════════════════════════════════════════════════════════════════════════════
+; This file contains custom oracle implementations that can be loaded by
+; qutrit_engine_born_rule.asm via %include directive.
+;
+; To add your own oracles:
+;   1. Define your oracle function following the standard interface
+;   2. Add a registration call in register_custom_oracles
+;   3. Assign an opcode in the range 0x82-0xFF
+;
+; Oracle Interface:
+;   Input:  rdi = state_vector pointer (array of complex doubles)
+;           rsi = num_states (number of states in the vector)
+;           rdx = operand1 (optional parameter)
+;           rcx = operand2 (optional parameter)
+;   Output: None (modifies state vector in place)
+;
+; Each state is 16 bytes: 8 bytes real + 8 bytes imag
+; ═══════════════════════════════════════════════════════════════════════════════
+
+section .data
+    ; Oracle names for custom oracles
+    oracle_grover_mark_name:    db "Grover Mark Oracle", 0
+    oracle_z_gate_name:         db "Qutrit Z Gate", 0
+    oracle_x01_swap_name:       db "X01 Swap Gate", 0
+    oracle_sum_gate_name:       db "SUM Gate (CNOT)", 0
+
+; ═══════════════════════════════════════════════════════════════════════════════
+; CUSTOM ORACLE REGISTRATION
+; ═══════════════════════════════════════════════════════════════════════════════
+
+section .text
+
+; register_custom_oracles - Called from main engine to register all custom oracles
+; Call this function from register_builtins in the main file
+; Preserves: all callee-saved registers
+global register_custom_oracles
+register_custom_oracles:
+    push rdi
+    push rsi
+    push rdx
+
+    ; Register Grover Mark Oracle as opcode 0x82
+    lea rdi, [oracle_grover_mark_name]
+    lea rsi, [grover_mark_oracle]
+    mov rdx, 0x82
+    call register_addon
+
+    ; Register Qutrit Z Gate as opcode 0x83
+    lea rdi, [oracle_z_gate_name]
+    lea rsi, [qutrit_z_gate]
+    mov rdx, 0x83
+    call register_addon
+
+    ; Register X01 Swap as opcode 0x84
+    lea rdi, [oracle_x01_swap_name]
+    lea rsi, [x01_swap_gate]
+    mov rdx, 0x84
+    call register_addon
+
+    ; Register SUM Gate (CNOT) as opcode 0x85
+    lea rdi, [oracle_sum_gate_name]
+    lea rsi, [sum_gate]
+    mov rdx, 0x85
+    call register_addon
+
+    pop rdx
+    pop rsi
+    pop rdi
+    ret
+
+; ═══════════════════════════════════════════════════════════════════════════════
+; CUSTOM ORACLE IMPLEMENTATIONS
+; ═══════════════════════════════════════════════════════════════════════════════
+
+; grover_mark_oracle - Mark a specific state for Grover's algorithm
+; Input: rdi = state_vector, rsi = num_states, rdx = target_state (state to mark)
+; Action: Applies phase flip (-1) to the target state
+grover_mark_oracle:
+    push rbx
+    push r12
+    
+    mov r12, rdi                ; state vector
+    mov rbx, rdx                ; target state index
+    
+    ; Bounds check
+    cmp rbx, rsi
+    jge .grover_mark_done
+    
+    ; Apply phase flip: amp = -amp
+    shl rbx, 4                  ; offset = index * 16
+    
+    ; Negate real part
+    movsd xmm0, [r12 + rbx]
+    xorpd xmm1, xmm1
+    subsd xmm1, xmm0
+    movsd [r12 + rbx], xmm1
+    
+    ; Negate imaginary part
+    movsd xmm0, [r12 + rbx + 8]
+    xorpd xmm1, xmm1
+    subsd xmm1, xmm0
+    movsd [r12 + rbx + 8], xmm1
+
+.grover_mark_done:
+    pop r12
+    pop rbx
+    ret
+
+; qutrit_z_gate - Apply qutrit Z gate (diagonal phase gate)
+; Input: rdi = state_vector, rsi = num_states
+; Action: Applies phases |0⟩→|0⟩, |1⟩→ω|1⟩, |2⟩→ω²|2⟩ where ω = exp(2πi/3)
+; For multi-qutrit states, applies to the least significant qutrit
+qutrit_z_gate:
+    push rbx
+    push r12
+    push r13
+    push r14
+    
+    mov r12, rdi                ; state vector
+    mov r13, rsi                ; num states
+    
+    ; ω = -0.5 + i*√3/2
+    ; ω² = -0.5 - i*√3/2
+    
+    xor r14, r14                ; state counter
+.z_loop:
+    cmp r14, r13
+    jge .z_done
+    
+    ; Get qutrit value (state mod 3)
+    mov rax, r14
+    xor rdx, rdx
+    mov rcx, 3
+    div rcx
+    ; rdx = qutrit value (0, 1, or 2)
+    
+    cmp rdx, 0
+    je .z_next                  ; |0⟩ gets no phase
+    
+    mov rax, r14
+    shl rax, 4
+    
+    cmp rdx, 1
+    je .apply_omega
+    
+    ; Apply ω² for |2⟩
+    movsd xmm0, [r12 + rax]     ; real
+    movsd xmm1, [r12 + rax + 8] ; imag
+    
+    ; (a+bi)*(-0.5-i*√3/2) = (-0.5a + √3/2*b) + i*(-0.5b - √3/2*a)
+    mov rbx, 0xBFE0000000000000 ; -0.5
+    movq xmm2, rbx
+    mov rbx, 0xBFEBB67AE8584CAA ; -√3/2
+    movq xmm3, rbx
+    
+    movsd xmm4, xmm0
+    mulsd xmm4, xmm2            ; -0.5 * a
+    movsd xmm5, xmm1
+    mulsd xmm5, xmm3            ; -√3/2 * b (but we need +√3/2*b)
+    subsd xmm4, xmm5            ; -0.5a - (-√3/2*b) = -0.5a + √3/2*b
+    
+    movsd xmm5, xmm1
+    mulsd xmm5, xmm2            ; -0.5 * b
+    movsd xmm6, xmm0
+    mulsd xmm6, xmm3            ; -√3/2 * a
+    addsd xmm5, xmm6            ; -0.5b + (-√3/2*a) = -0.5b - √3/2*a
+    
+    movsd [r12 + rax], xmm4
+    movsd [r12 + rax + 8], xmm5
+    jmp .z_next
+    
+.apply_omega:
+    ; Apply ω for |1⟩
+    movsd xmm0, [r12 + rax]     ; real
+    movsd xmm1, [r12 + rax + 8] ; imag
+    
+    ; (a+bi)*(-0.5+i*√3/2) = (-0.5a - √3/2*b) + i*(-0.5b + √3/2*a)
+    mov rbx, 0xBFE0000000000000 ; -0.5
+    movq xmm2, rbx
+    mov rbx, 0x3FEBB67AE8584CAA ; +√3/2
+    movq xmm3, rbx
+    
+    movsd xmm4, xmm0
+    mulsd xmm4, xmm2            ; -0.5 * a
+    movsd xmm5, xmm1
+    mulsd xmm5, xmm3            ; √3/2 * b
+    subsd xmm4, xmm5            ; -0.5a - √3/2*b
+    
+    movsd xmm5, xmm1
+    mulsd xmm5, xmm2            ; -0.5 * b
+    movsd xmm6, xmm0
+    mulsd xmm6, xmm3            ; √3/2 * a
+    addsd xmm5, xmm6            ; -0.5b + √3/2*a
+    
+    movsd [r12 + rax], xmm4
+    movsd [r12 + rax + 8], xmm5
+    
+.z_next:
+    inc r14
+    jmp .z_loop
+    
+.z_done:
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+; x01_swap_gate - Swap |0⟩ and |1⟩ states (partial X gate)
+; Input: rdi = state_vector, rsi = num_states
+; Action: For each state triplet (based on least significant qutrit),
+;         swaps amplitudes of |0⟩ and |1⟩ component
+x01_swap_gate:
+    push rbx
+    push r12
+    push r13
+    push r14
+    
+    mov r12, rdi                ; state vector
+    mov r13, rsi                ; num states
+    
+    xor r14, r14                ; state counter (step by 3)
+.x01_loop:
+    cmp r14, r13
+    jge .x01_done
+    
+    ; Swap amplitudes at index r14 (|...0⟩) and r14+1 (|...1⟩)
+    mov rax, r14
+    shl rax, 4
+    
+    lea rbx, [r14 + 1]
+    cmp rbx, r13
+    jge .x01_done
+    shl rbx, 4
+    
+    ; Load |...0⟩
+    movsd xmm0, [r12 + rax]
+    movsd xmm1, [r12 + rax + 8]
+    
+    ; Load |...1⟩
+    movsd xmm2, [r12 + rbx]
+    movsd xmm3, [r12 + rbx + 8]
+    
+    ; Swap
+    movsd [r12 + rax], xmm2
+    movsd [r12 + rax + 8], xmm3
+    movsd [r12 + rbx], xmm0
+    movsd [r12 + rbx + 8], xmm1
+    
+    add r14, 3                  ; Skip to next triplet
+    jmp .x01_loop
+    
+.x01_done:
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+; sum_gate - Qutrit CNOT (SUM) gate: |c⟩|t⟩ -> |c⟩|t ⊕ c⟩ (mod 3)
+; Input: rdi = state_vector, rsi = num_states, rdx = control_qutrit, rcx = target_qutrit
+; This maps:
+; |0,t⟩ -> |0,t⟩
+; |1,t⟩ -> |1,(t+1)%3⟩
+; |2,t⟩ -> |2,(t+2)%3⟩
+sum_gate:
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+    push rbp
+    mov rbp, rsp
+    
+    mov r12, rdi                ; state vector
+    mov r13, rsi                ; num states
+    mov r14, rdx                ; control pos
+    mov r15, rcx                ; target pos
+    
+    ; Allocate temp space for amplitudes
+    sub rsp, 48                 ; Space for 3 complex amplitudes (3 * 16 = 48)
+    
+    xor rbx, rbx                ; state counter
+.sum_loop:
+    cmp rbx, r13
+    jge .sum_done
+    
+    ; We need to group states by (control, target) values
+    ; But easier: iterate all states, check if we've handled this group (via visited? no space)
+    ; Actually, simpler: Since mapping is 1-to-1 permutation, we can just compute destination index
+    ; BUT we can't do in-place without a buffer or careful swapping.
+    ; Wait, the permutation consists of disjoint cycles.
+    ; If control=0, cycle is identity (len 1).
+    ; If control=1, target cycles 0->1->2->0 (len 3).
+    ; If control=2, target cycles 0->2->1->0 (len 3).
+    ; We can process these cycles.
+    
+    ; To avoid double processing, let's look for the "base" of the cycle.
+    ; Cycle for C=1: ...0 -> ...1 -> ...2 -> ...0. Smallest is ...0. Process when we hit ...0.
+    ; Cycle for C=2: ...0 -> ...2 -> ...1 -> ...0. Smallest is ...0. Process when we hit ...0.
+    
+    ; Extract Control Value
+    mov rax, rbx
+    push rcx
+    mov rcx, r14
+.ext_c:
+    test rcx, rcx
+    jz .got_c
+    xor rdx, rdx
+    push rsi
+    mov rsi, 3
+    div rsi
+    pop rsi
+    dec rcx
+    jmp .ext_c
+.got_c:
+    xor rdx, rdx
+    push rsi
+    mov rsi, 3
+    div rsi
+    pop rsi
+    mov r8, rdx                 ; r8 = Control Value (0,1,2)
+    pop rcx
+    
+    cmp r8, 0
+    je .next_state              ; C=0 -> Identity
+    
+    ; Extract Target Value
+    mov rax, rbx
+    push rcx
+    mov rcx, r15
+.ext_t:
+    test rcx, rcx
+    jz .got_t
+    xor rdx, rdx
+    push rsi
+    mov rsi, 3
+    div rsi
+    pop rsi
+    dec rcx
+    jmp .ext_t
+.got_t:
+    xor rdx, rdx
+    push rsi
+    mov rsi, 3
+    div rsi
+    pop rsi
+    mov r9, rdx                 ; r9 = Target Value (0,1,2)
+    pop rcx
+    
+    cmp r9, 0
+    jne .next_state             ; Only process cycle starting at Target=0
+                                ; This ensures we hit each cycle exactly once (at ...0)
+    
+    ; Now we have a state |...C...0...⟩ where C!=0.
+    ; This is the start of a cycle.
+    ; Indices for the cycle:
+    ; Index0 = rbx (Target=0)
+    
+    ; Calculate stride for target
+    mov rax, 1
+    mov rcx, r15
+.powT:
+    test rcx, rcx
+    jz .got_powT
+    imul rax, 3
+    dec rcx
+    jmp .powT
+.got_powT:
+    mov r10, rax                ; r10 = 3^target_pos (stride)
+    
+    mov r11, rbx                ; Index0 (T=0)
+    
+    lea rax, [rbx + r10]        ; Index1 (T=1)
+    lea rcx, [rbx + r10]    
+    add rcx, r10                ; Index2 (T=2)
+    
+    ; Save amplitudes
+    ; Amp0 from Index0
+    mov rdx, r11
+    shl rdx, 4
+    movsd xmm0, [r12 + rdx]
+    movsd xmm1, [r12 + rdx + 8]
+    movsd [rsp], xmm0
+    movsd [rsp+8], xmm1
+    
+    ; Amp1 from Index1
+    mov rdx, rax
+    shl rdx, 4
+    movsd xmm2, [r12 + rdx]
+    movsd xmm3, [r12 + rdx + 8]
+    movsd [rsp+16], xmm2
+    movsd [rsp+24], xmm3
+    
+    ; Amp2 from Index2
+    mov rdx, rcx
+    shl rdx, 4
+    movsd xmm4, [r12 + rdx]
+    movsd xmm5, [r12 + rdx + 8]
+    movsd [rsp+32], xmm4
+    movsd [rsp+40], xmm5
+    
+    ; Apply Permutation
+    ; Control=1: 0->1, 1->2, 2->0 (Shift Right)
+    ; New0 <- Old2
+    ; New1 <- Old0
+    ; New2 <- Old1
+    
+    ; Control=2: 0->2, 2->1, 1->0 (Shift Left) <=> 0->2, 1->0, 2->1
+    ; New0 <- Old1
+    ; New1 <- Old2
+    ; New2 <- Old0
+    
+    cmp r8, 1
+    je .shift_right
+    
+.shift_left:
+    ; Dest Index0 gets Src Index1
+    movsd xmm0, [rsp+16]
+    movsd xmm1, [rsp+24]
+    
+    ; Dest Index1 gets Src Index2
+    movsd xmm2, [rsp+32]
+    movsd xmm3, [rsp+40]
+    
+    ; Dest Index2 gets Src Index0
+    movsd xmm4, [rsp]
+    movsd xmm5, [rsp+8]
+    jmp .write_back
+    
+.shift_right:
+    ; Dest Index0 gets Src Index2
+    movsd xmm0, [rsp+32]
+    movsd xmm1, [rsp+40]
+    
+    ; Dest Index1 gets Src Index0
+    movsd xmm2, [rsp]
+    movsd xmm3, [rsp+8]
+    
+    ; Dest Index2 gets Src Index1
+    movsd xmm4, [rsp+16]
+    movsd xmm5, [rsp+24]
+    
+.write_back:
+    ; Write to Index0
+    mov rdx, r11
+    shl rdx, 4
+    movsd [r12 + rdx], xmm0
+    movsd [r12 + rdx + 8], xmm1
+    
+    ; Write to Index1
+    mov rdx, rax
+    shl rdx, 4
+    movsd [r12 + rdx], xmm2
+    movsd [r12 + rdx + 8], xmm3
+    
+    ; Write to Index2
+    mov rdx, rcx
+    shl rdx, 4
+    movsd [r12 + rdx], xmm4
+    movsd [r12 + rdx + 8], xmm5
+
+.next_state:
+    inc rbx
+    jmp .sum_loop
+
+.sum_done:
+    add rsp, 48
+    pop rbp
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+; ═══════════════════════════════════════════════════════════════════════════════
+; END OF CUSTOM ORACLES
+; ═══════════════════════════════════════════════════════════════════════════════
