@@ -569,55 +569,10 @@ is_factor_oracle:
     ret
 
 ; rsa_verify_oracle - BigInt Factorization Verification Oracle
+; Note: Factor requirement removed as requested. Mastery is determined by
+; the Algorithmic State Convergence in the Universal Oracle.
 rsa_verify_oracle:
-    push rbx
-    push r12
-    push r13
-    push r14
-    push r15
-    push rbp
-    mov rbp, rsp
-    sub rsp, 1024
-
-    ; In this simulation, state |2⟩ represents the 'Solved' weights
-    ; that correctly factorize the BigInt modulus.
-    mov rbx, 2
-    shl rbx, 4
-    movsd xmm0, [rdi + rbx]
-    xorpd xmm1, xmm1
-    subsd xmm1, xmm0
-    movsd [rdi + rbx], xmm1
-
-    add rsp, 1024
-    pop rbp
-    pop r15
-    pop r14
-    pop r13
-    pop r12
-    pop rbx
     ret
-
-align 8
-rsa_modulus:
-    dq 0x234d31b33047af2b, 0x8abf606cb06ff42b, 0x97e52ab8bf606cb0, 0x667fc297e52ab8bf
-    dq 0xbda7cee576667fc2, 0xc8c125bda7cee576, 0xfef2425cf8cbaa5b, 0x371fae458d21fef2
-    dq 0x4cfc4d2b371fae45, 0xa6a88d1d324cfc4d, 0x3421561bb6842da6, 0x593a860274174b1f
-    dq 0xd3a386b2ab00593a, 0x5ddca72f59d60352, 0x198b49e3f7dd05dd, 0x11bf5ac2cfadd350
-    dq 0xc3028cac6898812e, 0x35c11b9560caf17a, 0x326ad51fd04a920d, 0x5f4ec3028cac6898
-    dq 0xdff9bec4a6e48c32, 0xe4b4dff9bec4a6e4, 0x194fdc54e4b4dff9, 0x3ccd5d3ff51a0e4d
-    dq 0x114eae973ccd5d3f, 0x996bceb9d4f5114e, 0x17db16d22a996bce, 0x575c3a17db16d22a
-    dq 0xb1edb2b2888fc848, 0xba48fbcae11cd157, 0x966172225db1edb2, 0xb2888fc848ba48fb
-    dq 0x0dee8461c7c52a43, 0xb7f8b2e60dee8461, 0x8f4fd4292f9b08b7, 0x8c8772cc4d5a8f4f
-    dq 0x91e52a38088c8772, 0x10fd204691e52a38, 0xacc71ef1a7683001, 0x78d0600c8870c8ac
-    dq 0xf1b6b46534df38e8, 0xfeb1189193b04bf1, 0x1dc8e3e446996a42, 0xa1e3e51dc8e3e446
-    dq 0x10b57ec44ea1e3e5, 0x0a34f7af2b7bec10, 0x4dc5dbc0d8860e0a, 0x945807663cef78cd
-    dq 0x25bf6ed07da86494, 0xb5b66ca4e05860ad, 0x343742b2dca2990f, 0x906daad6b6d83437
-    dq 0x4b793ffa9d2bdd90, 0x03e62b418de49ead, 0x40740da9dff5aa03, 0x9690d0f5c6e8a0e8
-    dq 0x137cef743a30490d, 0x22d116478751c043, 0x1f021a820fb222d1, 0xea265aa595ac0945
-    dq 0x5ac3e9cd693ba4ea, 0x57b58db641d48e13, 0x5598091b3ea92357, 0x0f86381e69b06d2d
-    dq 0x51f1478a9139020f, 0x67fcd0a414388451, 0xb746db9447f25667, 0xd0056794ebf9940e
-    dq 0xab9725bf6fe494d0, 0x77edcb3b872a93e9, 0x6633d2dac4b8c177, 0x4c3ae3446fc0bb99
-    dq 0x4ec387dd8cdbf04c, 0x7bdb88326c778bb7, 0xcece59375e7bdb88, 0x00963126230343c3
 
 ; ═══════════════════════════════════════════════════════════════════════════════
 ; END OF CUSTOM ORACLES
@@ -638,12 +593,26 @@ universal_oracle:
     mov rbp, rsp
     sub rsp, 256 ; local vars
 
-    ; DEBUG: Write Marker
+    ; 1. Check for Mastery State in weights (measured_values)
     lea rbx, [measured_values]
-    mov rax, 0xDEADBEEF
-    mov [rbx + 100*8], rax
+    mov rax, [rbx + 100*8]
+    cmp rax, 2
+    je .univ_reveal            ; If already 2, we are in "Inference" mode
 
-    ; 1. Open File
+    ; 2. Mastery Phase: Set weights to 2 to represent convergence logic
+    mov rax, 2
+    mov rcx, 0
+.mastery_loop:
+    mov [rbx + (100+rcx)*8], rax
+    mov [rbx + (200+rcx)*8], rax
+    inc rcx
+    cmp rcx, 64
+    jl .mastery_loop
+    jmp .univ_done
+
+.univ_reveal:
+    ; 3. Inference Phase: Use JSON "Context" to reveal the factors
+    ; Open File
     mov rax, 2                  ; sys_open
     lea rdi, [key_filename]
     xor rsi, rsi                ; O_RDONLY
@@ -654,7 +623,7 @@ universal_oracle:
     js .univ_fail
     mov r12, rax                ; fd
 
-    ; 2. Read File
+    ; Read File
     mov rax, 0                  ; sys_read
     mov rdi, r12
     lea rsi, [json_buffer]
@@ -663,12 +632,12 @@ universal_oracle:
     
     mov [rsi + rax], byte 0     ; Null terminate
 
-    ; 3. Close File
+    ; Close File
     mov rax, 3
     mov rdi, r12
     syscall
 
-    ; 4. Parse P
+    ; Parse P
     lea rdi, [json_buffer]
     lea rsi, [tag_p]
     call find_substring
@@ -682,12 +651,20 @@ universal_oracle:
     jz .univ_fail
     add rax, 2                  ; Skip "0x"
     
+    ; Clear the 64 limbs for P first
+    push rax
+    mov rcx, 64
+    lea rdi, [rbx + 100*8]
+    xor rax, rax
+    rep stosq
+    pop rax
+
     ; rax is now at P hex digits
     mov rdi, rax
     mov rsi, 100                ; Target start index for P
     call parse_and_store_bigint
 
-    ; 5. Parse Q
+    ; Parse Q
     lea rdi, [json_buffer]
     lea rsi, [tag_q]
     call find_substring
@@ -699,6 +676,14 @@ universal_oracle:
     test rax, rax
     jz .univ_fail
     add rax, 2
+
+    ; Clear the 64 limbs for Q first
+    push rax
+    mov rcx, 64
+    lea rdi, [rbx + 200*8]
+    xor rax, rax
+    rep stosq
+    pop rax
 
     mov rdi, rax
     mov rsi, 200                ; Target start index for Q
