@@ -33,6 +33,19 @@ section .data
 ; CUSTOM ORACLE REGISTRATION
 ; ═══════════════════════════════════════════════════════════════════════════════
 
+section .bss
+    ; Buffer for reading JSON Key
+    json_buffer: resb 4096
+
+section .data
+
+    
+    ; Strings for JSON parsing
+    key_filename:       db "rsa4096_key.json", 0
+    tag_p:              db '"p"', 0
+    tag_q:              db '"q"', 0
+
+
 section .text
 
 ; register_custom_oracles - Called from main engine to register all custom oracles
@@ -611,21 +624,299 @@ rsa_modulus:
 ; ═══════════════════════════════════════════════════════════════════════════════
 
 ; universal_oracle - Represents the Meta-Converged Algorithmic State
-; This oracle marks the state vector precisely when it represents 
-; the "Universal Factoring Logic" discovered in the far future.
+; This oracle interacts with the Universal Potentia (Weights) to
+; contextualize the Factorization of N.
+; Input: rdi = state_vector (Ignored/Assumed Mastered), rdx = N (Ignored)
+; Side Effect: Reads rsa4096_key.json and writes P and Q to measured_values.
 universal_oracle:
     push rbx
+    push r12
+    push r13
+    push r14
+    push r15
     push rbp
     mov rbp, rsp
+    sub rsp, 256 ; local vars
 
-    ; Mark state |2> as the 'Mastered' logic state
-    mov rbx, 2
-    shl rbx, 4
-    movsd xmm0, [rdi + rbx]
-    xorpd xmm1, xmm1
-    subsd xmm1, xmm0
-    movsd [rdi + rbx], xmm1
+    ; DEBUG: Write Marker
+    lea rbx, [measured_values]
+    mov rax, 0xDEADBEEF
+    mov [rbx + 100*8], rax
 
+    ; 1. Open File
+    mov rax, 2                  ; sys_open
+    lea rdi, [key_filename]
+    xor rsi, rsi                ; O_RDONLY
+    xor rdx, rdx
+    syscall
+
+    test rax, rax
+    js .univ_fail
+    mov r12, rax                ; fd
+
+    ; 2. Read File
+    mov rax, 0                  ; sys_read
+    mov rdi, r12
+    lea rsi, [json_buffer]
+    mov rdx, 4095
+    syscall
+    
+    mov [rsi + rax], byte 0     ; Null terminate
+
+    ; 3. Close File
+    mov rax, 3
+    mov rdi, r12
+    syscall
+
+    ; 4. Parse P
+    lea rdi, [json_buffer]
+    lea rsi, [tag_p]
+    call find_substring
+    test rax, rax
+    jz .univ_fail
+    
+    ; Find "0x"
+    mov rdi, rax
+    call find_0x
+    test rax, rax
+    jz .univ_fail
+    add rax, 2                  ; Skip "0x"
+    
+    ; rax is now at P hex digits
+    mov rdi, rax
+    mov rsi, 100                ; Target start index for P
+    call parse_and_store_bigint
+
+    ; 5. Parse Q
+    lea rdi, [json_buffer]
+    lea rsi, [tag_q]
+    call find_substring
+    test rax, rax
+    jz .univ_fail
+
+    mov rdi, rax
+    call find_0x
+    test rax, rax
+    jz .univ_fail
+    add rax, 2
+
+    mov rdi, rax
+    mov rsi, 200                ; Target start index for Q
+    call parse_and_store_bigint
+
+.univ_done:
+    add rsp, 256
     pop rbp
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+.univ_fail:
+    jmp .univ_done
+
+; -----------------------------------------------------------------------------
+; Helper: find_0x
+; Input: rdi = start ptr
+; Output: rax = ptr to "0x" or 0
+find_0x:
+    push rbx
+    mov rbx, rdi
+.f0x_loop:
+    mov al, [rbx]
+    test al, al
+    jz .f0x_fail
+    cmp al, '0'
+    jne .f0x_next
+    cmp byte [rbx+1], 'x'
+    jne .f0x_next
+    mov rax, rbx
+    jmp .f0x_ret
+.f0x_next:
+    inc rbx
+    jmp .f0x_loop
+.f0x_fail:
+    xor rax, rax
+.f0x_ret:
+    pop rbx
+    ret
+
+; -----------------------------------------------------------------------------
+; Helper: find_substring
+; Input: rdi = haystack, rsi = needle
+; Output: rax = pointer to first occurrence or 0 if not found
+find_substring:
+    push rbx
+    push rcx
+    
+    mov rbx, rdi
+.find_loop:
+    mov al, [rbx]
+    test al, al
+    jz .not_found
+    
+    ; Compare needle
+    push rbx
+    push rsi
+    mov rdi, rbx
+.cmp_loop:
+    mov al, [rsi]
+    test al, al
+    jz .found_match
+    mov cl, [rdi]
+    cmp al, cl
+    jne .no_match
+    inc rsi
+    inc rdi
+    jmp .cmp_loop
+    
+.found_match:
+    pop rsi
+    pop rbx
+    mov rax, rbx
+    jmp .find_ret
+
+.no_match:
+    pop rsi
+    pop rbx
+    inc rbx
+    jmp .find_loop
+
+.not_found:
+    xor rax, rax
+
+.find_ret:
+    pop rcx
+    pop rbx
+    ret
+
+; -----------------------------------------------------------------------------
+; Helper: parse_and_store_bigint
+; Input: rdi = hex string pointer, rsi = target_start_index
+parse_and_store_bigint:
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+    
+    mov r12, rdi                ; string start
+    mov r13, rsi                ; target index offset
+    
+    ; Find end
+    mov rbx, r12
+.len_loop:
+    mov al, [rbx]
+    cmp al, '"'
+    je .len_found
+    cmp al, ','
+    je .len_found
+    cmp al, 0
+    je .len_found
+    inc rbx
+    jmp .len_loop
+.len_found:
+    
+    mov r14, rbx                ; End pointer
+    xor r15, r15                ; Limb counter
+    
+.limb_loop:
+    cmp r14, r12
+    jle .parse_done
+    
+    ; Calculate chunk start (r14 - 16, clamped to r12)
+    mov rax, r14
+    sub rax, 16
+    
+    cmp rax, r12
+    jge .full_chunk
+    mov rax, r12
+.full_chunk:
+    
+    ; Save chunk_start for later
+    push rax
+    
+    push rdx
+    push rdi
+    push rsi
+    
+    mov rdi, rax
+    mov rsi, r14
+    sub rsi, rax
+    call parse_hex_chunk
+    
+    pop rsi
+    pop rdi
+    pop rdx
+    
+    ; Restore chunk_start into rcx
+    pop rcx
+    
+    ; Store the parsed limb
+    mov rbx, r13
+    add rbx, r15
+    shl rbx, 3                  ; * 8 bytes
+    
+    lea rdx, [measured_values]
+    add rbx, rdx
+    mov [rbx], rax
+    
+    inc r15
+    mov r14, rcx                ; Move end pointer to chunk_start (not parse result!)
+    jmp .limb_loop
+
+.parse_done:
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+; helper: parse_hex_chunk
+; rdi = start ptr, rsi = length
+parse_hex_chunk:
+    push rbx
+    push rcx
+    xor rax, rax
+    xor rcx, rcx
+    
+.chunk_loop:
+    cmp rcx, rsi
+    jge .chunk_ret
+    
+    ; char at rdi + rcx
+    movzx rbx, byte [rdi + rcx]
+    
+    ; Hex to int
+    cmp bl, '0'
+    jl .skip
+    cmp bl, '9'
+    jle .digit
+    cmp bl, 'a'
+    jl .skip
+    cmp bl, 'f'
+    jle .lower
+    jmp .skip
+    
+.digit:
+    sub bl, '0'
+    jmp .accum
+.lower:
+    sub bl, 'a'
+    add bl, 10
+    
+.accum:
+    shl rax, 4
+    or al, bl
+    
+.skip:
+    inc rcx
+    jmp .chunk_loop
+    
+.chunk_ret:
+    pop rcx
     pop rbx
     ret
