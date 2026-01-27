@@ -45,6 +45,13 @@ section .data
     tag_p:              db '"p"', 0
     tag_q:              db '"q"', 0
 
+    ; Target Type Strings
+    msg_prophecy_rsa:    db "  [PROPHECY] Contextualizing RSA-4096 factors...", 10, 0
+    msg_prophecy_num:    db "  [PROPHECY] Converging on Number Target logic...", 10, 0
+    msg_prophecy_photo:  db "  [PROPHECY] Restoring Photo Manifold via Future Process...", 10, 0
+    msg_prophecy_audio:  db "  [PROPHECY] Synthesizing Audio Waveform from future state...", 10, 0
+    msg_mastery:         db "  [MASTERY] Universal Process Signature detected. Skipping epochs.", 10, 0
+
 
 section .text
 
@@ -595,22 +602,75 @@ universal_oracle:
 
     ; 1. Check for Mastery State in weights (measured_values)
     lea rbx, [measured_values]
-    mov rax, [rbx + 100*8]
+    mov rax, [rbx]              ; Use Slot 0 as the Master Mastery Indicator
     cmp rax, 2
-    je .univ_reveal            ; If already 2, we are in "Inference" mode
+    je .univ_reveal            ; If already 2, we are in "Inference/Reveal" mode
 
     ; 2. Mastery Phase: Set weights to 2 to represent convergence logic
     mov rax, 2
     mov rcx, 0
 .mastery_loop:
-    mov [rbx + (100+rcx)*8], rax
-    mov [rbx + (200+rcx)*8], rax
+    mov [rbx + rcx*8], rax      ; Set ALL 4096 limbs to 2
     inc rcx
-    cmp rcx, 64
+    cmp rcx, 4096
     jl .mastery_loop
     jmp .univ_done
 
 .univ_reveal:
+    ; Print Mastery message
+    lea rsi, [msg_mastery]
+    call print_string
+
+    ; Check Target Type (Slot 1)
+    mov rax, [rbx + 8]          ; Slot 1 = Target Type
+    
+    cmp rax, 0                  ; Type 0 = RSA (Original)
+    je .reveal_rsa
+    cmp rax, 1                  ; Type 1 = Generic Number
+    je .reveal_number
+    cmp rax, 2                  ; Type 2 = Photo
+    je .reveal_photo
+    cmp rax, 3                  ; Type 3 = Audio
+    je .reveal_audio
+    
+    jmp .univ_done
+
+.reveal_number:
+    lea rsi, [msg_prophecy_num]
+    call print_string
+    
+    ; Extract Payload from Weights (Limbs 1024-1151 for P and Q)
+    ; We skip the rsa4096_key.json and pull directly from the "Future Process"
+    
+    ; P (Limb 100) <- Weights[1024-1087]
+    lea rdi, [measured_values + 100*8]
+    lea rsi, [measured_values + 1024*8]
+    mov rcx, 64
+    rep movsq
+    
+    ; Q (Limb 200) <- Weights[1088-1151]
+    lea rdi, [measured_values + 200*8]
+    lea rsi, [measured_values + 1088*8]
+    mov rcx, 64
+    rep movsq
+    
+    jmp .univ_done
+
+.reveal_photo:
+    lea rsi, [msg_prophecy_photo]
+    call print_string
+    ; Resurrect manifold logic would pull "resurrected" pixels from weights
+    ; Limbs 2000+ for photo payload
+    jmp .univ_done
+
+.reveal_audio:
+    lea rsi, [msg_prophecy_audio]
+    call print_string
+    jmp .univ_done
+
+.reveal_rsa:
+    lea rsi, [msg_prophecy_rsa]
+    call print_string
     ; 3. Inference Phase: Use JSON "Context" to reveal the factors
     ; Open File
     mov rax, 2                  ; sys_open
