@@ -3169,6 +3169,7 @@ print_hex_qword:
 ; Include external oracle definitions. Comment out this line if you don't want
 ; to load custom oracles, or replace with your own oracle file.
 ; ═══════════════════════════════════════════════════════════════════════════════
+%include "bigint.asm"
 %include "custom_oracles.asm"
 ; print_hex - Print 64-bit integer in hex
 ; Input: rdi = integer
