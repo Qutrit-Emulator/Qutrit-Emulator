@@ -139,11 +139,11 @@ def batch_worker(n_val, chunk_depth, chunk_states, batch_start, active_chunks, w
 def solve_distributed(n_val, intelligent=False):
     print(f"\n[Parallel-Brain] Targeting N = {n_val} {'[INTELLIGENT MODE]' if intelligent else ''}")
     
-    limit = int(math.sqrt(n_val)) + 1
+    limit = math.isqrt(n_val) + 1
     chunk_depth = 4 if n_val < 10**12 else 6
     chunk_states = 3**chunk_depth
     
-    num_chunks = math.ceil(limit / chunk_states)
+    num_chunks = (limit + chunk_states - 1) // chunk_states
     num_workers = min(multiprocessing.cpu_count(), num_chunks)
     
     print(f"[Parallel-Brain] Configuration:")
@@ -152,7 +152,7 @@ def solve_distributed(n_val, intelligent=False):
     print(f"  Parallel Workers: {num_workers}")
     print(f"\n[Real-Time] Streaming worker insights... (Candidates will appear instantly)")
     
-    chunks_per_worker = math.ceil(num_chunks / num_workers)
+    chunks_per_worker = (num_chunks + num_workers - 1) // num_workers
     
     pool = multiprocessing.Pool(processes=num_workers)
     tasks = []
