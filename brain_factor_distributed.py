@@ -19,9 +19,10 @@ OP_STORE_HI   = 0x18
 OP_DUMP_HEX   = 0x16
 OP_HALT       = 0xFF
 
-ID_UNIVERSAL     = 0x08
+ID_UNIVERSAL     = 0x08 # Oracle ID 0x08 -> Engine adds 0x80 = 0x88
 ID_NEURAL_INIT   = 0x09
 ID_NEURAL_DIFF   = 0x0B
+ID_BRAIN_DUMP    = 0x20 # Corrected: 0x20 + 0x80 = 0xA0
 ID_BIGINT_DIVISOR = 0x0D
 
 def make_instr(opcode, target=0, op1=0, op2=0):
@@ -44,74 +45,66 @@ def batch_worker(n_val, chunk_depth, chunk_states, batch_start, active_chunks, w
     # 0. Load Intelligence (Weights) if enabled
     if intelligent:
         program += make_instr(OP_IM_WEIGHTS)
-        # Try Prophecy first on Chunk 0 (global context)
+        # Call Universal Oracle as a "Prophecy" step
         program += make_instr(OP_ORACLE, target=0, op1=ID_UNIVERSAL)
-        # Dump prophecy slots 100-300 (where P and Q might be revealed)
-        program += make_instr(OP_DUMP_HEX, target=0, op1=100, op2=200)
+        # Extract prophecy results from Slot 100 and 200
+        program += make_instr(OP_ORACLE, target=0, op1=ID_BRAIN_DUMP, op2=1) # Target Slot 100 for P
+        program += make_instr(OP_ORACLE, target=0, op1=ID_BRAIN_DUMP, op2=2) # Target Slot 200 for Q
 
     # 1. Initialize Chunks
     for c in range(active_chunks):
         program += make_instr(OP_INIT, target=c, op1=chunk_depth)
         if intelligent:
-            # Neural Intuition: Start with amplitudes biased by weights
             program += make_instr(OP_ORACLE, target=c, op1=ID_NEURAL_INIT)
         else:
-            # Brute/Search: Start from uniform superposition
             program += make_instr(OP_SUP, target=c)
         
     # 2. Store N (Global Slots 16-79 for BigInt)
     program = store_bigint(program, 16, n_val)
     
-    # 3. Search/Inference Loop
-    # Intelligent mode needs fewer iterations because the initial state is already close
+    # 3. Search Loop
     iters = 2 if intelligent else 5
-    
     for k in range(iters):
         for c in range(active_chunks):
             chunk_id = batch_start + c
             offset = chunk_id * chunk_states
-            
-            # Set Offset in Slot 1
             program += make_instr(OP_STORE_LO, target=1, op1=offset & 0xFFFF, op2=(offset >> 16) & 0xFFFF)
             program += make_instr(OP_STORE_HI, target=1, op1=(offset >> 32) & 0xFFFF, op2=(offset >> 48) & 0xFFFF)
-            
-            # Run BigInt Divisor Oracle
             program += make_instr(OP_ORACLE, target=c, op1=ID_BIGINT_DIVISOR)
-            
             if intelligent:
-                # Neural Diffusion: Reflect about the 'Brain State'
                 program += make_instr(OP_ORACLE, target=c, op1=ID_NEURAL_DIFF)
             else:
-                # Standard Grover Diffusion
                 program += make_instr(OP_GROVER, target=c)
             
     # 4. Measure
     for c in range(active_chunks):
         program += make_instr(OP_MEASURE, target=c)
-        
     program += make_instr(OP_HALT)
     
     with open(qbin_file, "wb") as f:
         f.write(program)
         
     try:
-        result = subprocess.run(["./qutrit_engine", qbin_file], capture_output=True, text=True, timeout=300)
-        output = result.stdout
+        # Use Popen for real-time streaming
+        process = subprocess.Popen(["./qutrit_engine", qbin_file], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         
-        # Check Prophecy first
-        if intelligent:
-            for line in output.splitlines():
-                if "[HEX]" in line:
-                    # Extract limbs. Format is [HEX] Value
-                    try:
-                        val = int(line.split("[HEX]")[1].strip(), 16)
-                        if val > 1 and val < n_val and (n_val % val == 0):
-                            print(f"  [PROPHECY] Factoring revealed by Brain Memory: {val}")
-                            return val
-                    except:
-                        pass
+        while True:
+            line = process.stdout.readline()
+            if not line and process.poll() is not None:
+                break
+            if not line:
+                continue
+            
+            line = line.strip()
+            
+            # Real-Time Monitoring
+            if "[DEBUG] Product Match found" in line:
+                print(f"  [Worker {worker_id}] Found Candidate: {line.split(':')[-1].strip()}")
+            
+            if "[PROPHECY]" in line:
+                print(f"  [Worker {worker_id}] Prophecy Alert: Brain has revealed a potential factor!")
 
-        for line in output.splitlines():
+            # Extract Measure Results
             if "[MEAS]" in line:
                 try:
                     parts = line.split("=>")
@@ -124,6 +117,16 @@ def batch_worker(n_val, chunk_depth, chunk_states, batch_start, active_chunks, w
                     
                     if candidate > 1 and candidate < n_val and (n_val % candidate == 0):
                         return candidate
+                except:
+                    pass
+                    
+            # Check Prophecy HEX Dumps
+            if "[HEX]" in line:
+                try:
+                    val = int(line.split("[HEX]")[1].strip(), 16)
+                    if val > 1 and val < n_val and (n_val % val == 0):
+                        print(f"  [Worker {worker_id}] SUCCESS: Valid factor extracted from prophecy.")
+                        return val
                 except:
                     pass
     except Exception as e:
@@ -145,9 +148,9 @@ def solve_distributed(n_val, intelligent=False):
     
     print(f"[Parallel-Brain] Configuration:")
     print(f"  Architecture: {'Quantum Intuition' if intelligent else 'Guided Grover'}")
-    print(f"  Chunk Size: {chunk_depth} qutrits ({chunk_states} states)")
     print(f"  Total Chunks: {num_chunks}")
     print(f"  Parallel Workers: {num_workers}")
+    print(f"\n[Real-Time] Streaming worker insights... (Candidates will appear instantly)")
     
     chunks_per_worker = math.ceil(num_chunks / num_workers)
     
@@ -160,26 +163,26 @@ def solve_distributed(n_val, intelligent=False):
             break
         batch_end = min(batch_start + chunks_per_worker, num_chunks)
         active_chunks = batch_end - batch_start
-        
         tasks.append(pool.apply_async(batch_worker, (n_val, chunk_depth, chunk_states, batch_start, active_chunks, i, intelligent)))
         
     pool.close()
     
-    print(f"\n[Search] Wavefunction converging via {'Prophetic Reveal' if intelligent else 'Amplitudic Search'}...")
-    
     try:
+        found = False
         for t in tasks:
             res = t.get()
-            if res:
-                pool.terminate()
+            if res and not found:
+                found = True
                 print(f"\n[SUCCESS] Factors Found: {res} x {n_val // res} = {n_val}")
+                pool.terminate()
                 return
     except KeyboardInterrupt:
         pool.terminate()
         print("\n[Abort] Search stopped by user.")
         return
         
-    print("\n[Complete] No factors found.")
+    if not found:
+        print("\n[Complete] No factors discovered within this search manifold.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Multi-Brain Quantum Factorizer")
