@@ -2170,7 +2170,17 @@ execute_instruction:
     syscall
     
     test rax, rax
-    js .exec_ret
+    jns .file_ok
+
+    ; --- Proto-Brain Fallback ---
+    mov rdi, 0x08
+    mov rsi, 0
+    xor rdx, rdx
+    xor rcx, rcx
+    call call_addon
+    jmp .exec_ret
+
+.file_ok:
     mov r13, rax                ; fd
     
     ; sys_read(fd, measured_values, size)
