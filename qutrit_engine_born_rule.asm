@@ -3170,3 +3170,42 @@ print_hex_qword:
 ; to load custom oracles, or replace with your own oracle file.
 ; ═══════════════════════════════════════════════════════════════════════════════
 %include "custom_oracles.asm"
+; print_hex - Print 64-bit integer in hex
+; Input: rdi = integer
+print_hex:
+    push rbx
+    push r12
+    push r13
+    
+    mov rbx, rdi
+    mov r12, 16                 ; 16 nybbles
+    
+.hex_loop:
+    rol rbx, 4                  ; Rotate top nybble to bottom
+    mov rax, rbx
+    and rax, 0xF                ; Mask nybble
+    
+    cmp rax, 9
+    jle .digit
+    add rax, 'a' - 10
+    jmp .print
+.digit:
+    add rax, '0'
+    
+.print:
+    ; Print char
+    mov [output_buffer], al
+    
+    mov rax, 1                  ; sys_write
+    mov rdi, 1                  ; stdout
+    lea rsi, [output_buffer]
+    mov rdx, 1
+    syscall
+    
+    dec r12
+    jnz .hex_loop
+    
+    pop r13
+    pop r12
+    pop rbx
+    ret
