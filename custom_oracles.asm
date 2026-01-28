@@ -599,6 +599,7 @@ neural_init_oracle:
     jge .neural_done
     
     mov rax, rbx
+    add rax, r15           ; Global Index for Brain periodicity
     and rax, 4095           ; Modulo 4096
     
     mov rcx, [r14 + rax*8]  ; Get Weight (64-bit int)
@@ -1044,6 +1045,7 @@ neural_diffusion_oracle:
     jge .proj_done
     
     mov rax, rbx
+    add rax, r15            ; Global Index
     and rax, 4095
     mov rcx, [r14 + rax*8]
     
@@ -1122,6 +1124,7 @@ neural_diffusion_oracle:
     jge .diff_done
     
     mov rax, rbx
+    add rax, r15            ; Global Index
     and rax, 4095
     mov rcx, [r14 + rax*8]
     
@@ -1285,7 +1288,7 @@ brain_dump_oracle:
     mov r15, rbx
     add r15, rbp
     
-    mov rax, rbx
+    mov rax, r15
     and rax, 4095
     mov rcx, [r14 + rax*8]
     
