@@ -45,6 +45,7 @@ section .data
 section .bss
     ; Buffer for reading JSON Key
     json_buffer: resb 4096
+    brain_dump_buffer: resb 1024
 
 section .data
 
@@ -1299,10 +1300,68 @@ brain_dump_oracle:
     imul rcx, r8
     mov r9, rcx
     
-    ; Output hex would go here (omitted for brevity in this rewrite, 
-    ; but I'll include the syscall logic properly)
-    ; (Wait, I should include the hex output for consistency)
-    ; Actually, let's keep it clean since user wants "intelligence" fixed.
+    ; --- HEX OUTPUT LOGIC ---
+    lea rdi, [brain_dump_buffer]
+    
+    ; Write "0x"
+    mov byte [rdi], '0'
+    mov byte [rdi+1], 'x'
+    add rdi, 2
+    
+    ; Write Index (r15) in Hex
+    mov rax, r15
+    mov rcx, 16
+.idx_loop_final:
+    rol rax, 4
+    mov r8, rax
+    and r8, 0xF
+    cmp r8, 9
+    jle .idx_d3
+    add r8, 'a' - 10
+    jmp .idx_o3
+.idx_d3:
+    add r8, '0'
+.idx_o3:
+    mov [rdi], r8b
+    inc rdi
+    dec rcx
+    jnz .idx_loop_final
+    
+    ; Write ": "
+    mov byte [rdi], ':'
+    mov byte [rdi+1], ' '
+    add rdi, 2
+    
+    ; Write Weight (r9) in Hex
+    mov rax, r9
+    mov rcx, 16
+.wgt_loop_final:
+    rol rax, 4
+    mov r8, rax
+    and r8, 0xF
+    cmp r8, 9
+    jle .wgt_d3
+    add r8, 'a' - 10
+    jmp .wgt_o3
+.wgt_d3:
+    add r8, '0'
+.wgt_o3:
+    mov [rdi], r8b
+    inc rdi
+    dec rcx
+    jnz .wgt_loop_final
+    
+    ; Write Newline
+    mov byte [rdi], 10
+    inc rdi
+    
+    ; Syscall Write
+    mov rdx, rdi
+    lea rsi, [brain_dump_buffer]
+    sub rdx, rsi            ; Length
+    mov rax, 1              ; sys_write
+    mov rdi, 1              ; stdout
+    syscall
     
     inc rbx
     jmp .dump_loop
@@ -1358,6 +1417,19 @@ bigint_divisor_oracle:
     call bigint_is_zero
     test rax, rax
     jz .bigdiv_next         
+    
+    ; Real-Time Tracking: Print factor match
+    push rax
+    push rsi
+    lea rsi, [msg_match]
+    call print_string
+    mov rdi, rbx
+    add rdi, rbp
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+    pop rsi
+    pop rax
     
     mov rax, rbx
     shl rax, 4
