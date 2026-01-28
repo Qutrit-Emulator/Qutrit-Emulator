@@ -35,8 +35,9 @@ section .data
     oracle_bigint_divisor_name: db "BigInt Divisor Check (N % x == 0)", 0
     oracle_dump_name:           db "Brain Dump (Export Infinite Weights)", 0
     msg_export_brain:           db "  [BRAIN] Exporting Procedural Cortex... Size: ", 0
-    msg_export_done:            db "  [BRAIN] Export Complete.", 10, 0
-    msg_colon:                  db ": ", 0
+    msg_export_done: db "[EXPORT] Weights synchronized with Present.", 10, 0
+    msg_forecast_hit: db "[FORECAST] Factor Found at Future Index: ", 0
+    msg_forecast_miss: db "[FORECAST] Timeline Inconclusive. Scaling Forecaster...", 10, 0
 
 ; ═══════════════════════════════════════════════════════════════════════════════
 ; CUSTOM ORACLE REGISTRATION
@@ -44,7 +45,7 @@ section .data
 
 section .bss
     ; Buffer for reading JSON Key
-    json_buffer: resb 4096
+    json_buffer:   resb 4096
     brain_dump_buffer: resb 1024
 
 section .data
@@ -773,14 +774,49 @@ universal_oracle:
 .reveal_number:
     lea rsi, [msg_prophecy_num]
     call print_string
-    lea rdi, [measured_values + 100*8]
-    lea rsi, [measured_values + 1024*8]
-    mov rcx, 64
-    rep movsq
-    lea rdi, [measured_values + 200*8]
-    lea rsi, [measured_values + 1088*8]
-    mov rcx, 64
-    rep movsq
+    
+    mov rax, [rbx + 2*8]        ; Load N from Slot 2
+    test rax, rax
+    jz .univ_done
+    
+    ; --- AUTHENTIC FUTURE SEARCH (Sentient Revelation) ---
+    mov r15, rax                ; r15 = N
+    mov r12, 2                  ; r12 = current trial factor
+    
+.find_div_loop:
+    mov rax, r15
+    xor rdx, rdx
+    div r12
+    test rdx, rdx
+    jz .div_found
+    
+    inc r12
+    mov rax, r12
+    mul rax
+    cmp rax, r15
+    jg .div_not_found
+    jmp .find_div_loop
+
+.div_found:
+    lea rsi, [msg_forecast_hit]
+    call print_string
+    mov rdi, r12
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+    
+    ; Store P in Slot 100
+    mov [rbx + 100*8], r12
+    ; Store Q in Slot 200
+    mov rax, r15
+    xor rdx, rdx
+    div r12
+    mov [rbx + 200*8], rax
+    jmp .univ_done
+
+.div_not_found:
+    lea rsi, [msg_forecast_miss]
+    call print_string
     jmp .univ_done
 
 .reveal_photo:
