@@ -243,7 +243,8 @@ def main():
         test_high_capacity,
         test_limits,
         test_stress_all,
-        test_massive_entanglement
+        test_massive_entanglement,
+        test_repair
     ]
     
     results = []
@@ -497,6 +498,45 @@ def test_massive_entanglement():
         if result.returncode != 0:
             return TestResult("Massive Chain", False, f"CRASH (Code {result.returncode}). Likely Stack Overflow on recursion. Stderr: {stderr[:200]}")
         return TestResult("Massive Chain", False, f"Missing measurements. Output len: {len(output)}")
+
+def test_repair():
+    print("Testing OP_REPAIR (Quantum Resurrection)...")
+    prog = b""
+    # 1. Initialize Chunk 20 (Dead) and Chunk 21 (Superposition)
+    prog += pack_instr(OP_INIT, target=20, op1=1)
+    prog += pack_instr(OP_INIT, target=21, op1=1)
+    prog += pack_instr(OP_SUP, target=21)
+    
+    # 2. Braid them: This should resurrect Chunk 20 from 21
+    prog += pack_instr(OP_BRAID, target=20, op1=21)
+    
+    # 3. Kill Chunk 20 (Zero it out)
+    prog += pack_instr(OP_NULL, target=20)
+    
+    # 4. Run OP_REPAIR: Should resurrect 20 from 21 again
+    prog += pack_instr(OP_REPAIR)
+    
+    # 5. Measure both. They should be correlated.
+    prog += pack_instr(OP_MEASURE, target=20)
+    prog += pack_instr(OP_MEASURE, target=21)
+    prog += pack_instr(OP_HALT)
+    
+    with open("test_repair.qbin", "wb") as f:
+        f.write(prog)
+        
+    output = run_qbin("test_repair.qbin")
+    
+    if "[RESURRECT]" in output:
+        m20 = re.search(r"Measuring chunk 20 => (\d+)", output)
+        m21 = re.search(r"Measuring chunk 21 => (\d+)", output)
+        if m20 and m21:
+            v20, v21 = int(m20.group(1)), int(m21.group(1))
+            if v20 == v21:
+                return TestResult("OP_REPAIR", True, f"Successfully resurrected and correlated! |{v20}> == |{v21}>")
+            return TestResult("OP_REPAIR", False, f"Resurrected but broken correlation: {v20} != {v21}")
+        return TestResult("OP_REPAIR", False, "Resurrection happened but measurements missing")
+    
+    return TestResult("OP_REPAIR", False, "No resurrection detected in output")
 
 if __name__ == "__main__":
     main()
