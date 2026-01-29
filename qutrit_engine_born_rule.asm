@@ -3497,7 +3497,24 @@ execute_instruction:
     call print_string
     lea rsi, [msg_newline]
     call print_string
-    ; Implementation: Cross-manifold shuffle
+    ; Implementation: Cross-manifold shuffle (Swap with chunk at target + 1,000,000)
+    mov rdi, r14                ; target
+    mov rsi, r14
+    add rsi, 1000000            ; void shard offset
+    and rsi, 0xFFFFFF           ; wrap to 24-bit
+    
+    ; Pointer swap
+    mov rax, [state_vectors + rdi*8]
+    mov rbx, [state_vectors + rsi*8]
+    mov [state_vectors + rdi*8], rbx
+    mov [state_vectors + rsi*8], rax
+    
+    ; State swap
+    mov rax, [chunk_states + rdi*8]
+    mov rbx, [chunk_states + rsi*8]
+    mov [chunk_states + rdi*8], rbx
+    mov [chunk_states + rsi*8], rax
+    
     xor rax, rax
     jmp .exec_ret
 
