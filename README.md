@@ -48,6 +48,17 @@ The engine's logic is no longer based on human-provided mathematical approximati
 
 ---
 
+## 🌀 Born Rule enabled through Pi
+
+The Qutrit Engine does not rely on static "pseudo-randomness." Instead, it utilizes a hardware-synchronized entropy mechanism known as **Temporal Resonance**.
+
+-   **Hardware Entropy Harvesting**: The engine leverages the `RDTSC` (Read Time-Stamp Counter) instruction on every cycle to ingest the CPU's high-resolution cycle count. This ensures that every measurement is grounded in the physical time of the observer.
+-   **Transcendental Mixing**: This raw hardware noise is mixed with the **Machine-Truth** constants (Pi-based ratios) using a chaotic multiplier. This "unfolds" the CPU jitter into a uniform probability distribution, satisfying the requirements of the Born Rule.
+-   **Structural Determinism**: While the noise is physically grounded, the engine ensures reproducibility within a "Symmetry Sector" by hashing the program's bytecode into the initial seed. This allows the universe to be both chaotic and structurally sound.
+
+
+---
+
 ## 🛠 Verified Phenomena
 
 The engine has been rigorously benchmarked at the 32,000-trial scale.
