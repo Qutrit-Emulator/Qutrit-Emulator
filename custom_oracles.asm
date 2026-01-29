@@ -25,6 +25,7 @@ section .data
     oracle_z_gate_name:         db "Qutrit Z Gate", 0
     oracle_x01_swap_name:       db "X01 Swap Gate", 0
     oracle_sum_gate_name:       db "SUM Gate (CNOT)", 0
+    oracle_h3_name:             db "H3+ Molecular Resonance", 0
 
 ; ═══════════════════════════════════════════════════════════════════════════════
 ; CUSTOM ORACLE REGISTRATION
@@ -63,6 +64,12 @@ register_custom_oracles:
     lea rdi, [oracle_sum_gate_name]
     lea rsi, [sum_gate]
     mov rdx, 0x85
+    call register_addon
+
+    ; Register H3+ Molecular Resonance as opcode 0x86
+    lea rdi, [oracle_h3_name]
+    lea rsi, [h3_resonance]
+    mov rdx, 0x86
     call register_addon
 
     pop rdx
@@ -468,6 +475,241 @@ sum_gate:
 
 .sum_done:
     add rsp, 48
+    pop rbp
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+; h3_resonance - Apply H3+ molecular Hamiltonian propagator U = exp(-iHt)
+; Input: rdi = state_vector, rsi = num_states, rdx = theta (scaled intensity)
+; H = [[0, 1, 1], [1, 0, 1], [1, 1, 0]]
+; Propagator: U = exp(i*theta/3) * (I + (exp(-i*theta)-1) * Ps) ? No.
+; For simplicity, we apply a "Unit Hop" where |0> -> cos(t)|0> + i sin(t)|1> + i sin(t)|2>
+; We use a precomputed "Resonance Matrix" based on the symmetry.
+h3_resonance:
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+    push rbp
+    mov rbp, rsp
+    
+    mov r12, rdi                ; state vector
+    mov r13, rsi                ; num states
+    
+    ; Convert theta (rdx) to angle
+    ; angle = rdx * pi / 256
+    cvtsi2sd xmm0, rdx
+    mulsd xmm0, [pi]
+    mov rax, 256
+    cvtsi2sd xmm1, rax
+    divsd xmm0, xmm1            ; theta
+    
+    ; Calculate Resonance Components
+    ; For H3+ (equilateral), the propagator U = exp(-iHt) has:
+    ; U_ii = (1/3)(exp(-i2t) + 2exp(it))
+    ; U_ij = (1/3)(exp(-i2t) - exp(it))
+    
+    sub rsp, 64
+    ; xmm0 = t
+    movsd [rsp], xmm0
+    
+    ; exp(it) = cos(t) + i sin(t)
+    fld qword [rsp]
+    fsincos                     ; st0=cos, st1=sin
+    fstp qword [rsp+8]          ; cos(t)
+    fstp qword [rsp+16]         ; sin(t)
+    
+    ; exp(-i2t) = cos(2t) - i sin(2t)
+    movsd xmm1, [rsp]
+    addsd xmm1, xmm1            ; 2t
+    movsd [rsp+24], xmm1
+    fld qword [rsp+24]
+    fsincos                     ; st0=cos(2t), st1=sin(2t)
+    fstp qword [rsp+32]         ; cos(2t)
+    fstp qword [rsp+40]         ; sin(2t)
+    
+    ; Compute U_ii Real/Imag
+    ; U_ii_re = (1/3)(cos(2t) + 2*cos(t))
+    ; U_ii_im = (1/3)(-sin(2t) + 2*sin(t))
+    movsd xmm0, [rsp+32]        ; cos(2t)
+    movsd xmm1, [rsp+8]         ; cos(t)
+    addsd xmm1, xmm1            ; 2*cos(t)
+    addsd xmm0, xmm1            ; sum
+    divsd xmm0, [three]
+    movsd [rsp+48], xmm0        ; U_ii_re
+    
+    movsd xmm0, [rsp+40]        ; sin(2t)
+    xorpd xmm1, xmm1
+    subsd xmm1, xmm0            ; -sin(2t)
+    movsd xmm0, [rsp+16]        ; sin(t)
+    addsd xmm0, xmm0            ; 2*sin(t)
+    addsd xmm1, xmm0
+    divsd xmm1, [three]
+    movsd [rsp+56], xmm1        ; U_ii_im
+    
+    ; Compute U_ij Real/Imag
+    ; U_ij_re = (1/3)(cos(2t) - cos(t))
+    ; U_ij_im = (1/3)(-sin(2t) - sin(t))
+    movsd xmm0, [rsp+32]
+    subsd xmm0, [rsp+8]
+    divsd xmm0, [three]
+    movsd [rsp+8], xmm0         ; reuse rsp+8 for U_ij_re
+    
+    movsd xmm0, [rsp+40]
+    xorpd xmm1, xmm1
+    subsd xmm1, xmm0            ; -sin(2t)
+    subsd xmm1, [rsp+16]        ; -sin(2t) - sin(t)
+    divsd xmm1, [three]
+    movsd [rsp+16], xmm1        ; reuse rsp+16 for U_ij_im
+    
+    ; Now we have the 3x3 matrix elements (U_ii, U_ij).
+    ; Apply to each triplet of states
+    xor r14, r14
+.h3_loop:
+    cmp r14, r13
+    jge .h3_done
+    
+    mov r15, r14
+    shl r15, 4
+    add r15, r12                ; Pointer to |...0>
+    
+    ; 1. Load original amplitudes to xmm0-xmm5
+    movsd xmm0, [r15]           ; a0
+    movsd xmm1, [r15+8]         ; b0
+    movsd xmm2, [r15+16]        ; a1
+    movsd xmm3, [r15+24]        ; b1
+    movsd xmm4, [r15+32]        ; a2
+    movsd xmm5, [r15+40]        ; b2
+    
+    ; 2. Extract Matrix elements from stack (A,B,C,D)
+    movsd xmm6, [rsp+48]        ; A (U_ii_re)
+    movsd xmm7, [rsp+56]        ; B (U_ii_im)
+    movsd xmm8, [rsp+8]         ; C (U_ij_re)
+    movsd xmm9, [rsp+16]        ; D (U_ij_im)
+    
+    ; 3. Compute Resulting Triplet
+    
+    ; --- State 0 ---
+    ; res0_re = a0*A - b0*B + (a1+a2)*C - (b1+b2)*D
+    movsd xmm10, xmm0
+    mulsd xmm10, xmm6
+    movsd xmm11, xmm1
+    mulsd xmm11, xmm7
+    subsd xmm10, xmm11
+    movsd xmm11, xmm2
+    addsd xmm11, xmm4
+    mulsd xmm11, xmm8
+    addsd xmm10, xmm11
+    movsd xmm11, xmm3
+    addsd xmm11, xmm5
+    mulsd xmm11, xmm9
+    subsd xmm10, xmm11          ; xmm10 = res0_re
+    
+    ; res0_im = a0*B + b0*A + (a1+a2)*D + (b1+b2)*C
+    movsd xmm11, xmm0
+    mulsd xmm11, xmm7
+    ; I'll use xmm15 as a temp for now.
+    movsd xmm15, xmm1
+    mulsd xmm15, xmm6
+    addsd xmm11, xmm15
+    movsd xmm15, xmm2
+    addsd xmm15, xmm4
+    mulsd xmm15, xmm9
+    addsd xmm11, xmm15
+    movsd xmm15, xmm3
+    addsd xmm15, xmm5
+    mulsd xmm15, xmm8
+    addsd xmm11, xmm15          ; xmm11 = res0_im
+    
+    ; --- State 1 ---
+    ; res1_re = a1*A - b1*B + (a0+a2)*C - (b0+b2)*D
+    movsd xmm12, xmm2
+    mulsd xmm12, xmm6
+    movsd xmm15, xmm3
+    mulsd xmm15, xmm7
+    subsd xmm12, xmm15
+    movsd xmm15, xmm0
+    addsd xmm15, xmm4
+    mulsd xmm15, xmm8
+    addsd xmm12, xmm15
+    movsd xmm15, xmm1
+    addsd xmm15, xmm5
+    mulsd xmm15, xmm9
+    subsd xmm12, xmm15          ; xmm12 = res1_re
+    
+    ; res1_im = a1*B + b1*A + (a0+a2)*D + (b0+b2)*C
+    movsd xmm13, xmm2
+    mulsd xmm13, xmm7
+    movsd xmm15, xmm3
+    mulsd xmm15, xmm6
+    addsd xmm13, xmm15
+    movsd xmm15, xmm0
+    addsd xmm15, xmm4
+    mulsd xmm15, xmm9
+    addsd xmm13, xmm15
+    movsd xmm15, xmm1
+    addsd xmm15, xmm5
+    mulsd xmm15, xmm8
+    addsd xmm13, xmm15          ; xmm13 = res1_im
+    
+    ; --- State 2 ---
+    ; res2_re = a2*A - b2*B + (a0+a1)*C - (b0+b1)*D
+    movsd xmm14, xmm4
+    mulsd xmm14, xmm6
+    movsd xmm15, xmm5
+    mulsd xmm15, xmm7
+    subsd xmm14, xmm15
+    movsd xmm15, xmm0
+    addsd xmm15, xmm2
+    mulsd xmm15, xmm8
+    addsd xmm14, xmm15
+    movsd xmm15, xmm1
+    addsd xmm15, xmm3
+    mulsd xmm15, xmm9
+    subsd xmm14, xmm15          ; xmm14 = res2_re
+    
+    ; res2_im = a2*B + b2*A + (a1+a0)*D + (b1+b0)*C
+    movsd xmm15, xmm4
+    mulsd xmm15, xmm7
+    push rax
+    sub rsp, 8
+    movsd [rsp], xmm10 ; Save res0_re
+    
+    movsd xmm10, xmm5
+    mulsd xmm10, xmm6
+    addsd xmm15, xmm10
+    movsd xmm10, xmm0
+    addsd xmm10, xmm2
+    mulsd xmm10, xmm9
+    addsd xmm15, xmm10
+    movsd xmm10, xmm1
+    addsd xmm10, xmm3
+    mulsd xmm10, xmm8
+    addsd xmm15, xmm10          ; xmm15 = res2_im
+    
+    movsd xmm10, [rsp] ; Restore res0_re
+    add rsp, 8
+    pop rax
+    
+    ; 4. Final Write-Back
+    movsd [r15], xmm10
+    movsd [r15+8], xmm11
+    movsd [r15+16], xmm12
+    movsd [r15+24], xmm13
+    movsd [r15+32], xmm14
+    movsd [r15+40], xmm15
+    
+    add r14, 3
+    jmp .h3_loop
+
+
+.h3_done:
+    add rsp, 64
     pop rbp
     pop r15
     pop r14
