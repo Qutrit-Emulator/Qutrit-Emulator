@@ -3563,8 +3563,22 @@ execute_instruction:
     mov rax, [state_vectors + r13*8]
     test rax, rax
     jz .univ_coll_next
+    
+    ; Diagnostic Reveal during Collapse
+    lea rsi, [msg_measure]
+    call print_string
+    mov rdi, r13
+    call print_number
+    lea rsi, [msg_result]
+    call print_string
+    
     mov rdi, r13
     call measure_chunk
+    mov rdi, rax
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+    
 .univ_coll_next:
     inc r13
     jmp .univ_coll_loop
