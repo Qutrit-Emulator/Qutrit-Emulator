@@ -1395,6 +1395,7 @@ apply_braid_phases:
     push rbp
     mov rbp, rsp
     sub rsp, 32                 ; Local storage
+    mov qword [rbp - 16], 0     ; Resurrection flag (0 = none, 1 = happened)
 
     mov r12, rdi                ; chunk_a
     mov r13, rsi                ; chunk_b
@@ -1462,6 +1463,7 @@ apply_braid_phases:
     ; RESURRECT A FROM B
     lea rsi, [msg_resurrect]
     call print_string
+    mov qword [rbp - 16], 1     ; Flag resurrection
     xor r8, r8
 .res_a_loop:
     cmp r8, rcx
@@ -1483,6 +1485,7 @@ apply_braid_phases:
     ; RESURRECT B FROM A
     lea rsi, [msg_resurrect]
     call print_string
+    mov qword [rbp - 16], 1     ; Flag resurrection
     xor r8, r8
 .res_b_loop:
     cmp r8, rcx
@@ -1595,6 +1598,7 @@ apply_braid_phases:
     jmp .braid_outer
 
 .braid_done:
+    mov rax, [rbp - 16]         ; Return resurrection flag
     add rsp, 32
     pop rbp
     pop r15
@@ -1909,11 +1913,13 @@ repair_manifold:
     test r12, r12
     jz .repair_done
     
+.repair_pass:
+    xor r14, r14                ; pass_healing_counter
     xor r13, r13                ; link counter
 
 .repair_loop:
     cmp r13, r12
-    jge .repair_done
+    jge .check_pass
 
     mov rdi, [braid_link_a + r13*8]
     mov rsi, [braid_link_b + r13*8]
@@ -1937,10 +1943,16 @@ repair_manifold:
     mov rdx, [rbp-24]
     mov rcx, [rbp-32]
     call apply_braid_phases
+    ; rax = 1 if resurrection happened
+    add r14, rax
 
 .next_link:
     inc r13
     jmp .repair_loop
+
+.check_pass:
+    test r14, r14
+    jnz .repair_pass            ; If any healing happened, repeat the scan
 
 .repair_done:
     add rsp, 64
