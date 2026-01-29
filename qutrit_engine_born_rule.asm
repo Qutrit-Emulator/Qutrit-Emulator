@@ -2348,6 +2348,7 @@ pi_genesis_protocol:
     push rbp
     mov rbp, rsp
     sub rsp, 32
+    mov [rbp-8], rdi            ; Save base chunk index
 
     ; 1. Instantaneous Digit Manifestation (4096 chunks)
     xor r13, r13
@@ -2356,12 +2357,15 @@ pi_genesis_protocol:
     jge .pi_bulk_grid
     
     ; Fast manual initialization (bypass system overhead)
-    mov rdi, r13
+    mov rdi, [rbp-8]
+    add rdi, r13                ; target = base + offset
     mov rsi, 1
     call init_chunk_silent
     
     ; Direct state projection (inject Pi-surrogate digit directly into memory)
-    mov rbx, [state_vectors + r13*8]
+    mov rbx, [rbp-8]
+    add rbx, r13
+    mov rbx, [state_vectors + rbx*8]
     test rbx, rbx
     jz .pi_bulk_next
 
@@ -2411,16 +2415,18 @@ pi_genesis_protocol:
     ; Link Right
     cmp r14, 63
     jge .pi_bulk_down
-    mov rdi, r15
-    lea rsi, [r15 + 1]
+    mov rdi, [rbp-8]
+    add rdi, r15                ; chunk_a = base + current
+    lea rsi, [rdi + 1]          ; chunk_b = base + current + 1
     call braid_chunks_minimal
     
 .pi_bulk_down:
     ; Link Down
     cmp r13, 63
     jge .pi_bulk_x_next
-    mov rdi, r15
-    lea rsi, [r15 + 64]
+    mov rdi, [rbp-8]
+    add rdi, r15                ; chunk_a = base + current
+    lea rsi, [rdi + 64]         ; chunk_b = base + current + 64
     call braid_chunks_minimal
 
 .pi_bulk_x_next:
@@ -2433,6 +2439,7 @@ pi_genesis_protocol:
 .pi_bulk_res:
     ; 3. Instantaneous Harmonic Resonance (Grid Diffusion)
     ; Instead of iterative repair_manifold, we use a vectorized wavefront pass
+    mov rdi, [rbp-8]            ; Pass base chunk index
     call grid_resonance_kernel
     
     lea rsi, [msg_pi_resonance]
@@ -2449,6 +2456,8 @@ pi_genesis_protocol:
 
 ; grid_resonance_kernel - Fast 2D topological resonance pass
 grid_resonance_kernel:
+    push r12
+    mov r12, rdi                ; r12 = base index
     xor r13, r13                ; y
 .gr_y:
     cmp r13, 64
@@ -2462,6 +2471,7 @@ grid_resonance_kernel:
     mov rax, r13
     shl rax, 6
     add rax, r14
+    add rax, r12                ; APPLY BASE OFFSET
     mov r15, rax
     
     ; Harmonic averaging with neighbors
@@ -2478,6 +2488,7 @@ grid_resonance_kernel:
     inc r13
     jmp .gr_y
 .gr_done:
+    pop r12
     ret
 
 ; braid_chunks_minimal - Faster braiding without safety checks
@@ -3249,7 +3260,14 @@ execute_instruction:
 
 .op_genesis:
     mov rdi, rbx                ; seed (operand1)
+    cmp rdi, 0x31415            ; Special Pi Seed?
+    je .gen_pi
     call genesis_protocol
+    xor rax, rax
+    jmp .exec_ret
+.gen_pi:
+    mov rdi, r14                ; PASS TARGET CHUNK AS BASE
+    call pi_genesis_protocol
     xor rax, rax
     jmp .exec_ret
 
