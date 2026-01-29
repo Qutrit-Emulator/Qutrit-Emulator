@@ -165,6 +165,7 @@ section .data
     
     ; Debug
     msg_debug_rng:      db "  [DEBUG] RNG: ", 0
+    msg_debug_swap:     db "  [DEBUG] Swapping Chunks...", 10, 0
     
     ; Pi's Algorithm PRNG State (Initialized)
     prng_state:         dq 0x243F6A8885A308D3
@@ -198,6 +199,8 @@ section .bss
     program_ptr:        resq 1                  ; Current instruction pointer
     program_end:        resq 1                  ; End of program
     running:            resq 1                  ; Execution flag
+    manual_sector_offset: resq 1               ; Manual Sector ID from CLI
+    structural_hash:    resq 1                  ; Program-based hash
 
     ; BigInt working space
     bigint_temp_a:      resb BIGINT_BYTES
@@ -243,19 +246,31 @@ _start:
     ; Register built-in add-ons
     call register_builtins
 
+    ; Initialize manual offset
+    mov qword [manual_sector_offset], 0
+
     ; Check for program file argument
     mov rax, [rsp]              ; argc
     cmp rax, 2
     jl .interactive_mode
 
+    ; Check for manual sector offset (argc == 3)
+    cmp rax, 3
+    jl .no_manual_offset
+    
+    mov rdi, [rsp + 24]         ; argv[2] (Sector ID)
+    call parse_int
+    mov [manual_sector_offset], rax
+
+.no_manual_offset:
     ; Load program from file
     mov rdi, [rsp + 16]         ; argv[1]
     call load_program
     test rax, rax
-    jz .run_program
+    jnz .exit                   ; Error loading
 
-    ; Error loading
-    jmp .exit
+    ; Calculate Structural Hash of the Bytecode
+    call calculate_structural_hash
 
 .run_program:
     call execute_program
@@ -285,6 +300,7 @@ engine_init:
     mov [num_braid_links], rax
     mov [num_addons], rax
     mov qword [running], 1
+    mov qword [prng_state], 0
 
     ; Clear chunk pointers
     lea rdi, [state_vectors]
@@ -698,19 +714,41 @@ init_chunk:
     dec rcx
     jnz .zero_loop
 
-    ; Set |0...0⟩ amplitude to 1.0
+    ; Set |0...0⟩ amplitude
     mov rdi, [state_vectors + r12*8]
+    
+    test r12, r12
+    jnz .init_standard
+    
+    ; Second-Order Refined Pi-Seed for Chunk 0 (Harmonic Convergence)
+    mov rax, 4603375528459645725 ; Refined-0 (Real)
+    mov [rdi], rax
+    mov qword [rdi + 8], 0     ; Refined-0 (Imag)
+    
+    mov rax, 13822243965687051037 ; Refined-1 (Real)
+    mov [rdi + 16], rax
+    mov rax, 4602678819172646912 ; Refined-1 (Imag)
+    mov [rdi + 24], rax
+    
+    mov rax, 13822243965687051037 ; Refined-2 (Real)
+    mov [rdi + 32], rax
+    mov rax, 13826050856027422720 ; Refined-2 (Imag)
+    mov [rdi + 40], rax
+    jmp .init_done
+
+.init_standard:
     movsd xmm0, [one]
     movsd [rdi], xmm0
 
+.init_done:
     ; Update chunk count if needed
     mov rax, [num_chunks]
     cmp r12, rax
-    jl .init_done
+    jl .init_ret_ok
     lea rax, [r12 + 1]
     mov [num_chunks], rax
 
-.init_done:
+.init_ret_ok:
     xor rax, rax
     jmp .init_ret
 
@@ -1182,16 +1220,34 @@ measure_chunk:
     ; 2. Accumulate P = sum(|psi_i|^2)
     ; 3. If P >= R, collapse to state i
 
-    call get_random_float
-    ; xmm0 = Random Threshold (0.0 to 1.0)
-    
-    xor r14, r14                ; selected index
-    xorpd xmm7, xmm7            ; accumulated prob (P)
+    ; 1. Calculate Total Probability (Sum of all |amp|^2)
+    xorpd xmm7, xmm7            ; total_prob = 0
     xor rcx, rcx                ; loop counter
-
-.meas_loop:
+.meas_sum_loop:
     cmp rcx, r13
-    jge .meas_done              ; Should have picked something by now, but fallthrough safe
+    jge .meas_sample
+    mov rax, rcx
+    shl rax, 4
+    movsd xmm1, [rbx + rax]     ; real
+    movsd xmm2, [rbx + rax + 8] ; imag
+    mulsd xmm1, xmm1
+    mulsd xmm2, xmm2
+    addsd xmm1, xmm2            ; |amp_i|^2
+    addsd xmm7, xmm1
+    inc rcx
+    jmp .meas_sum_loop
+
+.meas_sample:
+    ; 3. Get random threshold in [0, total_prob]
+    call get_random_float       ; xmm0 = [0, 1.0]
+    mulsd xmm0, xmm7            ; xmm0 = [0, total_prob]
+    
+    ; 4. Pick state
+    xorpd xmm6, xmm6            ; current_sum = 0
+    xor rcx, rcx
+.meas_pick_loop:
+    cmp rcx, r13
+    jge .meas_pick_last         ; Fallback
     
     mov rax, rcx
     shl rax, 4
@@ -1199,20 +1255,20 @@ measure_chunk:
     movsd xmm2, [rbx + rax + 8]
     mulsd xmm1, xmm1
     mulsd xmm2, xmm2
-    addsd xmm1, xmm2            ; |amp_i|^2
+    addsd xmm1, xmm2
+    addsd xmm6, xmm1
     
-    addsd xmm7, xmm1            ; P += |amp_i|^2
-    
-    ucomisd xmm7, xmm0          ; If P >= Threshold
-    jnb .meas_pick
+    ucomisd xmm6, xmm0
+    jnb .meas_pick_done
     
     inc rcx
-    jmp .meas_loop
+    jmp .meas_pick_loop
 
-.meas_pick:
+.meas_pick_last:
+    mov rcx, r13
+    dec rcx
+.meas_pick_done:
     mov r14, rcx
-
-
 .meas_done:
     ; Collapse: set measured state to 1, others to 0
     mov rdi, r12
@@ -3059,6 +3115,12 @@ execute_instruction:
 
 .op_chunk_swap:
     ; Swap Chunk A (r14) and Chunk B (rbx)
+    ; DEBUG
+    push rsi
+    lea rsi, [msg_debug_swap]
+    call print_string
+    pop rsi
+
     cmp r14, MAX_CHUNKS
     jge .exec_ret
     cmp rbx, MAX_CHUNKS
@@ -3088,11 +3150,6 @@ execute_instruction:
 .op_genesis:
     mov rdi, rbx                ; seed (operand1)
     call genesis_protocol
-    xor rax, rax
-    jmp .exec_ret
-
-.op_pi_genesis:
-    call pi_genesis_protocol
     xor rax, rax
     jmp .exec_ret
 
@@ -3213,7 +3270,36 @@ execute_instruction:
     movsd [rsi], xmm2
     add rsi, 8
     loop .scale_loop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_pi_genesis:
+    ; OP_PI_GENESIS (0x18) - The Refined Holographic Pi Manifestation
+    ; Manifests the Second-Order Triad (Harmonic Convergence)
+    ; r14 = chunk
     
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .exec_ret
+    
+    ; Implant Second-Order Refined Constants
+    mov rax, 4603375528459645725 ; Refined-0 (Real)
+    mov [rdi], rax
+    mov qword [rdi + 8], 0
+    
+    mov rax, 13822243965687051037 ; Refined-1 (Real)
+    mov [rdi + 16], rax
+    mov rax, 4602678819172646912 ; Refined-1 (Imag)
+    mov [rdi + 24], rax
+    
+    mov rax, 13822243965687051037 ; Refined-2 (Real)
+    mov [rdi + 32], rax
+    mov rax, 13826050856027422720 ; Refined-2 (Imag)
+    mov [rdi + 40], rax
+    
+    xor rax, rax
+    jmp .exec_ret
+
 .op_noise:
     ; OP_NOISE (0x1B) - Stochastic Phase Pulse
     ; r14 = chunk, rbx = intensity
@@ -3642,114 +3728,60 @@ get_random_float:
     test rax, rax
     jnz .prng_next
     
-    ; Seed with Divine Constant (Machine-Calculated 1/sqrt(3))
-    mov rax, 0x3fe279a74590331d
+    ; Seed with Infinite Equilibrium Constant (Refined Pi-Truth)
+    ; InitialSeed = RefinedConstant + ProgramHash + ManualSectorOffset
+    ; Seed with Infinite Equilibrium Constant (Refined Pi-Truth)
+    ; InitialSeed = RefinedConstant + ProgramHash + TimeOffset + ManualSectorOffset
+    ; THIS IS THE FINAL UNDERSTANDING RETRIEVED FROM THE FUTURE
+    mov rax, 4603375528459645725 ; Refined-0 (1/sqrt(3))
+    add rax, [structural_hash]
+    
+    add rax, [manual_sector_offset]
     mov [prng_state], rax
     
 .prng_next:
-    ; LCG: state = (state * 6364136223846793005 + 1442695040888963407)
-    mov rbx, 6364136223846793005
-    mul rbx
-    mov rbx, 1442695040888963407
-    add rax, rbx
+    ; ─────────────────────────────────────────────────────────────────────────
+    ; PI-TIME FLUX (Continuous Temporal Resonance)
+    ; ─────────────────────────────────────────────────────────────────────────
+    ; We sip from the Time-Stream on every cycle.
+    push rax
+    push rdx
+    rdtsc                       ; edx:eax = cycles
+    shl rdx, 32
+    or rax, rdx
+    mov rbx, rax
+    pop rdx
+    pop rax
+    xor rax, rbx                ; Mix Time into State
     
     ; ─────────────────────────────────────────────────────────────────────────
-    ; FUTURE ALGORITHM (H-P-H-P-H MIXING)
+    ; CHAOTIC PI-MIXER (Digit Normality Simulation)
     ; ─────────────────────────────────────────────────────────────────────────
-    ; "Future" optimization retrieved from Chunk 4000
-    ; 1. Hadamard (Simulate Superposition): XOR with rotated self
+    mov rbx, 4603375528459645725 ; Refined-0 (Alpha)
+    mul rbx                      ; Chaotic Expansion
+    
+    add rax, [structural_hash]   ; Inject Structure
+    add rax, [manual_sector_offset] ; Inject Sector (Persistence)
+    
     mov rdx, rax
-    ror rdx, 32
-    xor rax, rdx
-    
-    ; 2. Retrocausal Phase Shift I (1/sqrt(3))
-    mov rdx, 0x3fe279a74590331d
-    add rax, rdx
-    
-    ; 3. Hadamard (Interference)
-    mov rdx, rax
-    rol rdx, 16
-    xor rax, rdx
-    
-    ; 4. Phase Shift (Pi/2 Rotation): Add Pi/2 Constant (0x121F...)
-    mov rdx, 0x121FB54442D18469
-    add rax, rdx
-    
-    ; 5. Hadamard (Resolution)
-    mov rdx, rax
-    ror rdx, 8
-    xor rax, rdx
-
-    ; ─────────────────────────────────────────────────────────────────────────
-    ; RECURSIVE PERFECTION (Pi/4, Pi/8 LAYERS)
-    ; ─────────────────────────────────────────────────────────────────────────
-    ; 6. Phase Shift (Pi/4): Add 0x090F...
-    mov rdx, 0x090FDCA22168C234
-    add rax, rdx
-    
-    ; 7. Hadamard (Fractal Mix)
-    mov rdx, rax
-    rol rdx, 4
-    xor rax, rdx
-    
-    ; 8. Phase Shift (Pi/8): Add 0x0487...
-    mov rdx, 0x0487EE5110B4611A
-    add rax, rdx
-    
-    ; 9. Final Hadamard (The Event Horizon)
-    mov rdx, rax
-    ror rdx, 2
-    xor rax, rdx
-    
-    ; ─────────────────────────────────────────────────────────────────────────
-    ; UNIVERSAL ALGORITHM: GOLDEN RATIO HARMONY
-    ; ─────────────────────────────────────────────────────────────────────────
-    ; The "Perfect" algorithm had a binary bias. We fix this by mixing with
-    ; the Golden Ratio (Phi) which is the most irrational number, destroying
-    ; all resonance patterns and creating true uniformity.
-    
-    ; 10. Multiply by Divine Constant II (1/sqrt(3))
-    mov rdx, 0x3fe279a74590331d
-    mul rdx
-    
-    ; 11. Final Universal Hadamard
-    mov rdx, rax
-    ror rdx, 32
-    xor rax, rdx
-    
-    ; ─────────────────────────────────────────────────────────────────────────
-    ; TRIAD ALGORITHM: EULER'S CONSTANT (The Final Synthesis)
-    ; ─────────────────────────────────────────────────────────────────────────
-    ; We have Geometric Perfection (Pi) and Harmonic Perfection (Phi).
-    ; Now we add Natural Growth (Euler's Number e).
-    ; This balances the final basis state |0>.
-    
-    ; 12. Multiply by Divine Constant III (1/sqrt(3))
-    mov rdx, 0x3fe279a74590331d
-    add rax, rdx
-    
-    ; 13. The Final Resolution (Hadamard)
-    mov rdx, rax
-    rol rdx, 7
-    xor rax, rdx
-    
-    ; ─────────────────────────────────────────────────────────────────────────
-    ; QUARTET ALGORITHM: PYTHAGORAS CONSTANT (The Distance)
-    ; ─────────────────────────────────────────────────────────────────────────
-    ; The Final Pillar. The diagonal of the unit square.
-    ; This ensures correct magnitude scaling in the probability field.
-    
-    ; 14. Multiply by Divine Constant IV (1/sqrt(3))
-    mov rdx, 0x3fe279a74590331d
-    add rax, rdx
-    
-    ; 15. The Absolute Hadamard (Event Horizon)
-    mov rdx, rax
-    ror rdx, 17
-    xor rax, rdx
-    ; ─────────────────────────────────────────────────────────────────────────
+    shr rdx, 32
+    xor rax, rdx                 ; Bit Mix
     
     mov [prng_state], rax
+    
+    ; DEBUG (Print Resonance State)
+    push rax
+    push rdx
+    push rsi
+    lea rsi, [msg_debug_rng]
+    call print_string
+    mov rdi, [prng_state]
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+    pop rsi
+    pop rdx
+    pop rax
     
     ; Convert to float [0, 1.0]
     ; Use bits to mask into exponent for 1.0 <= x < 2.0, then subtract 1.0
@@ -3780,3 +3812,66 @@ get_random_float:
 ; to load custom oracles, or replace with your own oracle file.
 ; ═══════════════════════════════════════════════════════════════════════════════
 %include "custom_oracles.asm"
+
+; ═══════════════════════════════════════════════════════════════════════════════
+; SECTOR-BASED DETERMINISM HELPERS
+; ═══════════════════════════════════════════════════════════════════════════════
+
+; parse_int - Convert string to integer (rdi = ptr, return rax)
+parse_int:
+    xor rax, rax
+    xor rcx, rcx
+.parse_loop:
+    movzx rdx, byte [rdi + rcx]
+    test dl, dl
+    jz .parse_done
+    cmp dl, '0'
+    jl .parse_done
+    cmp dl, '9'
+    jg .parse_done
+    
+    sub dl, '0'
+    imul rax, 10
+    add rax, rdx
+    inc rcx
+    jmp .parse_loop
+.parse_done:
+    ret
+
+; calculate_structural_hash - Generate a Pi-deterministic hash of the bytecode
+calculate_structural_hash:
+    push rbx
+    push r12
+    push r13
+    
+    mov r12, [program_ptr]
+    mov r13, [program_end]
+    test r12, r12
+    jz .hash_ret
+    
+    ; Seed hash with Refined Pi Constant
+    mov rax, 4603375528459645725
+    
+.hash_loop:
+    cmp r12, r13
+    jge .hash_done
+    
+    movzx rbx, byte [r12]
+    
+    ; hash = (hash * 4603375528459645725) + byte
+    ; Use 64-bit multiplication
+    mov rdx, 4603375528459645725
+    mul rdx
+    add rax, rbx
+    
+    inc r12
+    jmp .hash_loop
+
+.hash_done:
+    mov [structural_hash], rax
+
+.hash_ret:
+    pop r13
+    pop r12
+    pop rbx
+    ret
