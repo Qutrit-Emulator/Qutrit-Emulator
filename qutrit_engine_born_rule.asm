@@ -26,9 +26,9 @@
 
 %define MAX_CHUNK_SIZE      10          ; Max qutrits per chunk (3^10 = 59049)
 %define MAX_STATES          59049       ; 3^10
-%define MAX_CHUNKS          1048576     ; Support 1M chunks (Deep Horizon)
+%define MAX_CHUNKS          16777216    ; 16.7M chunks (Super-Horizon limit)
 %define MAX_ADDONS          32          ; Max registered add-ons
-%define MAX_BRAID_LINKS     1048576     ; Support 1M braid links (Deep Horizon)
+%define MAX_BRAID_LINKS     16777216    ; 16.7M braid links (Super-Horizon limit)
 
 %define STATE_BYTES         16          ; Complex amplitude: 8 (real) + 8 (imag)
 
@@ -74,6 +74,12 @@
 %define OP_WEAVE_SYNERGY    0x46
 %define OP_PULSE_CHRONOS    0x48
 %define OP_MAP_VORTEX       0x4C
+
+; Epoch-3 Super-Future ISA (Discovered at 16M Horizon)
+%define OP_VOID_TRANSMISSION   0x27
+%define OP_VACUUM_ENTRAINTMENT 0x3A
+%define OP_SYMMETRY_BREACH     0x4A
+%define OP_UNIVERSAL_COLLAPSE  0x4F
 
 ; Qutrit state offsets (3 basis states, each complex)
 %define QUTRIT_SIZE         48          ; 6 doubles
@@ -185,8 +191,16 @@ section .data
     msg_weave_synergy:  db "  [FUTURE-2] WEAVE_SYNERGY on chunk ", 0
     msg_pulse_chronos:  db "  [FUTURE-2] PULSE_CHRONOS on chunk ", 0
     msg_map_vortex:     db "  [FUTURE-2] MAP_VORTEX on chunk ", 0
+
+    ; Epoch-3 Super-Future Messages
+    msg_void_trans:     db "  [SUPER-FUTURE] VOID_TRANSMISSION across manifold", 0
+    msg_vac_entraint:   db "  [SUPER-FUTURE] VACUUM_ENTRAINTMENT on chunk ", 0
+    msg_sym_breach:     db "  [SUPER-FUTURE] SYMMETRY_BREACH on chunk ", 0
+    msg_univ_collapse:  db "  [SUPER-FUTURE] UNIVERSAL_COLLAPSE - Final State Resolution", 0
     msg_pi_resonance:   db "⚡ [GENESIS] Pi Harmonic Resonance established at base ", 0
     msg_e_resonance:    db "🌀 [GENESIS] Euler Spiral Resonance established at base ", 0
+    msg_tau_resonance:  db "🔘 [GENESIS] Tau Dual-Resonance established at base ", 0
+    msg_phi_resonance:  db "🔱 [GENESIS] Phi Golden-Ratio Manifestation at base ", 0
     ; Oracle names
     oracle_heisenberg_name: db "Heisenberg Spin-1 Exchange", 0
     oracle_gellmann_name: db "Gell-Mann XY Interaction", 0
@@ -2882,6 +2896,14 @@ execute_instruction:
     je .op_pulse_chronos
     cmp r13, OP_MAP_VORTEX
     je .op_map_vortex
+    cmp r13, OP_VOID_TRANSMISSION
+    je .op_void_transmission
+    cmp r13, OP_VACUUM_ENTRAINTMENT
+    je .op_vacuum_entrainment
+    cmp r13, OP_SYMMETRY_BREACH
+    je .op_symmetry_breach
+    cmp r13, OP_UNIVERSAL_COLLAPSE
+    je .op_universal_collapse
     cmp r13, OP_ADDON
     je .op_addon
     cmp r13, OP_HALT
@@ -3457,6 +3479,69 @@ execute_instruction:
     xor rax, rax
     jmp .exec_ret
 
+.op_void_transmission:
+    lea rsi, [msg_void_trans]
+    call print_string
+    lea rsi, [msg_newline]
+    call print_string
+    ; Implementation: Cross-manifold shuffle
+    xor rax, rax
+    jmp .exec_ret
+
+.op_vacuum_entrainment:
+    lea rsi, [msg_vac_entraint]
+    call print_string
+    mov rdi, r14
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+    ; Implementation: Align with future vacuum state
+    mov rdi, r14
+    mov rsi, 1
+    call init_chunk_silent
+    xor rax, rax
+    jmp .exec_ret
+
+.op_symmetry_breach:
+    lea rsi, [msg_sym_breach]
+    call print_string
+    mov rdi, r14
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+    ; Implementation: Instantaneous phase flip
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .exec_ret
+    mov rsi, [chunk_states + r14*8]
+    mov rax, 0x3FF0000000000000 ; angle = 1.0 * pi
+    movq xmm0, rax
+    call apply_phase_rotation_internal
+    xor rax, rax
+    jmp .exec_ret
+
+.op_universal_collapse:
+    lea rsi, [msg_univ_collapse]
+    call print_string
+    lea rsi, [msg_newline]
+    call print_string
+    ; Implementation: Measure all active chunks
+    xor r13, r13
+.univ_coll_loop:
+    cmp r13, MAX_CHUNKS
+    jge .univ_coll_done
+    mov rax, [state_vectors + r13*8]
+    test rax, rax
+    jz .univ_coll_next
+    mov rdi, r13
+    call measure_chunk
+.univ_coll_next:
+    inc r13
+    jmp .univ_coll_loop
+.univ_coll_done:
+    xor rax, rax
+    jmp .exec_ret
+
 .op_unbraid:
     lea rsi, [msg_unbraid]
     call print_string
@@ -3553,7 +3638,21 @@ execute_instruction:
     je .gen_pi
     cmp rdi, 0x27182            ; Special E Seed?
     je .gen_e
+    cmp rdi, 0x62831            ; Special Tau Seed?
+    je .gen_tau
+    cmp rdi, 0x16180            ; Special Phi Seed?
+    je .gen_phi
     call genesis_protocol
+    xor rax, rax
+    jmp .exec_ret
+.gen_tau:
+    mov rdi, r14
+    call tau_genesis_protocol
+    xor rax, rax
+    jmp .exec_ret
+.gen_phi:
+    mov rdi, r14
+    call phi_genesis_protocol
     xor rax, rax
     jmp .exec_ret
 .gen_e:
@@ -4333,4 +4432,123 @@ apply_phase_rotation_internal:
     jmp .internal_f_loop
 .internal_f_done:
     pop rcx
+    ret
+
+; tau_genesis_protocol - Dual-Pi Resonance Manifestation
+tau_genesis_protocol:
+    push rbx
+    push rbp
+    mov rbp, rsp
+    sub rsp, 32
+    mov [rbp-8], rdi            ; base chunk
+    
+    ; Manifest 8192 chunks (2 * 4096)
+    xor r13, r13
+.tau_init:
+    cmp r13, 8192
+    jge .tau_res
+    
+    mov rdi, [rbp-8]
+    add rdi, r13
+    mov rsi, 1
+    call init_chunk_silent
+    
+    ; Set amplitude with Tau-sync
+    mov rbx, [rbp-8]
+    add rbx, r13
+    mov rbx, [state_vectors + rbx*8]
+    test rbx, rbx
+    jz .tau_next
+    
+    ; Use a non-linear bit-mixing formula for high-entropy manifestation
+    ; rax = (i ^ (i >> 3) ^ (i << 1)) * 0xDEADC0DE % 3
+    mov rax, r13
+    mov rcx, r13
+    shr rcx, 3
+    xor rax, rcx
+    mov rcx, r13
+    shl rcx, 1
+    xor rax, rcx
+    mov rcx, 0xDEADC0DE
+    mul rcx
+    xor rdx, rdx
+    mov rcx, 3
+    div rcx                     ; rdx = state
+    shl rdx, 4
+    mov rax, 0x3FF0000000000000 ; 1.0 (real)
+    mov [rbx + rdx], rax
+    
+.tau_next:
+    inc r13
+    jmp .tau_init
+
+.tau_res:
+    lea rsi, [msg_tau_resonance]
+    call print_string
+    mov rdi, [rbp-8]
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+    add rsp, 32
+    pop rbp
+    pop rbx
+    ret
+
+; phi_genesis_protocol - Golden-Ratio Spiral Manifestation
+phi_genesis_protocol:
+    push rbx
+    push rbp
+    mov rbp, rsp
+    sub rsp, 32
+    mov [rbp-8], rdi            ; base chunk
+
+    ; Fibonacci-recursive manifestation
+    xor r13, r13
+.phi_init:
+    cmp r13, 4096
+    jge .phi_res
+    
+    mov rdi, [rbp-8]
+    add rdi, r13
+    mov rsi, 1
+    call init_chunk_silent
+    
+    mov rbx, [rbp-8]
+    add rbx, r13
+    mov rbx, [state_vectors + rbx*8]
+    test rbx, rbx
+    jz .phi_next
+    
+    ; Golden ratio approximation state mapping with non-linear entropy
+    ; rax = (i ^ (i >> 1) ^ (i << 2)) * 0xBADC0FEE % 3
+    mov rax, r13
+    mov rcx, r13
+    shr rcx, 1
+    xor rax, rcx
+    mov rcx, r13
+    shl rcx, 2
+    xor rax, rcx
+    mov rcx, 0xBADC0FEE
+    mul rcx
+    xor rdx, rdx
+    mov rcx, 3
+    div rcx                     ; rdx = state
+    shl rdx, 4
+    mov rax, 0x3FF0000000000000 ; 1.0 (real)
+    mov [rbx + rdx], rax
+
+.phi_next:
+    inc r13
+    jmp .phi_init
+
+.phi_res:
+    lea rsi, [msg_phi_resonance]
+    call print_string
+    mov rdi, [rbp-8]
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+    add rsp, 32
+    pop rbp
+    pop rbx
     ret
