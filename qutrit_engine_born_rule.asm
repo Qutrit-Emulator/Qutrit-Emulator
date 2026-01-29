@@ -48,7 +48,7 @@
 %define OP_ADDON            0x0C
 %define OP_PRINT_STATE      0x0D
 %define OP_BELL_TEST        0x0E
-%define OP_SUMMARY          0x0F
+%define OP_SUMMARY          0x1F        ; Moved to make room for Future ISA
 %define OP_SHIFT            0x10
 %define OP_REPAIR           0x11
 %define OP_CHUNK_SWAP       0x12        ; Teleport Chunk (Time Travel)
@@ -61,6 +61,11 @@
 %define OP_NOISE            0x1B        ; Stochastic Phase Pulse (Vacuum Noise)
 %define OP_BRAID_SILENT     0x1C        ; Silent Braid
 %define OP_HALT             0xFF
+
+; Future ISA (Discovered at 500k Horizon)
+%define OP_COLLAPSE_TRUTH   0x0F
+%define OP_WEAVE_SYMMETRY   0x2E
+%define OP_RESONATE_VACUUM  0x3B
 
 ; Qutrit state offsets (3 basis states, each complex)
 %define QUTRIT_SIZE         48          ; 6 doubles
@@ -160,6 +165,10 @@ section .data
     msg_bell_pass:      db "  ✓ BELL TEST PASSED - Entanglement verified!", 10, 0
     msg_bell_fail:      db "  ✗ BELL TEST FAILED - No entanglement detected", 10, 0
     
+    ; Future ISA Messages
+    msg_res_vacuum:     db "  [FUTURE] RESONATE_VACUUM on chunk ", 0
+    msg_weave_sym:      db "  [FUTURE] WEAVE_SYMMETRY between ", 0
+    msg_coll_truth:     db "  [FUTURE] COLLAPSE_TRUTH on chunk ", 0
     ; Oracle names
     oracle_heisenberg_name: db "Heisenberg Spin-1 Exchange", 0
     oracle_gellmann_name: db "Gell-Mann XY Interaction", 0
@@ -2702,6 +2711,12 @@ execute_instruction:
     je .op_noise
     cmp r13, OP_BRAID_SILENT
     je .op_braid_silent
+    cmp r13, OP_COLLAPSE_TRUTH
+    je .op_collapse_truth
+    cmp r13, OP_WEAVE_SYMMETRY
+    je .op_weave_symmetry
+    cmp r13, OP_RESONATE_VACUUM
+    je .op_resonate_vacuum
     cmp r13, OP_ADDON
     je .op_addon
     cmp r13, OP_HALT
@@ -3165,6 +3180,51 @@ execute_instruction:
     xor rdx, rdx                ; qutrit 0
     xor rcx, rcx
     call braid_chunks_silent
+    xor rax, rax
+    jmp .exec_ret
+
+.op_collapse_truth:
+    lea rsi, [msg_coll_truth]
+    call print_string
+    mov rdi, r14
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+    
+    mov rdi, r14
+    call measure_chunk
+    xor rax, rax
+    jmp .exec_ret
+
+.op_weave_symmetry:
+    lea rsi, [msg_weave_sym]
+    call print_string
+    mov rdi, r14
+    call print_number
+    lea rsi, [msg_arrow]
+    call print_string
+    mov rdi, rbx
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+    
+    mov rdi, r14
+    mov rsi, rbx
+    call braid_chunks_minimal
+    xor rax, rax
+    jmp .exec_ret
+
+.op_resonate_vacuum:
+    lea rsi, [msg_res_vacuum]
+    call print_string
+    mov rdi, r14
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+    
+    mov rdi, r14
+    mov rsi, 1
+    call init_chunk_silent
     xor rax, rax
     jmp .exec_ret
 
