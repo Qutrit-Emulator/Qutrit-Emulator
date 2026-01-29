@@ -46,8 +46,8 @@ def pack_instr(opcode, target=0, op1=0, op2=0):
             ((op2 & 0xFF) << 56)
     return struct.pack('<Q', instr)
 
-def generate_omega_protocol():
-    # Opcodes (Matches benchmark_suite.py)
+def generate_omega_protocol(horizon, length=1024):
+    # Opcodes
     OP_INIT        = 0x01
     OP_MEASURE     = 0x07
     OP_GENESIS     = 0x16
@@ -55,24 +55,19 @@ def generate_omega_protocol():
     OP_HALT        = 0xFF
     
     PI_SEED        = 0x31415
-    FUTURE_INDEX   = 500000
     PRESENT_INDEX  = 1000
-    CODE_LENGTH    = 400  # Number of chunks to retrieve
     
     bytecode = bytearray()
     
     # 1. Manifest Omega State at Future Horizon
-    # pack_instr(OP_GENESIS, target=FUTURE_INDEX, op1=PI_SEED)
-    bytecode.extend(pack_instr(OP_GENESIS, target=FUTURE_INDEX, op1=PI_SEED))
+    bytecode.extend(pack_instr(OP_GENESIS, target=horizon, op1=PI_SEED))
     
     # 2. Teleport Future Code to Present
-    # OP_CHUNK_SWAP <chunk_a> <chunk_b>
-    # Asm maps: r14 = target, rbx = op1
-    for i in range(CODE_LENGTH):
-        bytecode.extend(pack_instr(OP_CHUNK_SWAP, target=PRESENT_INDEX + i, op1=FUTURE_INDEX + i))
+    for i in range(length):
+        bytecode.extend(pack_instr(OP_CHUNK_SWAP, target=PRESENT_INDEX + i, op1=horizon + i))
     
     # 3. Measure the Teleported Manifestation
-    for i in range(CODE_LENGTH):
+    for i in range(length):
         bytecode.extend(pack_instr(OP_MEASURE, target=PRESENT_INDEX + i))
     
     bytecode.extend(pack_instr(OP_HALT))
@@ -81,54 +76,90 @@ def generate_omega_protocol():
         f.write(bytecode)
 
 def extract_code():
-    print("[*] Manifesting Omega State at 500,000-chunk horizon...")
-    generate_omega_protocol()
+    seeds = {
+        "Pi": 0x31415,
+        "Euler": 0x27182,
+        "Tau": 0x62831,
+        "Phi": 0x16180
+    }
+    horizons = [500000, 1000000, 10000000, 16000000]
+    block_size = 256  # Words (1024 chunks)
     
-    stdout, stderr = run_qutrit_code('omega_protocol.qbin')
-    
-    if stderr:
-        print(f"[!] Engine Error:\n{stderr}")
-        return
+    for seed_name, seed_val in seeds.items():
+        print(f"--- SCANNING WITH {seed_name.upper()} SEED (0x{seed_val:X}) ---")
+        for horizon in horizons:
+            print(f"[*] Probing Horizon at Index {horizon}...")
+            # We use seed_val in the genesis call
+            # Wait, the generate_omega_protocol needs to take seed_val
+            generate_omega_protocol_with_seed(seed_val, horizon, length=block_size * 4)
+            
+            stdout, stderr = run_qutrit_code('omega_protocol.qbin')
+            
+            if stderr:
+                print(f"[!] Engine Error at Horizon {horizon}:\n{stderr}")
+                continue
 
-    print(f"[*] Engine execution finished. Stdout length: {len(stdout)}")
+            # Parse measurements
+            measurements = []
+            lines = stdout.splitlines()
+            for line in lines:
+                if " => " in line:
+                    try:
+                        state = int(line.split("=>")[1].strip())
+                        measurements.append(state)
+                    except:
+                        pass
 
-    print(f"[*] Engine execution finished. Stdout length: {len(stdout)}")
-    if stdout:
-        print(f"[*] First 5 lines of stdout:\n" + "\n".join(stdout.splitlines()[:5]))
+            if not measurements:
+                print(f"[!] No measurements found for Horizon {horizon}.")
+                continue
 
-    # Parse measurements
-    measurements = []
-    lines = stdout.splitlines()
-    for line in lines:
-        if " => " in line:
-            # Format: "  [MEAS] Measuring chunk 1000 => 1"
-            try:
-                state = int(line.split("=>")[1].strip())
-                measurements.append(state)
-            except:
-                pass
+            print(f"[*] Retrieved {len(measurements)} quantum states.")
+            
+            # Entropy check
+            unique_patterns = set()
+            for i in range(0, len(measurements) - 3, 4):
+                unique_patterns.add(tuple(measurements[i:i+4]))
+            
+            print(f"[*] Complexity: {len(unique_patterns)} unique words in block.")
+            
+            if len(unique_patterns) > 5:
+                # Show first 10 ADDRs of complex code
+                print(f"--- DECOMPILED FUTURE MACHINE CODE (HORIZON {horizon}) ---")
+                print("ADDR | WORD (TERNARY) | MNEMONIC")
+                for i in range(0, min(len(measurements), 40), 4):
+                    word_states = measurements[i:i+4]
+                    opcode = sum(s * (3 ** idx) for idx, s in enumerate(word_states))
+                    mnemonic = get_mnemonic(opcode)
+                    ternary_str = "".join(map(str, word_states))
+                    print(f"{i//4:04} | {ternary_str} (0x{opcode:02X}) | {mnemonic}")
+            else:
+                print("[*] Repetitive loop detected (Synchronized Manifold).")
+            print("\n")
 
-    if not measurements:
-        print("[!] No measurements found in output.")
-        print(f"--- ENGINE STDOUT ---\n{stdout}")
-        print(f"--- ENGINE STDERR ---\n{stderr}")
-        return
+def generate_omega_protocol_with_seed(seed, horizon, length=1024):
+    # Opcodes
+    OP_INIT        = 0x01
+    OP_MEASURE     = 0x07
+    OP_GENESIS     = 0x16
+    OP_CHUNK_SWAP  = 0x12
+    OP_HALT        = 0xFF
+    PRESENT_INDEX  = 1000
+    bytecode = bytearray()
+    bytecode.extend(pack_instr(OP_GENESIS, target=horizon, op1=seed))
+    for i in range(length):
+        bytecode.extend(pack_instr(OP_CHUNK_SWAP, target=PRESENT_INDEX + i, op1=horizon + i))
+    for i in range(length):
+        bytecode.extend(pack_instr(OP_MEASURE, target=PRESENT_INDEX + i))
+    bytecode.extend(pack_instr(OP_HALT))
+    with open('omega_protocol.qbin', 'wb') as f:
+        f.write(bytecode)
 
-    print(f"[*] Retrieved {len(measurements)} quantum states from the future.")
-    
-    # Decompile into Future ISA (4 qutrits = 1 word)
-    print("\n--- DECOMPILED FUTURE MACHINE CODE ---")
-    print("ADDR | WORD (TERNARY) | MNEMONIC")
-    print("-" * 40)
-    
-    for i in range(0, len(measurements) - 3, 4):
-        word_states = measurements[i:i+4]
-        # Ternary to Decimal: d0*3^0 + d1*3^1 + d2*3^2 + d3*3^3
-        opcode = sum(s * (3 ** idx) for idx, s in enumerate(word_states))
-        mnemonic = get_mnemonic(opcode)
-        
-        ternary_str = "".join(map(str, word_states))
-        print(f"{i//4:04} | {ternary_str} (0x{opcode:02X}) | {mnemonic}")
+if __name__ == "__main__":
+    if not os.path.exists('./qutrit_engine'):
+        print("[!] qutrit_engine not found. Build it first.")
+    else:
+        extract_code()
 
 if __name__ == "__main__":
     if not os.path.exists('./qutrit_engine'):
