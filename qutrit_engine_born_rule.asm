@@ -29,6 +29,7 @@
 %define MAX_CHUNKS          16777216    ; 16.7M chunks (Super-Horizon limit)
 %define MAX_ADDONS          32          ; Max registered add-ons
 %define MAX_BRAID_LINKS     16777216    ; 16.7M braid links (Super-Horizon limit)
+%define CAUSAL_SAFEGUARD_CHUNKS 4096    ; Timeline protection buffer
 
 %define STATE_BYTES         16          ; Complex amplitude: 8 (real) + 8 (imag)
 
@@ -80,6 +81,10 @@
 %define OP_VACUUM_ENTRAINTMENT 0x3A
 %define OP_SYMMETRY_BREACH     0x4A
 %define OP_UNIVERSAL_COLLAPSE  0x4F
+
+; Epoch-4 Frontier ISA (Discovered via Apéry Seed)
+%define OP_ECHO_ORIGIN         0x28
+%define OP_ASCEND_QUBIT        0x50
 
 ; Qutrit state offsets (3 basis states, each complex)
 %define QUTRIT_SIZE         48          ; 6 doubles
@@ -197,10 +202,14 @@ section .data
     msg_vac_entraint:   db "  [SUPER-FUTURE] VACUUM_ENTRAINTMENT on chunk ", 0
     msg_sym_breach:     db "  [SUPER-FUTURE] SYMMETRY_BREACH on chunk ", 0
     msg_univ_collapse:  db "  [SUPER-FUTURE] UNIVERSAL_COLLAPSE - Final State Resolution", 0
+    msg_causal_violation: db "⚠️ [CAUSAL VIOLATION] Unauthorized Super-Future Horizon access blocked!", 10, 0
+    msg_echo_origin:    db "  [EPOCH-4] ECHO_ORIGIN establish feedback to chunk 0", 0
+    msg_ascend_qubit:   db "  [EPOCH-4] ASCEND_QUBIT performed on chunk ", 0
     msg_pi_resonance:   db "⚡ [GENESIS] Pi Harmonic Resonance established at base ", 0
     msg_e_resonance:    db "🌀 [GENESIS] Euler Spiral Resonance established at base ", 0
     msg_tau_resonance:  db "🔘 [GENESIS] Tau Dual-Resonance established at base ", 0
     msg_phi_resonance:  db "🔱 [GENESIS] Phi Golden-Ratio Manifestation at base ", 0
+    msg_apery_resonance: db "💎 [GENESIS] Apéry Prism-Entanglement manifested at base ", 0
     ; Oracle names
     oracle_heisenberg_name: db "Heisenberg Spin-1 Exchange", 0
     oracle_gellmann_name: db "Gell-Mann XY Interaction", 0
@@ -2904,6 +2913,10 @@ execute_instruction:
     je .op_symmetry_breach
     cmp r13, OP_UNIVERSAL_COLLAPSE
     je .op_universal_collapse
+    cmp r13, OP_ECHO_ORIGIN
+    je .op_echo_origin
+    cmp r13, OP_ASCEND_QUBIT
+    je .op_ascend_qubit
     cmp r13, OP_ADDON
     je .op_addon
     cmp r13, OP_HALT
@@ -3542,6 +3555,51 @@ execute_instruction:
     xor rax, rax
     jmp .exec_ret
 
+.op_echo_origin:
+    ; OP_ECHO_ORIGIN (0x28) - Establish feedback link between target and Chunk 0
+    lea rsi, [msg_echo_origin]
+    call print_string
+    lea rsi, [msg_newline]
+    call print_string
+    
+    mov rdi, r14                ; chunk A (target)
+    xor rsi, rsi                ; chunk B (Chunk 0)
+    call braid_chunks_minimal
+    xor rax, rax
+    jmp .exec_ret
+
+.op_ascend_qubit:
+    ; OP_ASCEND_QUBIT (0x50) - Safe state ascension with Causal Firewall
+    ; Safeguard: Bound check target
+    mov rax, MAX_CHUNKS
+    sub rax, CAUSAL_SAFEGUARD_CHUNKS
+    cmp r14, rax
+    jae .causal_violation
+    
+    lea rsi, [msg_ascend_qubit]
+    call print_string
+    mov rdi, r14
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+    
+    ; Logic: Force 4th state simulation (clobber-safe average)
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .exec_ret
+    mov rsi, [chunk_states + r14*8]
+    mov rax, 0x3FE0000000000000 ; 0.5 factor for "ascension" stability
+    movq xmm0, rax
+    call apply_phase_rotation_internal
+    xor rax, rax
+    jmp .exec_ret
+
+.causal_violation:
+    lea rsi, [msg_causal_violation]
+    call print_string
+    mov rax, -1
+    jmp .exec_ret
+
 .op_unbraid:
     lea rsi, [msg_unbraid]
     call print_string
@@ -3642,6 +3700,8 @@ execute_instruction:
     je .gen_tau
     cmp rdi, 0x16180            ; Special Phi Seed?
     je .gen_phi
+    cmp rdi, 0x12020            ; Special Apéry Seed?
+    je .gen_apery
     call genesis_protocol
     xor rax, rax
     jmp .exec_ret
@@ -3653,6 +3713,11 @@ execute_instruction:
 .gen_phi:
     mov rdi, r14
     call phi_genesis_protocol
+    xor rax, rax
+    jmp .exec_ret
+.gen_apery:
+    mov rdi, r14
+    call apery_genesis_protocol
     xor rax, rax
     jmp .exec_ret
 .gen_e:
@@ -4543,6 +4608,65 @@ phi_genesis_protocol:
 
 .phi_res:
     lea rsi, [msg_phi_resonance]
+    call print_string
+    mov rdi, [rbp-8]
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+    add rsp, 32
+    pop rbp
+    pop rbx
+    ret
+
+; apery_genesis_protocol - 3D Prism Entanglement Manifestation
+apery_genesis_protocol:
+    push rbx
+    push rbp
+    mov rbp, rsp
+    sub rsp, 32
+    mov [rbp-8], rdi            ; base chunk
+
+    ; Manifest 16384 chunks (Cubic Prism)
+    xor r13, r13
+.ap_init:
+    cmp r13, 16384
+    jge .ap_res
+    
+    mov rdi, [rbp-8]
+    add rdi, r13
+    mov rsi, 1
+    call init_chunk_silent
+    
+    mov rbx, [rbp-8]
+    add rbx, r13
+    mov rbx, [state_vectors + rbx*8]
+    test rbx, rbx
+    jz .ap_next
+    
+    ; 3D-simulated mapping using non-linear bit-mixing
+    ; rax = (i ^ (i >> 4) ^ (i << 2)) * 0x120205 % 3
+    mov rax, r13
+    mov rcx, r13
+    shr rcx, 4
+    xor rax, rcx
+    mov rcx, r13
+    shl rcx, 2
+    xor rax, rcx
+    mov rcx, 0x120205
+    mul rcx
+    xor rdx, rdx
+    mov rcx, 3
+    div rcx                     ; rdx = state
+    shl rdx, 4
+    mov rax, 0x3FF0000000000000 ; 1.0 (real)
+    mov [rbx + rdx], rax
+
+.ap_next:
+    inc r13
+    jmp .ap_init
+
+.ap_res:
+    lea rsi, [msg_apery_resonance]
     call print_string
     mov rdi, [rbp-8]
     call print_number
