@@ -26,9 +26,9 @@
 
 %define MAX_CHUNK_SIZE      10          ; Max qutrits per chunk (3^10 = 59049)
 %define MAX_STATES          59049       ; 3^10
-%define MAX_CHUNKS          524288      ; Support 524k chunks (Doubled)
+%define MAX_CHUNKS          1048576     ; Support 1M chunks (Deep Horizon)
 %define MAX_ADDONS          32          ; Max registered add-ons
-%define MAX_BRAID_LINKS     524288      ; Support 524k braid links (Doubled)
+%define MAX_BRAID_LINKS     1048576     ; Support 1M braid links (Deep Horizon)
 
 %define STATE_BYTES         16          ; Complex amplitude: 8 (real) + 8 (imag)
 
