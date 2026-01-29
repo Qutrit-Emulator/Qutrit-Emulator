@@ -26,9 +26,9 @@
 
 %define MAX_CHUNK_SIZE      10          ; Max qutrits per chunk (3^10 = 59049)
 %define MAX_STATES          59049       ; 3^10
-%define MAX_CHUNKS          4096        ; Support 4096 chunks
+%define MAX_CHUNKS          262144      ; Support 262k chunks
 %define MAX_ADDONS          32          ; Max registered add-ons
-%define MAX_BRAID_LINKS     4096        ; Keep high braid links
+%define MAX_BRAID_LINKS     262144      ; Support 262k braid links
 
 %define STATE_BYTES         16          ; Complex amplitude: 8 (real) + 8 (imag)
 
@@ -2550,13 +2550,17 @@ execute_instruction:
     
     mov r12, rdi                ; full 64-bit instruction
     
-    movzx r13, r12w             ; opcode (bits 0-15)
-    shr r12, 16
-    movzx r14, r12w             ; target (bits 16-31)
-    shr r12, 16
-    movzx rbx, r12w             ; operand1 (bits 32-47)
-    shr r12, 16
-    movzx rcx, r12w             ; operand2 (bits 48-63)
+    mov r13, r12
+    and r13, 0xFF               ; opcode (bits 0-7)
+    shr r12, 8
+    mov r14, r12
+    and r14, 0xFFFFFF           ; target (bits 8-31)
+    shr r12, 24
+    mov rbx, r12
+    and rbx, 0xFFFFFF           ; operand1 (bits 32-55)
+    shr r12, 24
+    mov rcx, r12
+    and rcx, 0xFF               ; operand2 (bits 56-63)
 
     ; Dispatch based on opcode
     cmp r13, OP_NOP
@@ -3769,19 +3773,19 @@ get_random_float:
     
     mov [prng_state], rax
     
-    ; DEBUG (Print Resonance State)
-    push rax
-    push rdx
-    push rsi
-    lea rsi, [msg_debug_rng]
-    call print_string
-    mov rdi, [prng_state]
-    call print_number
-    lea rsi, [msg_newline]
-    call print_string
-    pop rsi
-    pop rdx
-    pop rax
+    ; DEBUG (Print Resonance State) - SILENCED for cleaner prophecy
+    ;push rax
+    ;push rdx
+    ;push rsi
+    ;lea rsi, [msg_debug_rng]
+    ;call print_string
+    ;mov rdi, [prng_state]
+    ;call print_number
+    ;lea rsi, [msg_newline]
+    ;call print_string
+    ;pop rsi
+    ;pop rdx
+    ;pop rax
     
     ; Convert to float [0, 1.0]
     ; Use bits to mask into exponent for 1.0 <= x < 2.0, then subtract 1.0
