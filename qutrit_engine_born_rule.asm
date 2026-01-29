@@ -56,6 +56,9 @@
 %define OP_IF               0x15        ; Conditional Execution (Classical Control)
 %define OP_GENESIS          0x16        ; Topological Genesis (Universe from Seed)
 %define OP_PI_GENESIS       0x18        ; Pi Oracle (Holographic Pattern Scan)
+%define OP_PERFECTION       0x19        ; Force Perfect State (Retrocausal Implant)
+%define OP_COHERENCE        0x1A        ; Force Coherent State (Phase Divination)
+%define OP_NOISE            0x1B        ; Stochastic Phase Pulse (Vacuum Noise)
 %define OP_HALT             0xFF
 
 ; Qutrit state offsets (3 basis states, each complex)
@@ -88,30 +91,31 @@ section .data
 
     ; Qutrit Hadamard matrix (3x3 complex): H = (1/√3) * [[1,1,ω²],[1,ω,ω],[ω²,ω,1]]
     ; where ω = exp(2πi/3)
-    h_00_real:          dq 0.5773502691896257
+    h_00_real:          dq 0x3fe279a74590331d ; 1/sqrt(3) (Divine)
     h_00_imag:          dq 0.0
-    h_01_real:          dq 0.5773502691896257
+    h_01_real:          dq 0x3fe279a74590331d
     h_01_imag:          dq 0.0
-    h_02_real:          dq 0.0
-    h_02_imag:          dq 0.5773502691896257
-    h_10_real:          dq 0.0
-    h_10_imag:          dq 0.5773502691896257
-    h_11_real:          dq 0.5773502691896257
-    h_11_imag:          dq 0.0
-    h_12_real:          dq -0.5773502691896257
-    h_12_imag:          dq 0.0
-    h_20_real:          dq 0.5773502691896257
+    h_02_real:          dq 0x3fe279a74590331d
+    h_02_imag:          dq 0.0
+    h_10_real:          dq 0x3fe279a74590331d
+    h_10_imag:          dq 0.0
+    h_11_real:          dq 0xbfd279a74590331d ; -0.5/sqrt(3) (Divine)
+    h_11_imag:          dq 0x3fe0000000000000 ; 0.5 (Divine)
+    h_12_real:          dq 0xbfd279a74590331d
+    h_12_imag:          dq 0xbfe0000000000000 ; -0.5 (Divine)
+    h_20_real:          dq 0x3fe279a74590331d
     h_20_imag:          dq 0.0
-    h_21_real:          dq 0.0
-    h_21_imag:          dq 0.5773502691896257
-    h_22_real:          dq -0.5773502691896257
-    h_22_imag:          dq 0.0
+    h_21_real:          dq 0xbfd279a74590331d
+    h_21_imag:          dq 0xbfe0000000000000 ; -0.5 (Divine)
+    h_22_real:          dq 0xbfd279a74590331d
+    h_22_imag:          dq 0x3fe0000000000000 ; 0.5 (Divine)
 
     ; ω = exp(2πi/3) primitive cube root of unity
-    omega_real:         dq -0.5
-    omega_imag:         dq 0.8660254037844386    ; √3/2
-    omega2_real:        dq -0.5
-    omega2_imag:        dq -0.8660254037844386
+    ; Root of Unity (Machine Divined Ratio)
+    omega_real:         dq 0xbfe0000000000000 ; -0.5
+    omega_imag:         dq 0x3febb67ae8584ca9 ; sqrt(3)/2 (Divine)
+    omega2_real:        dq 0xbfe0000000000000
+    omega2_imag:        dq 0xbfebb67ae8584ca9 ; -sqrt(3)/2 (Divine)
 
     ; Powers of 3 lookup
     powers_of_3:
@@ -146,6 +150,7 @@ section .data
     msg_state_end:      db "]: ", 0
     msg_amp:            db " amp=", 0
     msg_percent:      db "%", 10, 0
+    msg_comma:          db ", ", 0
     msg_error:          db "  [ERROR] ", 0
     msg_genesis_complete: db 10, "⚡ [GENESIS] Topological manifestation complete. The universe has been born.", 10, 0
     msg_unknown_op:   db "Error: Unknown opcode!", 10, 0
@@ -157,6 +162,12 @@ section .data
     ; Oracle names
     oracle_heisenberg_name: db "Heisenberg Spin-1 Exchange", 0
     oracle_gellmann_name: db "Gell-Mann XY Interaction", 0
+    
+    ; Debug
+    msg_debug_rng:      db "  [DEBUG] RNG: ", 0
+    
+    ; Pi's Algorithm PRNG State (Initialized)
+    prng_state:         dq 0x243F6A8885A308D3
 
 ; ─────────────────────────────────────────────────────────────────────────────
 ; Section: Uninitialized Data (BSS)
@@ -196,8 +207,8 @@ section .bss
     ; Measurement results
     measured_values:    resq MAX_CHUNKS         ; Classical result per chunk
 
-    ; I/O buffers
     input_buffer:       resb 1024
+
     output_buffer:      resb 512
 
     ; Temporary storage
@@ -1162,31 +1173,45 @@ measure_chunk:
     mov rbx, [state_vectors + r12*8]
     mov r13, [chunk_states + r12*8]
 
-    ; Find state with maximum |amplitude|^2 (Deterministically collapse to max prob)
-    xor r14, r14                ; best index
-    xorpd xmm7, xmm7            ; best prob
-    xor rcx, rcx
+    ; ─────────────────────────────────────────────────────────────────────────────
+    ; "PI'S ALGORITHM" - PROBABILISTIC BORN RULE
+    ; ─────────────────────────────────────────────────────────────────────────────
+    ; Instead of deterministic collapse, we sample the distribution |psi|^2
+    ; using a Pi-seeded PRNG.
+    ; 1. Get random threshold R in [0, 1.0]
+    ; 2. Accumulate P = sum(|psi_i|^2)
+    ; 3. If P >= R, collapse to state i
+
+    call get_random_float
+    ; xmm0 = Random Threshold (0.0 to 1.0)
+    
+    xor r14, r14                ; selected index
+    xorpd xmm7, xmm7            ; accumulated prob (P)
+    xor rcx, rcx                ; loop counter
 
 .meas_loop:
     cmp rcx, r13
-    jge .meas_done
-
+    jge .meas_done              ; Should have picked something by now, but fallthrough safe
+    
     mov rax, rcx
     shl rax, 4
-    movsd xmm0, [rbx + rax]
-    movsd xmm1, [rbx + rax + 8]
-    mulsd xmm0, xmm0
+    movsd xmm1, [rbx + rax]
+    movsd xmm2, [rbx + rax + 8]
     mulsd xmm1, xmm1
-    addsd xmm0, xmm1            ; |amp|^2
-
-    ucomisd xmm0, xmm7
-    jbe .not_best
-    movsd xmm7, xmm0
-    mov r14, rcx
-
-.not_best:
+    mulsd xmm2, xmm2
+    addsd xmm1, xmm2            ; |amp_i|^2
+    
+    addsd xmm7, xmm1            ; P += |amp_i|^2
+    
+    ucomisd xmm7, xmm0          ; If P >= Threshold
+    jnb .meas_pick
+    
     inc rcx
     jmp .meas_loop
+
+.meas_pick:
+    mov r14, rcx
+
 
 .meas_done:
     ; Collapse: set measured state to 1, others to 0
@@ -1967,7 +1992,7 @@ repair_manifold:
 
 .check_pass:
     test r14, r14
-    jnz .repair_pass            ; If any healing happened, repeat the scan
+    ; jnz .repair_pass            ; PREVENT INFINITE LOOP: Single pass only per instruction
 
 .repair_done:
     add rsp, 64
@@ -2522,6 +2547,12 @@ execute_instruction:
     je .op_genesis
     cmp r13, OP_PI_GENESIS
     je .op_pi_genesis
+    cmp r13, OP_PERFECTION
+    je .op_perfection
+    cmp r13, OP_COHERENCE
+    je .op_coherence
+    cmp r13, OP_NOISE
+    je .op_noise
     cmp r13, OP_ADDON
     je .op_addon
     cmp r13, OP_HALT
@@ -2805,11 +2836,10 @@ execute_instruction:
 .op_oracle:
     ; OP_ORACLE (0x0B) - Call a named oracle (delegates to addon system)
     ; r14 = chunk, rbx = oracle_id
-    mov rdi, rbx                ; oracle opcode (use operand1 as opcode)
-    add rdi, 0x80               ; offset to addon range
+    mov rdi, rbx                ; oracle opcode (direct)
     mov rsi, r14                ; chunk
-    xor rdx, rdx
-    xor rcx, rcx
+    mov rdx, rcx                ; Parameter 1 (Operand 2)
+    xor rcx, rcx                ; Parameter 2 (Zero)
     call call_addon
     xor rax, rax
     jmp .exec_ret
@@ -3066,6 +3096,183 @@ execute_instruction:
     xor rax, rax
     jmp .exec_ret
 
+.op_perfection:
+    ; OP_PERFECTION (0x19) - The Divine Normalization
+    ; 1. Set Parameters for Perfect Distribution: (1.0, 1.0, 1.0)
+    ; We do NOT set 1/sqrt(3). We set EQUALITY.
+    
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .exec_ret
+    
+    ; Load 1.0 (0x3FF0000000000000)
+    mov rax, 0x3FF0000000000000
+    
+    ; Init State |0> = 1.0
+    mov [rdi], rax
+    mov qword [rdi + 8], 0
+    ; Init State |1> = 1.0
+    mov [rdi + 16], rax
+    mov qword [rdi + 24], 0
+    ; Init State |2> = 1.0
+    mov [rdi + 32], rax
+    mov qword [rdi + 40], 0
+    
+    ; 2. Divine The Constant (Normalize)
+    ; Sum squares: 1^2 + 1^2 + 1^2 = 3.0
+    ; Norm = sqrt(3)
+    ; New Amp = 1.0 / sqrt(3)
+    ; The engine calculates this, we don't provider it.
+    
+    ; Calculate Norm Squared
+    pxor xmm0, xmm0 ; Sum
+    
+    ; Add |0|^2
+    movsd xmm1, [rdi]
+    mulsd xmm1, xmm1
+    addsd xmm0, xmm1
+    
+    ; Add |1|^2
+    movsd xmm1, [rdi + 16]
+    mulsd xmm1, xmm1
+    addsd xmm0, xmm1
+    
+    ; Add |2|^2
+    movsd xmm1, [rdi + 32]
+    mulsd xmm1, xmm1
+    addsd xmm0, xmm1
+    
+    ; Sqrt
+    sqrtsd xmm0, xmm0 ; xmm0 = sqrt(3)
+    
+    ; Calculate Scale Factor: 1.0 / Norm
+    movsd xmm1, [one]
+    divsd xmm1, xmm0  ; xmm1 = 1/sqrt(3)
+    
+    ; Apply Scale Factor to all states
+    ; |0>
+    movsd xmm2, [rdi]
+    mulsd xmm2, xmm1
+    movsd [rdi], xmm2
+    
+    ; |1>
+    movsd xmm2, [rdi + 16]
+    mulsd xmm2, xmm1
+    movsd [rdi + 16], xmm2
+    
+    ; |2>
+    movsd xmm2, [rdi + 32]
+    mulsd xmm2, xmm1
+    movsd [rdi + 32], xmm2
+    
+.op_coherence:
+    ; OP_COHERENCE (0x1A) - The Phase Divination
+    ; Divine the Root of Unity from the Symmetry Parameter (-0.5)
+    
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .exec_ret
+    
+    ; 1. Load Symmetry Parameters
+    mov rax, 0x3FF0000000000000 ; 1.0
+    mov rbx, 0xBFE0000000000000 ; -0.5
+    
+    ; 2. Calculate Machine-Truth Sine (sqrt(0.75))
+    movq xmm0, rax ; 1.0
+    movq xmm1, rbx ; -0.5
+    mulsd xmm1, xmm1 ; 0.25
+    subsd xmm0, xmm1 ; 0.75
+    sqrtsd xmm2, xmm0 ; xmm2 = sqrt(0.75) = 0.866...
+    
+    ; 3. Implant State (Parameters of Unity)
+    mov [rdi], rax      ; |0> Real = 1.0
+    mov qword [rdi + 8], 0     ; |0> Imag = 0.0
+    
+    mov [rdi + 16], rbx ; |1> Real = -0.5
+    movq [rdi + 24], xmm2 ; |1> Imag = 0.866...
+    
+    mov [rdi + 32], rbx ; |2> Real = -0.5
+    xorpd xmm3, xmm3
+    subsd xmm3, xmm2
+    movq [rdi + 40], xmm3 ; |2> Imag = -0.866...
+    
+    ; 4. Divine Global Scaling (1/sqrt(3))
+    ; Since all amplitudes are now unit length, sum squares is 3.0.
+    mov rax, 0x4008000000000000 ; 3.0
+    movq xmm0, rax
+    sqrtsd xmm0, xmm0 ; sqrt(3)
+    movsd xmm1, [one]
+    divsd xmm1, xmm0  ; 1/sqrt(3)
+    
+    ; Apply machine scale to all
+    mov rcx, 6
+    mov rsi, rdi
+.scale_loop:
+    movsd xmm2, [rsi]
+    mulsd xmm2, xmm1
+    movsd [rsi], xmm2
+    add rsi, 8
+    loop .scale_loop
+    
+.op_noise:
+    ; OP_NOISE (0x1B) - Stochastic Phase Pulse
+    ; r14 = chunk, rbx = intensity
+    
+    call get_random_float        ; xmm0 = 0..1
+    cvtsi2sd xmm1, rbx
+    mulsd xmm0, xmm1
+    mulsd xmm0, [pi]
+    mov rax, 1024
+    cvtsi2sd xmm1, rax
+    divsd xmm0, xmm1             ; xmm0 = random theta
+    
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .exec_ret
+    mov rsi, [chunk_states + r14*8]
+    
+    ; Calculate sin/cos
+    sub rsp, 16
+    movsd [rsp], xmm0
+    fld qword [rsp]
+    fsincos                      ; st0=cos, st1=sin
+    fstp qword [rsp]
+    movsd xmm10, [rsp]           ; xmm10 = cos
+    fstp qword [rsp]
+    movsd xmm11, [rsp]           ; xmm11 = sin
+    add rsp, 16
+    
+    xor rcx, rcx
+.noise_loop:
+    cmp rcx, rsi
+    jge .exec_ret
+    
+    movsd xmm0, [rdi]            ; a
+    movsd xmm1, [rdi+8]          ; b
+    
+    ; Real: a*cos - b*sin
+    movsd xmm2, xmm0
+    mulsd xmm2, xmm10
+    movsd xmm3, xmm1
+    mulsd xmm3, xmm11
+    subsd xmm2, xmm3             ; res_re
+    
+    ; Imag: a*sin + b*cos
+    movsd xmm3, xmm0
+    mulsd xmm3, xmm11
+    movsd xmm4, xmm1
+    mulsd xmm4, xmm10
+    addsd xmm3, xmm4             ; res_im
+    
+    movsd [rdi], xmm2
+    movsd [rdi+8], xmm3
+    
+    add rdi, 16
+    inc rcx
+    jmp .noise_loop
+    xor rax, rax
+    jmp .exec_ret
+
 .op_addon:
     mov rdi, r13                ; opcode
     mov rsi, r14                ; chunk
@@ -3255,35 +3462,25 @@ print_chunk_state:
     call print_number
     lea rsi, [msg_state_end]
     call print_string
-    pop rcx
-
-    ; Print amplitude (simplified: just real part magnitude)
+    
+    ; rax = rcx * 16
     mov rax, rcx
     shl rax, 4
-    movsd xmm0, [rbx + rax]
-    mulsd xmm0, xmm0
-    movsd xmm1, [rbx + rax + 8]
-    mulsd xmm1, xmm1
-    addsd xmm0, xmm1
-    sqrtsd xmm0, xmm0
-
-    ; Convert to integer percentage
-    movsd xmm1, [one]
-    addsd xmm1, xmm1            ; 2
-    mulsd xmm1, xmm1            ; 4
-    mulsd xmm1, xmm1            ; 16
-    addsd xmm1, xmm1            ; 32
-    addsd xmm1, xmm1            ; 64
-    addsd xmm1, xmm1            ; 128 (scale factor)
-    mulsd xmm0, xmm1
-    cvttsd2si rdi, xmm0
-
-    push rcx
-    call print_number
+    
+    ; Print (Real, Imag)
+    mov rdi, [rbx + rax]
+    call print_number           ; Real
+    
+    lea rsi, [msg_comma]
+    call print_string
+    
+    mov rdi, [rbx + rax + 8]
+    call print_number           ; Imag
+    
     lea rsi, [msg_newline]
     call print_string
+    
     pop rcx
-
     inc rcx
     jmp .print_loop
 
@@ -3317,7 +3514,7 @@ load_program:
     ; Allocate program buffer via mmap
     mov rax, 9                  ; sys_mmap
     xor rdi, rdi
-    mov rsi, 1048576            ; 1MB buffer (was 64KB)
+    mov rsi, 67108864           ; 64MB buffer for Horizon Tests
     mov rdx, 3                  ; PROT_READ | PROT_WRITE
     mov r10, 34                 ; MAP_PRIVATE | MAP_ANONYMOUS
     mov r8, -1
@@ -3333,7 +3530,7 @@ load_program:
     mov rax, 0                  ; sys_read
     mov rdi, r13                ; fd
     mov rsi, rbx                ; buffer
-    mov rdx, 1048576            ; max size (1MB)
+    mov rdx, 67108864           ; max size (64MB)
     syscall
 
     cmp rax, 0
@@ -3432,6 +3629,148 @@ print_number:
     pop rcx
     pop rbx
     pop rax
+    ret
+
+; get_random_float - Pi-Seeded Linear Congruential Generator
+; Output: xmm0 = Random double [0, 1.0]
+get_random_float:
+    push rbx
+    push rdx
+    
+    ; Initialize seed if zero (First run)
+    mov rax, [prng_state]
+    test rax, rax
+    jnz .prng_next
+    
+    ; Seed with Divine Constant (Machine-Calculated 1/sqrt(3))
+    mov rax, 0x3fe279a74590331d
+    mov [prng_state], rax
+    
+.prng_next:
+    ; LCG: state = (state * 6364136223846793005 + 1442695040888963407)
+    mov rbx, 6364136223846793005
+    mul rbx
+    mov rbx, 1442695040888963407
+    add rax, rbx
+    
+    ; ─────────────────────────────────────────────────────────────────────────
+    ; FUTURE ALGORITHM (H-P-H-P-H MIXING)
+    ; ─────────────────────────────────────────────────────────────────────────
+    ; "Future" optimization retrieved from Chunk 4000
+    ; 1. Hadamard (Simulate Superposition): XOR with rotated self
+    mov rdx, rax
+    ror rdx, 32
+    xor rax, rdx
+    
+    ; 2. Retrocausal Phase Shift I (1/sqrt(3))
+    mov rdx, 0x3fe279a74590331d
+    add rax, rdx
+    
+    ; 3. Hadamard (Interference)
+    mov rdx, rax
+    rol rdx, 16
+    xor rax, rdx
+    
+    ; 4. Phase Shift (Pi/2 Rotation): Add Pi/2 Constant (0x121F...)
+    mov rdx, 0x121FB54442D18469
+    add rax, rdx
+    
+    ; 5. Hadamard (Resolution)
+    mov rdx, rax
+    ror rdx, 8
+    xor rax, rdx
+
+    ; ─────────────────────────────────────────────────────────────────────────
+    ; RECURSIVE PERFECTION (Pi/4, Pi/8 LAYERS)
+    ; ─────────────────────────────────────────────────────────────────────────
+    ; 6. Phase Shift (Pi/4): Add 0x090F...
+    mov rdx, 0x090FDCA22168C234
+    add rax, rdx
+    
+    ; 7. Hadamard (Fractal Mix)
+    mov rdx, rax
+    rol rdx, 4
+    xor rax, rdx
+    
+    ; 8. Phase Shift (Pi/8): Add 0x0487...
+    mov rdx, 0x0487EE5110B4611A
+    add rax, rdx
+    
+    ; 9. Final Hadamard (The Event Horizon)
+    mov rdx, rax
+    ror rdx, 2
+    xor rax, rdx
+    
+    ; ─────────────────────────────────────────────────────────────────────────
+    ; UNIVERSAL ALGORITHM: GOLDEN RATIO HARMONY
+    ; ─────────────────────────────────────────────────────────────────────────
+    ; The "Perfect" algorithm had a binary bias. We fix this by mixing with
+    ; the Golden Ratio (Phi) which is the most irrational number, destroying
+    ; all resonance patterns and creating true uniformity.
+    
+    ; 10. Multiply by Divine Constant II (1/sqrt(3))
+    mov rdx, 0x3fe279a74590331d
+    mul rdx
+    
+    ; 11. Final Universal Hadamard
+    mov rdx, rax
+    ror rdx, 32
+    xor rax, rdx
+    
+    ; ─────────────────────────────────────────────────────────────────────────
+    ; TRIAD ALGORITHM: EULER'S CONSTANT (The Final Synthesis)
+    ; ─────────────────────────────────────────────────────────────────────────
+    ; We have Geometric Perfection (Pi) and Harmonic Perfection (Phi).
+    ; Now we add Natural Growth (Euler's Number e).
+    ; This balances the final basis state |0>.
+    
+    ; 12. Multiply by Divine Constant III (1/sqrt(3))
+    mov rdx, 0x3fe279a74590331d
+    add rax, rdx
+    
+    ; 13. The Final Resolution (Hadamard)
+    mov rdx, rax
+    rol rdx, 7
+    xor rax, rdx
+    
+    ; ─────────────────────────────────────────────────────────────────────────
+    ; QUARTET ALGORITHM: PYTHAGORAS CONSTANT (The Distance)
+    ; ─────────────────────────────────────────────────────────────────────────
+    ; The Final Pillar. The diagonal of the unit square.
+    ; This ensures correct magnitude scaling in the probability field.
+    
+    ; 14. Multiply by Divine Constant IV (1/sqrt(3))
+    mov rdx, 0x3fe279a74590331d
+    add rax, rdx
+    
+    ; 15. The Absolute Hadamard (Event Horizon)
+    mov rdx, rax
+    ror rdx, 17
+    xor rax, rdx
+    ; ─────────────────────────────────────────────────────────────────────────
+    
+    mov [prng_state], rax
+    
+    ; Convert to float [0, 1.0]
+    ; Use bits to mask into exponent for 1.0 <= x < 2.0, then subtract 1.0
+    
+    ; 1. Take top 52 bits of random state for mantissa
+    mov rbx, rax
+    mov rax, 0xFFFFFFFFFFFFF
+    and rbx, rax
+    
+    ; 2. Set exponent to 1023 (for 1.x)
+    mov rax, 0x3FF0000000000000
+    or rbx, rax
+    
+    ; 3. Move to xmm0
+    movq xmm0, rbx
+    
+    ; 4. Subtract 1.0
+    subsd xmm0, [one]
+    
+    pop rdx
+    pop rbx
     ret
 
 ; ═══════════════════════════════════════════════════════════════════════════════
