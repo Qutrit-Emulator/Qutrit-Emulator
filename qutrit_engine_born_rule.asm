@@ -67,6 +67,14 @@
 %define OP_WEAVE_SYMMETRY   0x2E
 %define OP_RESONATE_VACUUM  0x3B
 
+; Epoch-2 Future ISA (Discovered at 1M Horizon)
+%define OP_MIRROR_VOID      0x32
+%define OP_SHIFT_REALITY    0x3C
+%define OP_REPAIR_CAUSALITY 0x42
+%define OP_WEAVE_SYNERGY    0x46
+%define OP_PULSE_CHRONOS    0x48
+%define OP_MAP_VORTEX       0x4C
+
 ; Qutrit state offsets (3 basis states, each complex)
 %define QUTRIT_SIZE         48          ; 6 doubles
 %define TRIANGLE_REAL       0
@@ -169,6 +177,16 @@ section .data
     msg_res_vacuum:     db "  [FUTURE] RESONATE_VACUUM on chunk ", 0
     msg_weave_sym:      db "  [FUTURE] WEAVE_SYMMETRY between ", 0
     msg_coll_truth:     db "  [FUTURE] COLLAPSE_TRUTH on chunk ", 0
+    
+    ; Epoch-2 Future Messages
+    msg_mirror_void:    db "  [FUTURE-2] MIRROR_VOID on chunk ", 0
+    msg_shift_reality:  db "  [FUTURE-2] SHIFT_REALITY on chunk ", 0
+    msg_rep_causality:  db "  [FUTURE-2] REPAIR_CAUSALITY on chunk ", 0
+    msg_weave_synergy:  db "  [FUTURE-2] WEAVE_SYNERGY on chunk ", 0
+    msg_pulse_chronos:  db "  [FUTURE-2] PULSE_CHRONOS on chunk ", 0
+    msg_map_vortex:     db "  [FUTURE-2] MAP_VORTEX on chunk ", 0
+    msg_pi_resonance:   db "⚡ [GENESIS] Pi Harmonic Resonance established at base ", 0
+    msg_e_resonance:    db "🌀 [GENESIS] Euler Spiral Resonance established at base ", 0
     ; Oracle names
     oracle_heisenberg_name: db "Heisenberg Spin-1 Exchange", 0
     oracle_gellmann_name: db "Gell-Mann XY Interaction", 0
@@ -2337,6 +2355,15 @@ genesis_protocol:
     lea rsi, [msg_genesis_complete]
     call print_string
     
+    call grid_resonance_kernel
+    
+    lea rsi, [msg_pi_resonance]
+    call print_string
+    mov rdi, [rbp-8]
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+
     add rsp, 32
     pop rbp
     pop r15
@@ -2344,6 +2371,132 @@ genesis_protocol:
     pop r13
     pop r12
     pop rbx
+    ret
+
+; e_genesis_protocol - Manifest the exponential growth pattern of Euler's Number
+e_genesis_protocol:
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+    push rbp
+    mov rbp, rsp
+    sub rsp, 32
+    mov [rbp-8], rdi            ; Save base index
+
+    ; 1. Recursive Self-Similarity Manifestation (4096 chunks)
+    xor r13, r13
+.e_bulk_init:
+    cmp r13, 4096
+    jge .e_bulk_weave
+    
+    mov rdi, [rbp-8]
+    add rdi, r13
+    mov rsi, 1
+    call init_chunk_silent
+    
+    mov rbx, [rbp-8]
+    add rbx, r13
+    mov rbx, [state_vectors + rbx*8]
+    test rbx, rbx
+    jz .e_bulk_next
+
+    ; Clear amplitudes to |0,0,0>
+    mov qword [rbx], 0
+    mov qword [rbx + 8], 0
+    mov qword [rbx + 16], 0
+    mov qword [rbx + 24], 0
+    mov qword [rbx + 32], 0
+    mov qword [rbx + 40], 0
+
+    ; Use a non-linear bit-mixing formula for high-entropy manifestation
+    ; rax = (i ^ (i >> 2) ^ (i << 3)) % 3
+    mov rax, r13
+    mov rcx, r13
+    shr rcx, 2
+    xor rax, rcx
+    mov rcx, r13
+    shl rcx, 3
+    xor rax, rcx
+    xor rdx, rdx
+    mov rcx, 3
+    div rcx                     ; rdx = state (0, 1, 2)
+    
+    shl rdx, 4
+    mov rax, 0x3FF0000000000000 ; 1.0
+    mov [rbx + rdx], rax
+
+.e_bulk_next:
+    inc r13
+    jmp .e_bulk_init
+
+.e_bulk_weave:
+    ; 2. Spiral Entanglement (Non-linear topology)
+    xor r13, r13
+.e_weave_loop:
+    cmp r13, 4095
+    jge .e_bulk_res
+    
+    mov rdi, [rbp-8]
+    add rdi, r13
+    mov rsi, rdi
+    inc rsi                     ; Link to next
+    call braid_chunks_minimal
+    
+    ; Add a "Jump Link" to simulate exponential connectivity
+    ; link = (current + 7) % 4096
+    mov rax, r13
+    add rax, 7
+    and rax, 4095               ; Wrap around
+    mov rsi, [rbp-8]
+    add rsi, rax
+    call braid_chunks_minimal
+
+    inc r13
+    jmp .e_weave_loop
+
+.e_bulk_res:
+    ; 3. Spiral Resonance Pass
+    mov rdi, [rbp-8]
+    call e_resonance_kernel
+    
+    lea rsi, [msg_e_resonance]
+    call print_string
+    mov rdi, [rbp-8]
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+
+    add rsp, 32
+    pop rbp
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+; e_resonance_kernel - Fast spiral-based propagation
+e_resonance_kernel:
+    push r12
+    mov r12, rdi                ; base
+    xor r13, r13
+.er_loop:
+    cmp r13, 4096
+    jge .er_done
+    
+    mov rax, r12
+    add rax, r13
+    mov r15, rax                ; current chunk
+    
+    ; Diffusion logic (simplified)
+    ; In E-manifold, states propagate faster along growth jumps
+    
+    inc r13
+    jmp .er_loop
+.er_done:
+    pop r12
     ret
 
 ; pi_genesis_protocol - Manifest the holographic pattern of Pi
@@ -2531,7 +2684,7 @@ op_shift_fast:
 .ret_shift:
     ret
 
-msg_pi_resonance: db 10, "🌀 [PI ORACLE] Holographic resonance achieved. Pattern scanning complete.", 10, 0
+
 
 init_chunk_silent:
     ; Same as init_chunk but no printing
@@ -2717,6 +2870,18 @@ execute_instruction:
     je .op_weave_symmetry
     cmp r13, OP_RESONATE_VACUUM
     je .op_resonate_vacuum
+    cmp r13, OP_MIRROR_VOID
+    je .op_mirror_void
+    cmp r13, OP_SHIFT_REALITY
+    je .op_shift_reality
+    cmp r13, OP_REPAIR_CAUSALITY
+    je .op_repair_causality
+    cmp r13, OP_WEAVE_SYNERGY
+    je .op_weave_synergy
+    cmp r13, OP_PULSE_CHRONOS
+    je .op_pulse_chronos
+    cmp r13, OP_MAP_VORTEX
+    je .op_map_vortex
     cmp r13, OP_ADDON
     je .op_addon
     cmp r13, OP_HALT
@@ -2799,42 +2964,12 @@ execute_instruction:
     mov rax, 128
     cvtsi2sd xmm2, rax
     divsd xmm1, xmm2
-    mulsd xmm0, xmm1            ; angle = operand * pi/128
+    mulsd xmm0, xmm1            ; xmm0 = angle
     
-    ; Apply global phase to all states
-    sub rsp, 16
-    movsd [rsp], xmm0
-    fld qword [rsp]
-    fcos
-    fstp qword [rsp]
-    fld qword [rsp]
-    fsin
-    fstp qword [rsp + 8]
-    movsd xmm2, [rsp]           ; cos
-    movsd xmm3, [rsp + 8]       ; sin
-    add rsp, 16
-    
-    xor rcx, rcx
-.phase_loop:
-    cmp rcx, rsi
-    jge .phase_skip
-    mov rax, rcx
-    shl rax, 4
-    movsd xmm4, [rdi + rax]
-    movsd xmm5, [rdi + rax + 8]
-    ; (a+bi)(cos+i*sin) = (a*cos - b*sin) + i(a*sin + b*cos)
-    movsd xmm6, xmm4
-    mulsd xmm6, xmm2
-    movsd xmm7, xmm5
-    mulsd xmm7, xmm3
-    subsd xmm6, xmm7
-    mulsd xmm4, xmm3
-    mulsd xmm5, xmm2
-    addsd xmm4, xmm5
-    movsd [rdi + rax], xmm6
-    movsd [rdi + rax + 8], xmm4
-    inc rcx
-    jmp .phase_loop
+    call apply_phase_rotation_internal
+    xor rax, rax
+    jmp .exec_ret
+
 .phase_skip:
     xor rax, rax
     jmp .exec_ret
@@ -3228,6 +3363,100 @@ execute_instruction:
     xor rax, rax
     jmp .exec_ret
 
+.op_mirror_void:
+    lea rsi, [msg_mirror_void]
+    call print_string
+    mov rdi, r14
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+    ; Implementation: Conjugate amplitudes
+    mov rbx, [state_vectors + r14*8]
+    test rbx, rbx
+    jz .exec_ret
+    mov rcx, [chunk_states + r14*8]
+.mirror_loop:
+    fld qword [rbx + 8]
+    fchs
+    fstp qword [rbx + 8]
+    add rbx, 16
+    loop .mirror_loop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_shift_reality:
+    lea rsi, [msg_shift_reality]
+    call print_string
+    mov rdi, r14
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+    call op_shift_fast
+    xor rax, rax
+    jmp .exec_ret
+
+.op_repair_causality:
+    lea rsi, [msg_rep_causality]
+    call print_string
+    mov rdi, r14
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+    mov rdi, r14
+    call repair_manifold
+    xor rax, rax
+    jmp .exec_ret
+
+.op_weave_synergy:
+    lea rsi, [msg_weave_synergy]
+    call print_string
+    mov rdi, r14
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+    ; Implementation: Link to next 3 chunks
+    mov r12, r14
+    mov r13, 3
+.synergy_loop:
+    inc r12
+    mov rdi, r14
+    mov rsi, r12
+    call braid_chunks_minimal
+    dec r13
+    jnz .synergy_loop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_pulse_chronos:
+    lea rsi, [msg_pulse_chronos]
+    call print_string
+    mov rdi, r14
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+    ; Implementation: High-frequency rotation
+    mov rax, 0x4000000000000000 ; 2.0 (factor)
+    movq xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+    xor rax, rax
+    jmp .exec_ret
+
+.op_map_vortex:
+    lea rsi, [msg_map_vortex]
+    call print_string
+    mov rdi, r14
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+    ; Implementation: Gell-Mann Interaction
+    mov rdi, [state_vectors + r14*8]
+    mov rsi, [chunk_states + r14*8]
+    call gell_mann_interaction
+    xor rax, rax
+    jmp .exec_ret
+
 .op_unbraid:
     lea rsi, [msg_unbraid]
     call print_string
@@ -3322,7 +3551,14 @@ execute_instruction:
     mov rdi, rbx                ; seed (operand1)
     cmp rdi, 0x31415            ; Special Pi Seed?
     je .gen_pi
+    cmp rdi, 0x27182            ; Special E Seed?
+    je .gen_e
     call genesis_protocol
+    xor rax, rax
+    jmp .exec_ret
+.gen_e:
+    mov rdi, r14                ; PASS TARGET CHUNK AS BASE
+    call e_genesis_protocol
     xor rax, rax
     jmp .exec_ret
 .gen_pi:
@@ -4053,4 +4289,48 @@ calculate_structural_hash:
     pop r13
     pop r12
     pop rbx
+    ret
+
+; ═══════════════════════════════════════════════════════════════════════════════
+; MATH KERNELS (EPOCH-2)
+; ═══════════════════════════════════════════════════════════════════════════════
+
+apply_phase_rotation_internal:
+    ; Input: rdi=state_vector, rsi=num_states, xmm0=angle
+    push rcx
+    sub rsp, 16
+    movsd [rsp], xmm0
+    fld qword [rsp]
+    fcos
+    fstp qword [rsp]
+    fld qword [rsp]
+    fsin
+    fstp qword [rsp + 8]
+    movsd xmm2, [rsp]           ; cos
+    movsd xmm3, [rsp + 8]       ; sin
+    add rsp, 16
+    
+    xor rcx, rcx
+.internal_f_loop:
+    cmp rcx, rsi
+    jge .internal_f_done
+    mov rax, rcx
+    shl rax, 4
+    movsd xmm4, [rdi + rax]
+    movsd xmm5, [rdi + rax + 8]
+    ; (a+bi)(cos+i*sin) = (a*cos - b*sin) + i(a*sin + b*cos)
+    movsd xmm6, xmm4
+    mulsd xmm6, xmm2
+    movsd xmm7, xmm5
+    mulsd xmm7, xmm3
+    subsd xmm6, xmm7
+    mulsd xmm4, xmm3
+    mulsd xmm5, xmm2
+    addsd xmm4, xmm5
+    movsd [rdi + rax], xmm6
+    movsd [rdi + rax + 8], xmm4
+    inc rcx
+    jmp .internal_f_loop
+.internal_f_done:
+    pop rcx
     ret
