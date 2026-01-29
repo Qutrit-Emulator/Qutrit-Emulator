@@ -26,9 +26,9 @@
 
 %define MAX_CHUNK_SIZE      10          ; Max qutrits per chunk (3^10 = 59049)
 %define MAX_STATES          59049       ; 3^10
-%define MAX_CHUNKS          262144      ; Support 262k chunks
+%define MAX_CHUNKS          524288      ; Support 524k chunks (Doubled)
 %define MAX_ADDONS          32          ; Max registered add-ons
-%define MAX_BRAID_LINKS     262144      ; Support 262k braid links
+%define MAX_BRAID_LINKS     524288      ; Support 524k braid links (Doubled)
 
 %define STATE_BYTES         16          ; Complex amplitude: 8 (real) + 8 (imag)
 
@@ -59,6 +59,7 @@
 %define OP_PERFECTION       0x19        ; Force Perfect State (Retrocausal Implant)
 %define OP_COHERENCE        0x1A        ; Force Coherent State (Phase Divination)
 %define OP_NOISE            0x1B        ; Stochastic Phase Pulse (Vacuum Noise)
+%define OP_BRAID_SILENT     0x1C        ; Silent Braid
 %define OP_HALT             0xFF
 
 ; Qutrit state offsets (3 basis states, each complex)
@@ -220,6 +221,7 @@ section .bss
     temp_sum_real:      resq 1
     temp_sum_imag:      resq 1
 
+    ; Recursion tracking for collapse propagation
     ; Recursion tracking for collapse propagation
     visited_chunks:     resb MAX_CHUNKS         ; 1 byte per chunk (0 or 1)
 
@@ -2613,6 +2615,8 @@ execute_instruction:
     je .op_coherence
     cmp r13, OP_NOISE
     je .op_noise
+    cmp r13, OP_BRAID_SILENT
+    je .op_braid_silent
     cmp r13, OP_ADDON
     je .op_addon
     cmp r13, OP_HALT
@@ -3058,6 +3062,24 @@ execute_instruction:
     xor rcx, rcx
     call braid_chunks
 .braid_skip:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_braid_silent:
+    mov rdi, r14                ; chunk_a
+    mov rsi, rbx                ; chunk_b (operand1)
+    
+    ; Check chunks exist
+    mov rax, [state_vectors + r14*8]
+    test rax, rax
+    jz .braid_skip
+    mov rax, [state_vectors + rbx*8]
+    test rax, rax
+    jz .braid_skip
+
+    xor rdx, rdx                ; qutrit 0
+    xor rcx, rcx
+    call braid_chunks_silent
     xor rax, rax
     jmp .exec_ret
 
@@ -3815,6 +3837,7 @@ get_random_float:
 ; Include external oracle definitions. Comment out this line if you don't want
 ; to load custom oracles, or replace with your own oracle file.
 ; ═══════════════════════════════════════════════════════════════════════════════
+%include "bigint.asm"
 %include "custom_oracles.asm"
 
 ; ═══════════════════════════════════════════════════════════════════════════════
