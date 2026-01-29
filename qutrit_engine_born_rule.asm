@@ -222,8 +222,17 @@ section .bss
     temp_sum_imag:      resq 1
 
     ; Recursion tracking for collapse propagation
-    ; Recursion tracking for collapse propagation
     visited_chunks:     resb MAX_CHUNKS         ; 1 byte per chunk (0 or 1)
+    
+    ; Iterative traversal stack
+    traversal_stack:    resq MAX_CHUNKS         ; Stack for chunk indices
+    stack_ptr:          resq 1                  ; Current stack depth
+
+    ; Adjacency list for entanglement propagation
+    adj_head:           resq MAX_CHUNKS         ; Point to first edge index (1-based, 0 = null)
+    adj_to:             resq MAX_BRAID_LINKS * 2 ; Neighbor chunk index
+    adj_next:           resq MAX_BRAID_LINKS * 2 ; Next edge index
+    adj_count:          resq 1                  ; Current number of edges (starting at 1)
 
 ; ─────────────────────────────────────────────────────────────────────────────
 ; Section: Code
@@ -301,6 +310,7 @@ engine_init:
     mov [num_chunks], rax
     mov [num_braid_links], rax
     mov [num_addons], rax
+    mov qword [adj_count], 1    ; 1-based indexing for edges
     mov qword [running], 1
     mov qword [prng_state], 0
 
@@ -312,6 +322,12 @@ engine_init:
     add rdi, 8
     dec rcx
     jnz .clear_chunks
+
+    ; Clear adjacency heads
+    lea rdi, [adj_head]
+    mov rcx, MAX_CHUNKS
+    xor rax, rax
+    rep stosq
 
     pop r12
     pop rbx
@@ -1348,7 +1364,7 @@ collapse_chunk_to_state:
     pop rbx
     ret
 
-; propagate_collapse - Recursively collapse entangled chunks
+; propagate_collapse - Iteratively collapse entangled chunks
 ; Input: rdi = current_chunk, rsi = measured_state
 propagate_collapse:
     push rbx
@@ -1356,77 +1372,76 @@ propagate_collapse:
     push r13
     push r14
     push r15
-    
-    mov r12, rdi                ; current chunk
+    push rbp
+    mov rbp, rsp
+
+    mov r12, rdi                ; start chunk
     mov r13, rsi                ; state
+
+    ; Initialize stack
+    mov qword [stack_ptr], 0
+    lea rax, [traversal_stack]
+    mov [rax], r12
+    mov qword [stack_ptr], 1
+
+.iter_loop:
+    ; Pop chunk from stack
+    mov rax, [stack_ptr]
+    test rax, rax
+    jz .prop_done               ; Stack empty
     
+    dec rax
+    mov [stack_ptr], rax
+    lea rdx, [traversal_stack]
+    mov r12, [rdx + rax*8]      ; r12 = current chunk
+
     ; Check if already visited
     lea rax, [visited_chunks]
     cmp byte [rax + r12], 1
-    je .prop_ret
+    je .iter_loop
     
     ; Mark as visited
     mov byte [rax + r12], 1
     
-    ; Iterate through all braid links to find neighbors
-    mov r14, [num_braid_links]
-    xor r15, r15                ; link index
+    ; Collapse current chunk (except for the very first one which is already done, 
+    ; but calling it again is safe)
+    mov rdi, r12
+    mov rsi, r13
+    call collapse_chunk_to_state
+    mov [measured_values + r12*8], r13
+
+    ; Find neighbors using adjacency list
+    mov r15, [adj_head + r12*8] ; r15 = first edge index
     
-.link_loop:
-    cmp r15, r14
-    jge .prop_ret
+.adj_loop:
+    test r15, r15
+    jz .iter_loop               ; No more neighbors
     
-    ; Check Link A -> B
-    mov rax, [braid_link_a + r15*8]
-    cmp rax, r12
-    je .found_neighbor_b
+    lea rax, [adj_to]
+    mov rbx, [rax + r15*8]      ; rbx = neighbor chunk
     
-    ; Check Link B -> A
-    mov rax, [braid_link_b + r15*8]
-    cmp rax, r12
-    je .found_neighbor_a
-    
-    jmp .next_link
-    
-.found_neighbor_b:
-    mov rbx, [braid_link_b + r15*8] ; Neighbor is B
-    jmp .process_neighbor
-    
-.found_neighbor_a:
-    mov rbx, [braid_link_a + r15*8] ; Neighbor is A
-    
-.process_neighbor:
-    ; neighbor in rbx
     ; Check if neighbor visited
     lea rax, [visited_chunks]
     cmp byte [rax + rbx], 1
-    je .next_link
+    je .next_adj
     
-    ; Collapse neighbor to SAME state (simplification for symmetric entanglement)
-    ; Real physics note: This assumes maximal correlation |ii> + |jj>. 
-    ; If anti-correlated, we'd need logic here. Assuming symmetric for this engine.
+    ; Push neighbor onto stack
+    mov rax, [stack_ptr]
+    cmp rax, MAX_CHUNKS
+    jge .next_adj               ; Stack overflow
     
-    mov rdi, rbx
-    mov rsi, r13
-    call collapse_chunk_to_state
+    lea rdx, [traversal_stack]
+    mov [rdx + rax*8], rbx
+    inc rax
+    mov [stack_ptr], rax
     
-    ; Save measurement result for neighbor too (auto-measure)
-    mov [measured_values + rbx*8], r13
+.next_adj:
+    lea rax, [adj_next]
+    mov r15, [rax + r15*8]
+    jmp .adj_loop
     
-    ; Recurse
-    mov rdi, rbx
-    mov rsi, r13
-    call propagate_collapse
-    
-    ; Restore r12, r13 after recursion
-    mov rdi, r12
-    mov rsi, r13
-    
-.next_link:
-    inc r15
-    jmp .link_loop
-    
-.prop_ret:
+.prop_done:
+    pop rbp
     pop r15
     pop r14
     pop r13
@@ -1453,6 +1468,29 @@ braid_chunks:
     mov [braid_link_b + r12*8], rsi
     mov [braid_qutrit_a + r12*8], rdx
     mov [braid_qutrit_b + r12*8], rcx
+
+    ; Populate adjacency list (bidirectional)
+    mov rax, [adj_count]
+    
+    ; Edge A -> B
+    lea r8, [adj_to]
+    mov [r8 + rax*8], rsi
+    lea r8, [adj_next]
+    mov r9, [adj_head + rdi*8]
+    mov [r8 + rax*8], r9
+    mov [adj_head + rdi*8], rax
+    inc rax
+    
+    ; Edge B -> A
+    lea r8, [adj_to]
+    mov [r8 + rax*8], rdi
+    lea r8, [adj_next]
+    mov r9, [adj_head + rsi*8]
+    mov [r8 + rax*8], r9
+    mov [adj_head + rsi*8], rax
+    inc rax
+    
+    mov [adj_count], rax
 
     ; Apply entanglement phase correlations
     ; For each pair of states, apply phase exp(i*π/3 * t_a * t_b)
@@ -2524,10 +2562,46 @@ braid_chunks_silent:
     mov r8, [num_braid_links]
     cmp r8, MAX_BRAID_LINKS
     jge .silent_braid_fail
+    
     mov [braid_link_a + r8*8], rdi
     mov [braid_link_b + r8*8], rsi
     mov [braid_qutrit_a + r8*8], rdx
     mov [braid_qutrit_b + r8*8], rcx
+
+    ; Populate adjacency list (bidirectional)
+    mov rax, [adj_count]
+    
+    ; Edge A -> B
+    lea r12, [adj_to]
+    mov [r12 + rax*8], rsi
+    lea r12, [adj_next]
+    mov r9, [adj_head + rdi*8]
+    mov [r12 + rax*8], r9
+    mov [adj_head + rdi*8], rax
+    inc rax
+    
+    ; Edge B -> A
+    lea r12, [adj_to]
+    mov [r12 + rax*8], rdi
+    lea r12, [adj_next]
+    mov r9, [adj_head + rsi*8]
+    mov [r12 + rax*8], r9
+    mov [adj_head + rsi*8], rax
+    inc rax
+    
+    mov [adj_count], rax
+
+    ; Apply entanglement phases
+    push rdi
+    push rsi
+    push rdx
+    push rcx
+    call apply_braid_phases
+    pop rcx
+    pop rdx
+    pop rsi
+    pop rdi
+
     inc qword [num_braid_links]
 .silent_braid_fail:
     pop r12
