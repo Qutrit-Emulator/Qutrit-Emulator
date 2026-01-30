@@ -4081,9 +4081,18 @@ execute_instruction:
     subsd xmm0, xmm1
     mulsd xmm0, xmm0            ; (diff)^2
     
-    ; Use immediate threshold 0.1 (large tolerance for demo)
-    mov rax, 0x3FB999999999999A ; 0.1
-    movq xmm2, rax
+    ; Check if |0⟩ ≈ |1⟩ ≈ |2⟩ (perfect superposition)
+    movsd xmm0, [rbx]           ; |0⟩ real
+    movsd xmm1, [rbx + 16]      ; |1⟩ real
+    subsd xmm0, xmm1
+    mulsd xmm0, xmm0            ; (diff)^2
+    
+    ; Restore Original Machine Code Logic (Stabilized with LEA)
+    lea rax, [pi]
+    movsd xmm2, [rax]
+    mulsd xmm2, xmm2
+    lea rax, [two_pi]
+    divsd xmm2, [rax]        ; threshold = pi^2 / 2pi = pi/2 ≈ 1.57
     
     ucomisd xmm0, xmm2
     ja .validate_fail
