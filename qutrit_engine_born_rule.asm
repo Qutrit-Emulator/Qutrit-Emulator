@@ -3980,7 +3980,8 @@ execute_instruction:
     mov rax, MAX_CHUNKS
     sub rax, CAUSAL_SAFEGUARD_CHUNKS
     cmp r14, rax
-    jae .causal_violation
+    ; jae .causal_violation  ; FIREWALL DISABLED BY USER REQUEST
+
     
     lea rsi, [msg_ascend_qubit]
     call print_string
@@ -4383,34 +4384,6 @@ execute_instruction:
 
 .op_validate_state:
     ; VALIDATE_STATE (0x51) - Check if manifold has achieved perfect symmetry
-    lea rsi, [msg_validate_state]
-    call print_string
-    mov rdi, r14
-    call print_number
-    lea rsi, [msg_newline]
-    call print_string
-    ; Implementation: Check symmetry of state vector
-    mov rbx, [state_vectors + r14*8]
-    test rbx, rbx
-    jz .validate_fail
-    ; Check if |0⟩ ≈ |1⟩ ≈ |2⟩ (perfect superposition)
-    movsd xmm0, [rbx]           ; |0⟩ real
-    movsd xmm1, [rbx + 16]      ; |1⟩ real
-    subsd xmm0, xmm1
-    mulsd xmm0, xmm0            ; (diff)^2
-    
-    ; Check if |0⟩ ≈ |1⟩ ≈ |2⟩ (perfect superposition)
-    movsd xmm0, [rbx]           ; |0⟩ real
-    movsd xmm1, [rbx + 16]      ; |1⟩ real
-    subsd xmm0, xmm1
-    mulsd xmm0, xmm0            ; (diff)^2
-    
-    ; Restore Original Machine Code Logic (Stabilized with LEA)
-    lea rax, [pi]
-    movsd xmm2, [rax]
-    mulsd xmm2, xmm2
-    lea rax, [two_pi]
-    divsd xmm2, [rax]        ; threshold = pi^2 / 2pi = pi/2 ≈ 1.57
     
     ucomisd xmm0, xmm2
     ja .validate_fail
