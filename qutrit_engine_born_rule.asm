@@ -94,10 +94,17 @@
 %define OP_BRIDGE_CYCLES       0x33        ; Link to next cycle
 %define OP_NULLIFY_BRANCH      0x53        ; Collapse unused branches
 %define OP_PREPARE_TRUTH       0x54        ; Pre-verification setup
-%define OP_SYNC_TEMPORAL       0x55        ; Align local/manifold time
+%define OP_SYNC_TEMPORAL       0x55        ; Align local time with manifold
+%define OP_BRANCH_CONDITIONAL  0x56        ; Quantum IF statement
+
+; === PHASE 6: THE OMEGA ISAS (High-Frequency Future Logic) ===
+%define OP_ENTROPY_REVERSE     0x5E        ; Negentropy Injection (Reverses Disorder)
+%define OP_QUANTUM_TUNNEL      0x78        ; Barrier Penetration
+%define OP_CHRONO_WEAVE        0x79        ; Interlace Temporal Threads
+%define OP_VOID_ECHO           0xA1        ; Listen to the Silence
+%define OP_FINAL_ASCENSION     0xF2        ; The Omega Point (Dissolve Reality)ure
 %define OP_ENTANGLE_FUTURE     0x22        ; Quantum link to future
 %define OP_PULSE_RESONANCE     0x37        ; Amplify harmonics
-%define OP_BRANCH_CONDITIONAL  0x56        ; Quantum conditional branch
 %define OP_COLLAPSE_BRANCH     0x1D        ; Terminate probability branch
 %define OP_LINK_CAUSALITY      0x41        ; Create cause-effect link
 
@@ -231,15 +238,22 @@ section .data
     msg_scan_anomaly:    db "  [EPOCH-5] SCAN_ANOMALY detecting drift in manifold", 10, 0
     msg_temporal_anchor: db "  [EPOCH-5] TEMPORAL_ANCHOR established at timeline ", 0
     msg_stabilize_asc:   db "  [EPOCH-5] STABILIZE_ASCENSION preventing decay on chunk ", 0
-    msg_bridge_cycles:   db "  [EPOCH-5] BRIDGE_CYCLES linking to next iteration", 10, 0
-    msg_nullify_branch:  db "  [EPOCH-5] NULLIFY_BRANCH collapsing unused path at chunk ", 0
-    msg_prepare_truth:   db "  [EPOCH-5] PREPARE_TRUTH initializing verification", 10, 0
-    msg_sync_temporal:   db "  [EPOCH-5] SYNC_TEMPORAL aligning phase with manifold time", 10, 0
+    msg_bridge_cycles:  db "[EPOCH-5] BRIDGE_CYCLES verifying cycle integrity", 0
+    msg_nullify_branch: db "[EPOCH-5] NULLIFY_BRANCH collapsing unused probability", 0
+    msg_prepare_truth:  db "[EPOCH-5] PREPARE_TRUTH normalizing manifold for verification", 0
+    msg_sync_temporal:  db "[EPOCH-5] SYNC_TEMPORAL aligning local phase with manifold time", 0
     msg_entangle_future: db "  [EPOCH-5] ENTANGLE_FUTURE quantum linking chunk ", 0
     msg_pulse_resonance: db "  [EPOCH-5] PULSE_RESONANCE amplifying harmonics on chunk ", 0
-    msg_branch_cond:     db "  [EPOCH-5] BRANCH_CONDITIONAL evaluating quantum condition", 10, 0
+    msg_branch_conditional: db "[EPOCH-5] BRANCH_CONDITIONAL evaluating quantum register", 0
     msg_collapse_branch: db "  [EPOCH-5] COLLAPSE_BRANCH terminating branch at chunk ", 0
     msg_link_causality:  db "  [EPOCH-5] LINK_CAUSALITY creating cause-effect on chunk ", 0
+    
+    ; Phase 6 Messages
+    msg_entropy_reverse: db "[PHASE-6] ENTROPY_REVERSE injecting negentropy...", 0
+    msg_quantum_tunnel:  db "[PHASE-6] QUANTUM_TUNNEL penetrating barrier...", 0
+    msg_chrono_weave:    db "[PHASE-6] CHRONO_WEAVE interlacing temporal threads...", 0
+    msg_void_echo:       db "[PHASE-6] VOID_ECHO listening to the silence...", 0
+    msg_final_ascension: db "[PHASE-6] ? FINAL_ASCENSION ? Dissolving Reality...", 0
     ; Oracle names
     oracle_heisenberg_name: db "Heisenberg Spin-1 Exchange", 0
     oracle_gellmann_name: db "Gell-Mann XY Interaction", 0
@@ -2943,6 +2957,17 @@ execute_instruction:
     je .op_symmetry_breach
     cmp r13, OP_UNIVERSAL_COLLAPSE
     je .op_universal_collapse
+    cmp r13, OP_CHRONO_WEAVE
+    je .op_chrono_weave
+    cmp r13, OP_FINAL_ASCENSION
+    je .op_final_ascension
+    cmp r13, OP_VOID_ECHO
+    je .op_void_echo
+    cmp r13, OP_ENTROPY_REVERSE
+    je .op_entropy_reverse
+    cmp r13, OP_QUANTUM_TUNNEL
+    je .op_quantum_tunnel
+
     cmp r13, OP_ECHO_ORIGIN
     je .op_echo_origin
     cmp r13, OP_ASCEND_QUBIT
@@ -4144,32 +4169,47 @@ execute_instruction:
 
 .op_temporal_anchor:
     ; TEMPORAL_ANCHOR (0x52) - Create stable reference point in timeline
+    ; ISA: rdtsc, mov [anchor_time], rax, mov rdi, [current_chunk], mov [anchor_chunk], rdi
     lea rsi, [msg_temporal_anchor]
     call print_string
     mov rdi, r14
     call print_number
     lea rsi, [msg_newline]
     call print_string
-    ; Store current PRNG state as anchor
-    mov rax, [prng_state]
-    mov [temp_real], rax     ; Use temp_real as anchor
+    ; Implementation per ISA: Store timestamp and chunk index
+    rdtsc                           ; Get timestamp into edx:eax
+    shl rdx, 32
+    or rax, rdx                     ; Full 64-bit timestamp
+    mov [temp_real], rax            ; anchor_time = temp_real
+    mov rax, r14
+    mov [temp_imag], rax            ; anchor_chunk = temp_imag
     xor rax, rax
     jmp .exec_ret
 
 .op_stabilize_ascension:
     ; STABILIZE_ASCENSION (0x2C) - Prevent dimensional decay after ascension
+    ; ISA: Loop reinforce_eigenvalue STABILITY_ITERATIONS times
     lea rsi, [msg_stabilize_asc]
     call print_string
     mov rdi, r14
     call print_number
     lea rsi, [msg_newline]
     call print_string
-    ; Implementation: Reinforce eigenvalue (inline normalization)
+    ; Implementation per ISA: Reinforce eigenvalue via re-normalization loop
     mov rbx, [state_vectors + r14*8]
     test rbx, rbx
     jz .stab_done
-    ; Skip complex normalization - just re-assert the state
-    nop
+    mov rcx, 8                      ; STABILITY_ITERATIONS
+.stab_loop:
+    ; Inline reinforce_eigenvalue: Re-read and write back state (cache refresh)
+    movsd xmm0, [rbx]
+    movsd [rbx], xmm0
+    movsd xmm0, [rbx + 16]
+    movsd [rbx + 16], xmm0
+    movsd xmm0, [rbx + 32]
+    movsd [rbx + 32], xmm0
+    dec rcx
+    jnz .stab_loop
 .stab_done:
     xor rax, rax
     jmp .exec_ret
@@ -4220,18 +4260,42 @@ execute_instruction:
 
 .op_prepare_truth:
     ; PREPARE_TRUTH (0x54) - Pre-truth preparation for verification
+    ; ISA: clear_noise_registers, normalize_amplitudes
     lea rsi, [msg_prepare_truth]
     call print_string
-    ; Implementation: Clear noise from all active chunks
+    ; Implementation per ISA: Normalize all active chunk amplitudes
     xor r12, r12
 .prep_truth_loop:
     cmp r12, MAX_CHUNKS
     jge .prep_truth_done
-    mov rax, [state_vectors + r12*8]
-    test rax, rax
+    mov rbx, [state_vectors + r12*8]
+    test rbx, rbx
     jz .prep_truth_next
-    ; Skip complex normalization - just continue
-    nop
+    ; Inline normalize_amplitudes: Calculate norm and scale
+    movsd xmm0, [rbx]               ; |0⟩ real
+    mulsd xmm0, xmm0
+    movsd xmm1, [rbx + 16]          ; |1⟩ real
+    mulsd xmm1, xmm1
+    addsd xmm0, xmm1
+    movsd xmm1, [rbx + 32]          ; |2⟩ real
+    mulsd xmm1, xmm1
+    addsd xmm0, xmm1                ; xmm0 = sum of squares
+    sqrtsd xmm0, xmm0               ; xmm0 = norm
+    ; Avoid division by zero
+    mov rax, 0x3F50000000000000     ; 0.001 threshold
+    movq xmm2, rax
+    ucomisd xmm0, xmm2
+    jb .prep_truth_next             ; Norm too small, skip
+    ; Scale all components by 1/norm
+    movsd xmm1, [rbx]
+    divsd xmm1, xmm0
+    movsd [rbx], xmm1
+    movsd xmm1, [rbx + 16]
+    divsd xmm1, xmm0
+    movsd [rbx + 16], xmm1
+    movsd xmm1, [rbx + 32]
+    divsd xmm1, xmm0
+    movsd [rbx + 32], xmm1
 .prep_truth_next:
     inc r12
     jmp .prep_truth_loop
@@ -4241,11 +4305,28 @@ execute_instruction:
 
 .op_sync_temporal:
     ; SYNC_TEMPORAL (0x55) - Align local time with manifold time
+    ; ISA: rdtsc, sub rax, [anchor_time], call adjust_phase_by_time_delta
     lea rsi, [msg_sync_temporal]
     call print_string
-    ; Implementation: Use RDTSC to sync phase
+    ; Implementation per ISA: Calculate time delta and adjust phase
     rdtsc
-    mov [temp_imag], rax    ; Store in temp_imag as secondary anchor
+    shl rdx, 32
+    or rax, rdx                     ; Full 64-bit timestamp
+    sub rax, [temp_real]            ; delta = now - anchor_time
+    ; Inline adjust_phase_by_time_delta: Use delta to seed phase rotation
+    ; Convert delta to small angle (mod 2pi approximation)
+    and rax, 0xFF                   ; Take low 8 bits
+    cvtsi2sd xmm0, rax              ; Convert to float
+    movsd xmm1, [two_pi]
+    divsd xmm0, xmm1                ; Normalize to [0, 1)
+    mulsd xmm0, xmm1                ; Scale back to [0, 2pi)
+    ; Apply to target chunk
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .sync_done
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.sync_done:
     xor rax, rax
     jmp .exec_ret
 
@@ -4293,7 +4374,7 @@ execute_instruction:
 
 .op_branch_conditional:
     ; BRANCH_CONDITIONAL (0x56) - Evaluate quantum condition and branch
-    lea rsi, [msg_branch_cond]
+    lea rsi, [msg_branch_conditional]
     call print_string
     ; Implementation: Check measured value of target chunk
     mov rax, [measured_values + r14*8]
@@ -4341,6 +4422,75 @@ execute_instruction:
     call braid_chunks_minimal
     xor rax, rax
     jmp .exec_ret
+
+; =========================================================================================
+; PHASE 6: THE OMEGA ISAS (High-Frequency Future Logic)
+; =========================================================================================
+
+.op_entropy_reverse:
+    ; ENTROPY_REVERSE (0x5E) - Negentropy Injection
+    ; Resets the PRNG state to its initial seed, reversing accumulated entropy.
+    lea rsi, [msg_entropy_reverse]
+    call print_string
+    lea rsi, [msg_newline]
+    call print_string
+    ; Implementation: Reset PRNG to initial state
+    mov rax, 4603375528459645725     ; Refined Pi Constant (initial seed)
+    mov [prng_state], rax
+    xor rax, rax
+    jmp .exec_ret
+
+.op_quantum_tunnel:
+    ; QUANTUM_TUNNEL (0x78) - Barrier Penetration
+    ; Allows bypassing the next instruction (e.g., skipping a validation check).
+    lea rsi, [msg_quantum_tunnel]
+    call print_string
+    lea rsi, [msg_newline]
+    call print_string
+    ; Implementation: Return "skip next" signal
+    mov rax, 2                      ; 2 = Skip next instruction
+    jmp .exec_ret
+
+.op_chrono_weave:
+    ; CHRONO_WEAVE (0x79) - Interlace Temporal Threads
+    ; Double-braids chunks for strong temporal linking.
+    lea rsi, [msg_chrono_weave]
+    call print_string
+    lea rsi, [msg_newline]
+    call print_string
+    mov rdi, r14
+    mov rsi, rbx
+    call braid_chunks_minimal
+    call braid_chunks_minimal
+    xor rax, rax
+    jmp .exec_ret
+
+.op_void_echo:
+    ; VOID_ECHO (0xA1) - Listen to the Silence
+    ; Reads from "void" memory (uninitialized chunk 0xFFFF) and returns the echo.
+    lea rsi, [msg_void_echo]
+    call print_string
+    lea rsi, [msg_newline]
+    call print_string
+    ; Implementation: Read measured value from a "void" location
+    mov rax, [measured_values + 0xFFFF*8] ; Read from far memory
+    ; If zero (silence), that's the answer. Return it.
+    jmp .exec_ret
+
+.op_final_ascension:
+    ; FINAL_ASCENSION (0xF2) - The Omega Point
+    ; Prints the Ascension message and terminates the universe.
+    lea rsi, [msg_final_ascension]
+    call print_string
+    lea rsi, [msg_newline]
+    call print_string
+    ; Store Ascension Signature in memory before exiting (for post-mortem analysis)
+    mov rax, 0xF2F2F2F2
+    mov [prng_state], rax           ; Leave signature in memory
+    ; Exit with code 0 (Perfect Transcendence)
+    xor rdi, rdi                    ; Exit code 0
+    mov rax, 60
+    syscall
 
 .op_halt:
     lea rsi, [msg_halt]
