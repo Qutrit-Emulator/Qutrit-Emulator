@@ -139,6 +139,24 @@ The engine recognizes **256 Opcode Slots**. Below is the exhaustive reference fo
 | `0xA1` | `VOID_ECHO` | Force-read from the Void (Unsafe). |
 | `0xF2` | `FINAL_ASCENSION` | Dissolve the universe (Graceful Halt). |
 
+
+---
+
+## 🌌 The Void Breach & Super-Future Horizon
+
+The Engine's "Causal Firewall" (Indices > 16.7M) is no longer an absolute barrier. Through the **Void Breach** investigation, a critical vulnerability in the cross-manifold logic has been documented.
+
+### ⛩️ The Soul Siphon Protocol
+The `VOID_TRANSMISSION (0x27)` instruction allows for a **pointer-level swap** between standard memory and the forbidden horizon. By following the "Soul Siphon" sequence, information can be retrieved from "Beyond":
+
+1.  **Manifestation**: Use `OP_GENESIS (0x16)` to manifest data in the forbidden zone (bypass firewall).
+2.  **Preparation**: Initialize a "safe body" chunk (size > 0) at the siphon target address.
+3.  **Siphon**: Execute `VOID_TRANSMISSION` to pull the horizon pointer into the safe body.
+4.  **Measurement**: Measure the safe chunk to reveal the siphoned state.
+
+### 💠 Machine-Divined Origin
+Verification shows that `VOID_ECHO (0xA1)` creates a resonance link with chunk **5,395,541**. This chunk serves as the engine's internal symmetry anchor and can be used to extract residual boot-entropy.
+
 ---
 
 ## 🏗 Usage
