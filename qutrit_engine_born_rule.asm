@@ -318,6 +318,7 @@ section .data
 
     ; Epoch-5 Deep Future Messages (Extracted at 16.7M Horizon)
     msg_validate_state:  db "  [EPOCH-5] VALIDATE_STATE checking symmetry on chunk ", 0
+    msg_found_anomaly:   db "  [ANOMALY] Drift detected in chunk ", 0
     msg_scan_anomaly:    db "  [EPOCH-5] SCAN_ANOMALY detecting drift in manifold", 10, 0
     msg_temporal_anchor: db "  [EPOCH-5] TEMPORAL_ANCHOR established at timeline ", 0
     msg_stabilize_asc:   db "  [EPOCH-5] STABILIZE_ASCENSION preventing decay on chunk ", 0
@@ -348,6 +349,10 @@ section .data
     msg_check_generic:   db "  [CHECK] Verification check...", 10, 0
     msg_gate_generic:    db "  [GATE] Control flow decision...", 10, 0
     msg_ascend_generic:  db "  [ASCEND] Ascension preparation...", 10, 0
+    msg_ascend_halo:     db "  [EPOCH-6] Dimensional Alignment Confirmed. HALO status: ACTIVE.", 10, 0
+    msg_ascend_fail:     db "  [CRITICAL] Ascension Refused - Lattice Purity Insufficient.", 10, 0
+    msg_halo_active:     db "  [HALO] Higher-dimensional siphoning active...", 10, 0
+    msg_halo_siphon:     db "  [HALO] Dimensional Pull: Siphoning from Ascended Tape...", 10, 0
     
     ; Oracle names
     oracle_heisenberg_name: db "Heisenberg Spin-1 Exchange", 0
@@ -383,6 +388,9 @@ section .bss
     addon_names:        resq MAX_ADDONS         ; Name string pointers
     addon_funcs:        resq MAX_ADDONS         ; Function pointers
     addon_opcodes:      resb MAX_ADDONS         ; Assigned opcodes
+    lattice_integrity:  resq 1                  ; Crystal Lattice Health (0-100)
+    dimension_layer:    resq 1                  ; Current Dimensional Index (0=Baseline, 1=Ascended)
+    void_frequency:     resq 1                  ; Void Tuning Param
     num_addons:         resq 1
 
     ; Program execution
@@ -2976,7 +2984,15 @@ execute_instruction:
     ; Dispatch based on opcode
     cmp r13, OP_NOP
     je .op_nop
-    cmp r13, OP_INIT
+    ; HOOK: CRYSTAL OPCODES (Epoch V)
+    cmp r13, 0x70
+    je op_purify_state
+    cmp r13, 0x7A
+    je op_lattice_lock
+    cmp r13, 0x7C
+    je op_crystal_growth
+
+    cmp r13, 0x01
     je .op_init
     cmp r13, OP_SUP
     je .op_sup
@@ -3244,7 +3260,9 @@ execute_instruction:
     cmp r13, OP_ASCEND_CROWN
     je .op_ascend_generic
     cmp r13, OP_ASCEND_HALO
-    je .op_ascend_generic
+    je .op_ascend_halo
+    cmp r13, 0xE0              ; OP_CHECK_ACTIVE (HALO_PROBE)
+    je .op_halo_probe
     
     cmp r13, OP_ADDON
     je .op_addon
@@ -3252,6 +3270,17 @@ execute_instruction:
     je .op_halt
 
     ; Check for addon opcode (0x80+)
+    ; Check for addon opcode (0x80+)
+    ; HOOK: FUTURE OPCODES (Stabilizers)
+    cmp r13, 0x84
+    je op_chrono_stasis
+    cmp r13, 0xA3
+    je op_void_resonance
+    cmp r13, 0xBB
+    je op_collapse_prep
+    cmp r13, 0xEF
+    je op_meta_halt
+
     cmp r13, 0x80
     jge .op_addon
 
@@ -3827,14 +3856,26 @@ execute_instruction:
     jmp .exec_ret
 
 .op_void_transmission:
+    mov rax, [dimension_layer]
+    test rax, rax
+    jnz .void_halo
+    
     lea rsi, [msg_void_trans]
     call print_string
     lea rsi, [msg_newline]
     call print_string
-    ; Implementation: Cross-manifold shuffle (Swap with chunk at target + 1,000,000)
+    mov rsi, 1000000            ; Baseline void offset
+    jmp .void_pull_exec
+
+.void_halo:
+    lea rsi, [msg_halo_siphon]
+    call print_string
+    mov rsi, 2000000            ; ASCENDED HALO offset (Higher Plane)
+
+.void_pull_exec:
+    ; Implementation: Cross-manifold shuffle
     mov rdi, r14                ; target
-    mov rsi, r14
-    add rsi, 1000000            ; void shard offset
+    add rsi, r14                ; target + offset
     and rsi, 0xFFFFFF           ; wrap to 24-bit
     
     ; Pointer swap
@@ -4373,10 +4414,10 @@ execute_instruction:
     
     ucomisd xmm0, xmm2
     ja .validate_fail
-    mov rax, 1                  ; STATE_VALID
+    xor rax, rax                ; STATE_VALID (Continue execution)
     jmp .exec_ret
 .validate_fail:
-    xor rax, rax                ; STATE_DRIFT
+    mov rax, -1                 ; STATE_DRIFT (Halt with error)
     jmp .exec_ret
 
 .op_scan_anomaly:
@@ -4384,11 +4425,12 @@ execute_instruction:
     lea rsi, [msg_scan_anomaly]
     call print_string
     ; Implementation: Check all chunks for non-normalized states
-    xor r12, r12
+    xor rcx, rcx
+    mov r15, [num_chunks]
 .scan_loop_chunks:
-    cmp r12, MAX_CHUNKS
+    cmp rcx, r15
     jge .scan_done
-    mov rax, [state_vectors + r12*8]
+    mov rax, [state_vectors + rcx*8]
     test rax, rax
     jz .scan_next_chunk
     ; Calculate norm
@@ -4410,10 +4452,19 @@ execute_instruction:
     ucomisd xmm0, xmm1
     jb .scan_next_chunk
     ; Anomaly detected
-    mov rax, r12                ; Return anomaly chunk
+    push rcx
+    lea rsi, [msg_found_anomaly]
+    call print_string
+    mov rdi, rcx
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+    pop rcx
+    
+    mov rax, rcx                ; Return anomaly chunk
     jmp .exec_ret
 .scan_next_chunk:
-    inc r12
+    inc rcx
     jmp .scan_loop_chunks
 .scan_done:
     xor rax, rax                ; No anomaly
@@ -4516,20 +4567,21 @@ execute_instruction:
     lea rsi, [msg_prepare_truth]
     call print_string
     ; Implementation per ISA: Normalize all active chunk amplitudes
-    xor r12, r12
+    xor rcx, rcx
+    mov r15, [num_chunks]
 .prep_truth_loop:
-    cmp r12, MAX_CHUNKS
+    cmp rcx, r15
     jge .prep_truth_done
-    mov rbx, [state_vectors + r12*8]
+    mov rbx, [state_vectors + rcx*8]
     test rbx, rbx
     jz .prep_truth_next
     ; Inline normalize_amplitudes: Calculate norm and scale
-    movsd xmm0, [rbx]               ; |0⟩ real
+    movsd xmm0, [rbx]               ; |0> real
     mulsd xmm0, xmm0
-    movsd xmm1, [rbx + 16]          ; |1⟩ real
+    movsd xmm1, [rbx + 16]          ; |1> real
     mulsd xmm1, xmm1
     addsd xmm0, xmm1
-    movsd xmm1, [rbx + 32]          ; |2⟩ real
+    movsd xmm1, [rbx + 32]          ; |2> real
     mulsd xmm1, xmm1
     addsd xmm0, xmm1                ; xmm0 = sum of squares
     sqrtsd xmm0, xmm0               ; xmm0 = norm
@@ -4549,7 +4601,7 @@ execute_instruction:
     divsd xmm1, xmm0
     movsd [rbx + 32], xmm1
 .prep_truth_next:
-    inc r12
+    inc rcx
     jmp .prep_truth_loop
 .prep_truth_done:
     xor rax, rax
@@ -4836,13 +4888,58 @@ execute_instruction:
     mov rax, 2                      ; Skip next instruction
     jmp .exec_ret
 
+.op_ascend_halo:
+    ; OP_ASCEND_HALO (0x9D) - Targeted Ascension
+    ; REQUIRES: lattice_integrity == 100
+    mov rax, [lattice_integrity]
+    cmp rax, 100
+    jne .ascend_fail
+    
+    ; Shift Dimension
+    mov qword [dimension_layer], 1
+    lea rsi, [msg_ascend_halo]
+    call print_string
+    
+    ; Braid target chunk with chunk 0 as anchor
+    mov rdi, r14
+    xor rsi, rsi
+    call braid_chunks_minimal
+    
+    xor rax, rax
+    jmp .exec_ret
+
+.ascend_fail:
+    lea rsi, [msg_ascend_fail]
+    call print_string
+    xor rax, rax               ; Non-fatal failure
+    jmp .exec_ret
+
+.op_halo_probe:
+    mov rax, [dimension_layer]
+    test rax, rax
+    jz .probe_baseline
+    lea rsi, [msg_halo_active]
+    call print_string
+    jmp .probe_done
+.probe_baseline:
+    lea rsi, [msg_check_generic]
+    call print_string
+.probe_done:
+    xor rax, rax
+    jmp .exec_ret
+
 .op_ascend_generic:
-    ; Generic ASCENSION handler - Pre-ascension braid
     lea rsi, [msg_ascend_generic]
     call print_string
-    ; Braid target chunk with chunk 0 (origin)
     mov rdi, r14
-    xor rsi, rsi                    ; Chunk 0
+    xor rsi, rsi
+    call braid_chunks_minimal
+    xor rax, rax
+    jmp .exec_ret
+    lea rsi, [msg_ascend_generic]
+    call print_string
+    mov rdi, r14
+    xor rsi, rsi
     call braid_chunks_minimal
     xor rax, rax
     jmp .exec_ret
@@ -5550,5 +5647,158 @@ apery_genesis_protocol:
     call print_string
     add rsp, 32
     pop rbp
+    pop rbx
+    ret
+
+
+; ═══════════════════════════════════════════════════════════════════════════════
+; FUTURE LOGIC IMPLEMENTATION (Epoch-X)
+; ═══════════════════════════════════════════════════════════════════════════════
+
+op_chrono_stasis:
+    ; CHRONO_STASIS (0x84) - Freeze Entropy
+    ; Implementation: Lock PRNG state to Golden Ratio Constant
+    mov rax, 4603375528459645725
+    mov [prng_state], rax
+    xor rax, rax ; Success, Continue
+    
+    ; Return Sequence (Match execute_instruction stack frame)
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+op_void_resonance:
+    ; VOID_RESONANCE (0xA3) - Tune Void Frequency
+    ; Implementation: Force current chunk to Perfect Superposition
+    mov rbx, [state_vectors + r14*8]
+    test rbx, rbx
+    jz .void_skip
+    
+    ; Set |0> = |1> = |2> = 1/sqrt(3)
+    ; 1/sqrt(3) approx 0.577... -> 0x3FE279A74590331C
+    mov rax, 0x3FE279A74590331C
+    movq xmm0, rax
+    
+    movsd [rbx], xmm0      ; Real0
+    movsd [rbx+16], xmm0   ; Real1
+    movsd [rbx+32], xmm0   ; Real2
+    
+    ; Clear Imaginary
+    xorpd xmm1, xmm1
+    movsd [rbx+8], xmm1
+    movsd [rbx+24], xmm1
+    movsd [rbx+40], xmm1
+    
+.void_skip:
+    xor rax, rax
+    
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+op_collapse_prep:
+    ; COLLAPSE_PREP (0xBB) - Stabilize for Measurement
+    ; Implementation: Amplify |1> (Linear State)
+    ; This biases the measurement towards '1'
+    mov rbx, [state_vectors + r14*8]
+    test rbx, rbx
+    jz .prep_skip
+    
+    ; |1> = 1.0, others 0
+    mov rax, 0x3FF0000000000000 ; 1.0
+    movq xmm0, rax
+    xorpd xmm1, xmm1
+    
+    movsd [rbx], xmm1       ; 0
+    movsd [rbx+16], xmm0    ; 1
+    movsd [rbx+32], xmm1    ; 0
+    
+.prep_skip:
+    xor rax, rax
+    
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+op_meta_halt:
+    ; META_HALT (0xEF) - System Freeze
+    mov rax, 1 ; Signal HALT
+    
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+; ═══════════════════════════════════════════════════════════════════════════════
+; CRYSTAL LOGIC (EPOCH V)
+; ═══════════════════════════════════════════════════════════════════════════════
+
+op_lattice_lock:
+    ; OP_LATTICE_LOCK (0x7A)
+    ; Sets lattice integrity to 100%
+    mov rax, 100
+    mov [lattice_integrity], rax
+    
+    ; Stub: Print confirmation
+    ; (No msg defined, just silent success)
+    
+    xor rax, rax
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+op_crystal_growth:
+    ; OP_CRYSTAL_GROWTH (0x7C)
+    ; Expands manifold by initializing next chunk
+    ; Logic: init_chunk(r14 + 1)
+    
+    push rdi
+    push rsi
+    
+    mov rdi, r14
+    inc rdi ; Next chunk
+    mov rsi, 1 ; Mode
+    call init_chunk_silent
+    
+    pop rsi
+    pop rdi
+    
+    xor rax, rax
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+op_purify_state:
+    ; OP_PURIFY_STATE (0x70)
+    ; Clears state vector (Entropy Zero)
+    mov rbx, [state_vectors + r14*8]
+    test rbx, rbx
+    jz .purify_skip
+    
+    xorpd xmm0, xmm0
+    movsd [rbx], xmm0
+    movsd [rbx+8], xmm0
+    movsd [rbx+16], xmm0
+    movsd [rbx+24], xmm0
+    movsd [rbx+32], xmm0
+    movsd [rbx+40], xmm0
+    
+.purify_skip:
+    xor rax, rax
+    
+    pop r14
+    pop r13
+    pop r12
     pop rbx
     ret
