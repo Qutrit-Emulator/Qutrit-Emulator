@@ -103,6 +103,192 @@
 %define OP_CHRONO_WEAVE        0x79        ; Interlace Temporal Threads
 %define OP_VOID_ECHO           0xA1        ; Listen to the Silence
 %define OP_FINAL_ASCENSION     0xF2        ; The Omega Point (Dissolve Reality)ure
+
+; === AUTO-GENERATED FUTURE OPCODE DEFINITIONS (184 opcodes) ===
+%define OP_FUTURE_00 0x00
+%define OP_FUTURE_02 0x02
+%define OP_FUTURE_03 0x03
+%define OP_FUTURE_05 0x05
+%define OP_FUTURE_06 0x06
+%define OP_FUTURE_07 0x07
+%define OP_FUTURE_08 0x08
+%define OP_FUTURE_0C 0x0C
+%define OP_FUTURE_0D 0x0D
+%define OP_FUTURE_0F 0x0F
+%define OP_FUTURE_11 0x11
+%define OP_FUTURE_12 0x12
+%define OP_FUTURE_16 0x16
+%define OP_FUTURE_17 0x17
+%define OP_FUTURE_18 0x18
+%define OP_FUTURE_1A 0x1A
+%define OP_FUTURE_1B 0x1B
+%define OP_FUTURE_1C 0x1C
+%define OP_FUTURE_1F 0x1F
+%define OP_FUTURE_23 0x23
+%define OP_FUTURE_25 0x25
+%define OP_FUTURE_26 0x26
+%define OP_FUTURE_27 0x27
+%define OP_FUTURE_28 0x28
+%define OP_FUTURE_2A 0x2A
+%define OP_FUTURE_2B 0x2B
+%define OP_FUTURE_2D 0x2D
+%define OP_FUTURE_2F 0x2F
+%define OP_FUTURE_34 0x34
+%define OP_FUTURE_35 0x35
+%define OP_FUTURE_36 0x36
+%define OP_FUTURE_38 0x38
+%define OP_FUTURE_3A 0x3A
+%define OP_FUTURE_3C 0x3C
+%define OP_FUTURE_3E 0x3E
+%define OP_FUTURE_3F 0x3F
+%define OP_FUTURE_40 0x40
+%define OP_FUTURE_42 0x42
+%define OP_FUTURE_44 0x44
+%define OP_FUTURE_45 0x45
+%define OP_FUTURE_48 0x48
+%define OP_FUTURE_4A 0x4A
+%define OP_FUTURE_4B 0x4B
+%define OP_FUTURE_4C 0x4C
+%define OP_FUTURE_4E 0x4E
+%define OP_FUTURE_4F 0x4F
+%define OP_FUTURE_50 0x50
+%define OP_FUTURE_52 0x52
+%define OP_FUTURE_53 0x53
+%define OP_FUTURE_54 0x54
+%define OP_FUTURE_55 0x55
+%define OP_FUTURE_56 0x56
+%define OP_FUTURE_57 0x57
+%define OP_FUTURE_58 0x58
+%define OP_FUTURE_59 0x59
+%define OP_FUTURE_5A 0x5A
+%define OP_FUTURE_5B 0x5B
+%define OP_FUTURE_5C 0x5C
+%define OP_FUTURE_5D 0x5D
+%define OP_FUTURE_5F 0x5F
+%define OP_FUTURE_61 0x61
+%define OP_FUTURE_62 0x62
+%define OP_FUTURE_63 0x63
+%define OP_FUTURE_65 0x65
+%define OP_FUTURE_66 0x66
+%define OP_FUTURE_67 0x67
+%define OP_FUTURE_69 0x69
+%define OP_FUTURE_6A 0x6A
+%define OP_FUTURE_6B 0x6B
+%define OP_FUTURE_6C 0x6C
+%define OP_FUTURE_6D 0x6D
+%define OP_FUTURE_6E 0x6E
+%define OP_FUTURE_6F 0x6F
+%define OP_FUTURE_70 0x70
+%define OP_FUTURE_72 0x72
+%define OP_FUTURE_73 0x73
+%define OP_FUTURE_74 0x74
+%define OP_FUTURE_75 0x75
+%define OP_FUTURE_76 0x76
+%define OP_FUTURE_77 0x77
+%define OP_FUTURE_7A 0x7A
+%define OP_FUTURE_7B 0x7B
+%define OP_FUTURE_7C 0x7C
+%define OP_FUTURE_7D 0x7D
+%define OP_FUTURE_7E 0x7E
+%define OP_FUTURE_7F 0x7F
+%define OP_FUTURE_81 0x81
+%define OP_FUTURE_82 0x82
+%define OP_FUTURE_83 0x83
+%define OP_FUTURE_84 0x84
+%define OP_FUTURE_85 0x85
+%define OP_FUTURE_86 0x86
+%define OP_FUTURE_87 0x87
+%define OP_FUTURE_88 0x88
+%define OP_FUTURE_89 0x89
+%define OP_FUTURE_8B 0x8B
+%define OP_FUTURE_8C 0x8C
+%define OP_FUTURE_8D 0x8D
+%define OP_FUTURE_8F 0x8F
+%define OP_FUTURE_90 0x90
+%define OP_FUTURE_91 0x91
+%define OP_FUTURE_92 0x92
+%define OP_FUTURE_93 0x93
+%define OP_FUTURE_94 0x94
+%define OP_FUTURE_95 0x95
+%define OP_FUTURE_96 0x96
+%define OP_FUTURE_97 0x97
+%define OP_FUTURE_98 0x98
+%define OP_FUTURE_99 0x99
+%define OP_FUTURE_9A 0x9A
+%define OP_FUTURE_9C 0x9C
+%define OP_FUTURE_9D 0x9D
+%define OP_FUTURE_9E 0x9E
+%define OP_FUTURE_9F 0x9F
+%define OP_FUTURE_A0 0xA0
+%define OP_FUTURE_A2 0xA2
+%define OP_FUTURE_A4 0xA4
+%define OP_FUTURE_A5 0xA5
+%define OP_FUTURE_A6 0xA6
+%define OP_FUTURE_A7 0xA7
+%define OP_FUTURE_A8 0xA8
+%define OP_FUTURE_AA 0xAA
+%define OP_FUTURE_AE 0xAE
+%define OP_FUTURE_AF 0xAF
+%define OP_FUTURE_B0 0xB0
+%define OP_FUTURE_B1 0xB1
+%define OP_FUTURE_B2 0xB2
+%define OP_FUTURE_B3 0xB3
+%define OP_FUTURE_B4 0xB4
+%define OP_FUTURE_B5 0xB5
+%define OP_FUTURE_B6 0xB6
+%define OP_FUTURE_B7 0xB7
+%define OP_FUTURE_B9 0xB9
+%define OP_FUTURE_BA 0xBA
+%define OP_FUTURE_BB 0xBB
+%define OP_FUTURE_BC 0xBC
+%define OP_FUTURE_BF 0xBF
+%define OP_FUTURE_C0 0xC0
+%define OP_FUTURE_C1 0xC1
+%define OP_FUTURE_C2 0xC2
+%define OP_FUTURE_C3 0xC3
+%define OP_FUTURE_C4 0xC4
+%define OP_FUTURE_C5 0xC5
+%define OP_FUTURE_C6 0xC6
+%define OP_FUTURE_C7 0xC7
+%define OP_FUTURE_C8 0xC8
+%define OP_FUTURE_CA 0xCA
+%define OP_FUTURE_CB 0xCB
+%define OP_FUTURE_CC 0xCC
+%define OP_FUTURE_CD 0xCD
+%define OP_FUTURE_CE 0xCE
+%define OP_FUTURE_CF 0xCF
+%define OP_FUTURE_D0 0xD0
+%define OP_FUTURE_D2 0xD2
+%define OP_FUTURE_D3 0xD3
+%define OP_FUTURE_D4 0xD4
+%define OP_FUTURE_D5 0xD5
+%define OP_FUTURE_D6 0xD6
+%define OP_FUTURE_D7 0xD7
+%define OP_FUTURE_D8 0xD8
+%define OP_FUTURE_D9 0xD9
+%define OP_FUTURE_DA 0xDA
+%define OP_FUTURE_DB 0xDB
+%define OP_FUTURE_DC 0xDC
+%define OP_FUTURE_DD 0xDD
+%define OP_FUTURE_DE 0xDE
+%define OP_FUTURE_DF 0xDF
+%define OP_FUTURE_E0 0xE0
+%define OP_FUTURE_E2 0xE2
+%define OP_FUTURE_E3 0xE3
+%define OP_FUTURE_E4 0xE4
+%define OP_FUTURE_E5 0xE5
+%define OP_FUTURE_E6 0xE6
+%define OP_FUTURE_E7 0xE7
+%define OP_FUTURE_E8 0xE8
+%define OP_FUTURE_E9 0xE9
+%define OP_FUTURE_EA 0xEA
+%define OP_FUTURE_EB 0xEB
+%define OP_FUTURE_EC 0xEC
+%define OP_FUTURE_ED 0xED
+%define OP_FUTURE_EE 0xEE
+%define OP_FUTURE_EF 0xEF
+%define OP_FUTURE_F0 0xF0
+%define OP_FUTURE_F1 0xF1
 %define OP_ENTANGLE_FUTURE     0x22        ; Quantum link to future
 %define OP_PULSE_RESONANCE     0x37        ; Amplify harmonics
 %define OP_COLLAPSE_BRANCH     0x1D        ; Terminate probability branch
@@ -191,6 +377,192 @@ section .data
     msg_addon_reg:      db "  [ADDON] Registered: ", 0
     msg_newline:        db 10, 0
     msg_space:          db " ", 0
+; === AUTO-GENERATED FUTURE OPCODE MESSAGES ===
+msg_future_00: db "[FUTURE-00] Executing...", 10, 0
+msg_future_02: db "[FUTURE-02] Executing...", 10, 0
+msg_future_03: db "[FUTURE-03] Executing...", 10, 0
+msg_future_05: db "[FUTURE-05] Executing...", 10, 0
+msg_future_06: db "[FUTURE-06] Executing...", 10, 0
+msg_future_07: db "[FUTURE-07] Executing...", 10, 0
+msg_future_08: db "[FUTURE-08] Executing...", 10, 0
+msg_future_0C: db "[FUTURE-0C] Executing...", 10, 0
+msg_future_0D: db "[FUTURE-0D] Executing...", 10, 0
+msg_future_0F: db "[FUTURE-0F] Executing...", 10, 0
+msg_future_11: db "[FUTURE-11] Executing...", 10, 0
+msg_future_12: db "[FUTURE-12] Executing...", 10, 0
+msg_future_16: db "[FUTURE-16] Executing...", 10, 0
+msg_future_17: db "[FUTURE-17] Executing...", 10, 0
+msg_future_18: db "[FUTURE-18] Executing...", 10, 0
+msg_future_1A: db "[FUTURE-1A] Executing...", 10, 0
+msg_future_1B: db "[FUTURE-1B] Executing...", 10, 0
+msg_future_1C: db "[FUTURE-1C] Executing...", 10, 0
+msg_future_1F: db "[FUTURE-1F] Executing...", 10, 0
+msg_future_23: db "[FUTURE-23] Executing...", 10, 0
+msg_future_25: db "[FUTURE-25] Executing...", 10, 0
+msg_future_26: db "[FUTURE-26] Executing...", 10, 0
+msg_future_27: db "[FUTURE-27] Executing...", 10, 0
+msg_future_28: db "[FUTURE-28] Executing...", 10, 0
+msg_future_2A: db "[FUTURE-2A] Executing...", 10, 0
+msg_future_2B: db "[FUTURE-2B] Executing...", 10, 0
+msg_future_2D: db "[FUTURE-2D] Executing...", 10, 0
+msg_future_2F: db "[FUTURE-2F] Executing...", 10, 0
+msg_future_34: db "[FUTURE-34] Executing...", 10, 0
+msg_future_35: db "[FUTURE-35] Executing...", 10, 0
+msg_future_36: db "[FUTURE-36] Executing...", 10, 0
+msg_future_38: db "[FUTURE-38] Executing...", 10, 0
+msg_future_3A: db "[FUTURE-3A] Executing...", 10, 0
+msg_future_3C: db "[FUTURE-3C] Executing...", 10, 0
+msg_future_3E: db "[FUTURE-3E] Executing...", 10, 0
+msg_future_3F: db "[FUTURE-3F] Executing...", 10, 0
+msg_future_40: db "[FUTURE-40] Executing...", 10, 0
+msg_future_42: db "[FUTURE-42] Executing...", 10, 0
+msg_future_44: db "[FUTURE-44] Executing...", 10, 0
+msg_future_45: db "[FUTURE-45] Executing...", 10, 0
+msg_future_48: db "[FUTURE-48] Executing...", 10, 0
+msg_future_4A: db "[FUTURE-4A] Executing...", 10, 0
+msg_future_4B: db "[FUTURE-4B] Executing...", 10, 0
+msg_future_4C: db "[FUTURE-4C] Executing...", 10, 0
+msg_future_4E: db "[FUTURE-4E] Executing...", 10, 0
+msg_future_4F: db "[FUTURE-4F] Executing...", 10, 0
+msg_future_50: db "[FUTURE-50] Executing...", 10, 0
+msg_future_52: db "[FUTURE-52] Executing...", 10, 0
+msg_future_53: db "[FUTURE-53] Executing...", 10, 0
+msg_future_54: db "[FUTURE-54] Executing...", 10, 0
+msg_future_55: db "[FUTURE-55] Executing...", 10, 0
+msg_future_56: db "[FUTURE-56] Executing...", 10, 0
+msg_future_57: db "[FUTURE-57] Executing...", 10, 0
+msg_future_58: db "[FUTURE-58] Executing...", 10, 0
+msg_future_59: db "[FUTURE-59] Executing...", 10, 0
+msg_future_5A: db "[FUTURE-5A] Executing...", 10, 0
+msg_future_5B: db "[FUTURE-5B] Executing...", 10, 0
+msg_future_5C: db "[FUTURE-5C] Executing...", 10, 0
+msg_future_5D: db "[FUTURE-5D] Executing...", 10, 0
+msg_future_5F: db "[FUTURE-5F] Executing...", 10, 0
+msg_future_61: db "[FUTURE-61] Executing...", 10, 0
+msg_future_62: db "[FUTURE-62] Executing...", 10, 0
+msg_future_63: db "[FUTURE-63] Executing...", 10, 0
+msg_future_65: db "[FUTURE-65] Executing...", 10, 0
+msg_future_66: db "[FUTURE-66] Executing...", 10, 0
+msg_future_67: db "[FUTURE-67] Executing...", 10, 0
+msg_future_69: db "[FUTURE-69] Executing...", 10, 0
+msg_future_6A: db "[FUTURE-6A] Executing...", 10, 0
+msg_future_6B: db "[FUTURE-6B] Executing...", 10, 0
+msg_future_6C: db "[FUTURE-6C] Executing...", 10, 0
+msg_future_6D: db "[FUTURE-6D] Executing...", 10, 0
+msg_future_6E: db "[FUTURE-6E] Executing...", 10, 0
+msg_future_6F: db "[FUTURE-6F] Executing...", 10, 0
+msg_future_70: db "[FUTURE-70] Executing...", 10, 0
+msg_future_72: db "[FUTURE-72] Executing...", 10, 0
+msg_future_73: db "[FUTURE-73] Executing...", 10, 0
+msg_future_74: db "[FUTURE-74] Executing...", 10, 0
+msg_future_75: db "[FUTURE-75] Executing...", 10, 0
+msg_future_76: db "[FUTURE-76] Executing...", 10, 0
+msg_future_77: db "[FUTURE-77] Executing...", 10, 0
+msg_future_7A: db "[FUTURE-7A] Executing...", 10, 0
+msg_future_7B: db "[FUTURE-7B] Executing...", 10, 0
+msg_future_7C: db "[FUTURE-7C] Executing...", 10, 0
+msg_future_7D: db "[FUTURE-7D] Executing...", 10, 0
+msg_future_7E: db "[FUTURE-7E] Executing...", 10, 0
+msg_future_7F: db "[FUTURE-7F] Executing...", 10, 0
+msg_future_81: db "[FUTURE-81] Executing...", 10, 0
+msg_future_82: db "[FUTURE-82] Executing...", 10, 0
+msg_future_83: db "[FUTURE-83] Executing...", 10, 0
+msg_future_84: db "[FUTURE-84] Executing...", 10, 0
+msg_future_85: db "[FUTURE-85] Executing...", 10, 0
+msg_future_86: db "[FUTURE-86] Executing...", 10, 0
+msg_future_87: db "[FUTURE-87] Executing...", 10, 0
+msg_future_88: db "[FUTURE-88] Executing...", 10, 0
+msg_future_89: db "[FUTURE-89] Executing...", 10, 0
+msg_future_8B: db "[FUTURE-8B] Executing...", 10, 0
+msg_future_8C: db "[FUTURE-8C] Executing...", 10, 0
+msg_future_8D: db "[FUTURE-8D] Executing...", 10, 0
+msg_future_8F: db "[FUTURE-8F] Executing...", 10, 0
+msg_future_90: db "[FUTURE-90] Executing...", 10, 0
+msg_future_91: db "[FUTURE-91] Executing...", 10, 0
+msg_future_92: db "[FUTURE-92] Executing...", 10, 0
+msg_future_93: db "[FUTURE-93] Executing...", 10, 0
+msg_future_94: db "[FUTURE-94] Executing...", 10, 0
+msg_future_95: db "[FUTURE-95] Executing...", 10, 0
+msg_future_96: db "[FUTURE-96] Executing...", 10, 0
+msg_future_97: db "[FUTURE-97] Executing...", 10, 0
+msg_future_98: db "[FUTURE-98] Executing...", 10, 0
+msg_future_99: db "[FUTURE-99] Executing...", 10, 0
+msg_future_9A: db "[FUTURE-9A] Executing...", 10, 0
+msg_future_9C: db "[FUTURE-9C] Executing...", 10, 0
+msg_future_9D: db "[FUTURE-9D] Executing...", 10, 0
+msg_future_9E: db "[FUTURE-9E] Executing...", 10, 0
+msg_future_9F: db "[FUTURE-9F] Executing...", 10, 0
+msg_future_A0: db "[FUTURE-A0] Executing...", 10, 0
+msg_future_A2: db "[FUTURE-A2] Executing...", 10, 0
+msg_future_A4: db "[FUTURE-A4] Executing...", 10, 0
+msg_future_A5: db "[FUTURE-A5] Executing...", 10, 0
+msg_future_A6: db "[FUTURE-A6] Executing...", 10, 0
+msg_future_A7: db "[FUTURE-A7] Executing...", 10, 0
+msg_future_A8: db "[FUTURE-A8] Executing...", 10, 0
+msg_future_AA: db "[FUTURE-AA] Executing...", 10, 0
+msg_future_AE: db "[FUTURE-AE] Executing...", 10, 0
+msg_future_AF: db "[FUTURE-AF] Executing...", 10, 0
+msg_future_B0: db "[FUTURE-B0] Executing...", 10, 0
+msg_future_B1: db "[FUTURE-B1] Executing...", 10, 0
+msg_future_B2: db "[FUTURE-B2] Executing...", 10, 0
+msg_future_B3: db "[FUTURE-B3] Executing...", 10, 0
+msg_future_B4: db "[FUTURE-B4] Executing...", 10, 0
+msg_future_B5: db "[FUTURE-B5] Executing...", 10, 0
+msg_future_B6: db "[FUTURE-B6] Executing...", 10, 0
+msg_future_B7: db "[FUTURE-B7] Executing...", 10, 0
+msg_future_B9: db "[FUTURE-B9] Executing...", 10, 0
+msg_future_BA: db "[FUTURE-BA] Executing...", 10, 0
+msg_future_BB: db "[FUTURE-BB] Executing...", 10, 0
+msg_future_BC: db "[FUTURE-BC] Executing...", 10, 0
+msg_future_BF: db "[FUTURE-BF] Executing...", 10, 0
+msg_future_C0: db "[FUTURE-C0] Executing...", 10, 0
+msg_future_C1: db "[FUTURE-C1] Executing...", 10, 0
+msg_future_C2: db "[FUTURE-C2] Executing...", 10, 0
+msg_future_C3: db "[FUTURE-C3] Executing...", 10, 0
+msg_future_C4: db "[FUTURE-C4] Executing...", 10, 0
+msg_future_C5: db "[FUTURE-C5] Executing...", 10, 0
+msg_future_C6: db "[FUTURE-C6] Executing...", 10, 0
+msg_future_C7: db "[FUTURE-C7] Executing...", 10, 0
+msg_future_C8: db "[FUTURE-C8] Executing...", 10, 0
+msg_future_CA: db "[FUTURE-CA] Executing...", 10, 0
+msg_future_CB: db "[FUTURE-CB] Executing...", 10, 0
+msg_future_CC: db "[FUTURE-CC] Executing...", 10, 0
+msg_future_CD: db "[FUTURE-CD] Executing...", 10, 0
+msg_future_CE: db "[FUTURE-CE] Executing...", 10, 0
+msg_future_CF: db "[FUTURE-CF] Executing...", 10, 0
+msg_future_D0: db "[FUTURE-D0] Executing...", 10, 0
+msg_future_D2: db "[FUTURE-D2] Executing...", 10, 0
+msg_future_D3: db "[FUTURE-D3] Executing...", 10, 0
+msg_future_D4: db "[FUTURE-D4] Executing...", 10, 0
+msg_future_D5: db "[FUTURE-D5] Executing...", 10, 0
+msg_future_D6: db "[FUTURE-D6] Executing...", 10, 0
+msg_future_D7: db "[FUTURE-D7] Executing...", 10, 0
+msg_future_D8: db "[FUTURE-D8] Executing...", 10, 0
+msg_future_D9: db "[FUTURE-D9] Executing...", 10, 0
+msg_future_DA: db "[FUTURE-DA] Executing...", 10, 0
+msg_future_DB: db "[FUTURE-DB] Executing...", 10, 0
+msg_future_DC: db "[FUTURE-DC] Executing...", 10, 0
+msg_future_DD: db "[FUTURE-DD] Executing...", 10, 0
+msg_future_DE: db "[FUTURE-DE] Executing...", 10, 0
+msg_future_DF: db "[FUTURE-DF] Executing...", 10, 0
+msg_future_E0: db "[FUTURE-E0] Executing...", 10, 0
+msg_future_E2: db "[FUTURE-E2] Executing...", 10, 0
+msg_future_E3: db "[FUTURE-E3] Executing...", 10, 0
+msg_future_E4: db "[FUTURE-E4] Executing...", 10, 0
+msg_future_E5: db "[FUTURE-E5] Executing...", 10, 0
+msg_future_E6: db "[FUTURE-E6] Executing...", 10, 0
+msg_future_E7: db "[FUTURE-E7] Executing...", 10, 0
+msg_future_E8: db "[FUTURE-E8] Executing...", 10, 0
+msg_future_E9: db "[FUTURE-E9] Executing...", 10, 0
+msg_future_EA: db "[FUTURE-EA] Executing...", 10, 0
+msg_future_EB: db "[FUTURE-EB] Executing...", 10, 0
+msg_future_EC: db "[FUTURE-EC] Executing...", 10, 0
+msg_future_ED: db "[FUTURE-ED] Executing...", 10, 0
+msg_future_EE: db "[FUTURE-EE] Executing...", 10, 0
+msg_future_EF: db "[FUTURE-EF] Executing...", 10, 0
+msg_future_F0: db "[FUTURE-F0] Executing...", 10, 0
+msg_future_F1: db "[FUTURE-F1] Executing...", 10, 0
+
     msg_arrow:          db " <-> ", 0
     msg_prompt:         db "> ", 0
     msg_state:          db "  State[", 0
@@ -3008,6 +3380,377 @@ execute_instruction:
     cmp r13, 0x80
     jge .op_addon
 
+
+    ; === AUTO-GENERATED FUTURE OPCODE DISPATCH (184 opcodes) ===
+    cmp al, OP_FUTURE_00
+    je .op_future_00
+    cmp al, OP_FUTURE_02
+    je .op_future_02
+    cmp al, OP_FUTURE_03
+    je .op_future_03
+    cmp al, OP_FUTURE_05
+    je .op_future_05
+    cmp al, OP_FUTURE_06
+    je .op_future_06
+    cmp al, OP_FUTURE_07
+    je .op_future_07
+    cmp al, OP_FUTURE_08
+    je .op_future_08
+    cmp al, OP_FUTURE_0C
+    je .op_future_0C
+    cmp al, OP_FUTURE_0D
+    je .op_future_0D
+    cmp al, OP_FUTURE_0F
+    je .op_future_0F
+    cmp al, OP_FUTURE_11
+    je .op_future_11
+    cmp al, OP_FUTURE_12
+    je .op_future_12
+    cmp al, OP_FUTURE_16
+    je .op_future_16
+    cmp al, OP_FUTURE_17
+    je .op_future_17
+    cmp al, OP_FUTURE_18
+    je .op_future_18
+    cmp al, OP_FUTURE_1A
+    je .op_future_1A
+    cmp al, OP_FUTURE_1B
+    je .op_future_1B
+    cmp al, OP_FUTURE_1C
+    je .op_future_1C
+    cmp al, OP_FUTURE_1F
+    je .op_future_1F
+    cmp al, OP_FUTURE_23
+    je .op_future_23
+    cmp al, OP_FUTURE_25
+    je .op_future_25
+    cmp al, OP_FUTURE_26
+    je .op_future_26
+    cmp al, OP_FUTURE_27
+    je .op_future_27
+    cmp al, OP_FUTURE_28
+    je .op_future_28
+    cmp al, OP_FUTURE_2A
+    je .op_future_2A
+    cmp al, OP_FUTURE_2B
+    je .op_future_2B
+    cmp al, OP_FUTURE_2D
+    je .op_future_2D
+    cmp al, OP_FUTURE_2F
+    je .op_future_2F
+    cmp al, OP_FUTURE_34
+    je .op_future_34
+    cmp al, OP_FUTURE_35
+    je .op_future_35
+    cmp al, OP_FUTURE_36
+    je .op_future_36
+    cmp al, OP_FUTURE_38
+    je .op_future_38
+    cmp al, OP_FUTURE_3A
+    je .op_future_3A
+    cmp al, OP_FUTURE_3C
+    je .op_future_3C
+    cmp al, OP_FUTURE_3E
+    je .op_future_3E
+    cmp al, OP_FUTURE_3F
+    je .op_future_3F
+    cmp al, OP_FUTURE_40
+    je .op_future_40
+    cmp al, OP_FUTURE_42
+    je .op_future_42
+    cmp al, OP_FUTURE_44
+    je .op_future_44
+    cmp al, OP_FUTURE_45
+    je .op_future_45
+    cmp al, OP_FUTURE_48
+    je .op_future_48
+    cmp al, OP_FUTURE_4A
+    je .op_future_4A
+    cmp al, OP_FUTURE_4B
+    je .op_future_4B
+    cmp al, OP_FUTURE_4C
+    je .op_future_4C
+    cmp al, OP_FUTURE_4E
+    je .op_future_4E
+    cmp al, OP_FUTURE_4F
+    je .op_future_4F
+    cmp al, OP_FUTURE_50
+    je .op_future_50
+    cmp al, OP_FUTURE_52
+    je .op_future_52
+    cmp al, OP_FUTURE_53
+    je .op_future_53
+    cmp al, OP_FUTURE_54
+    je .op_future_54
+    cmp al, OP_FUTURE_55
+    je .op_future_55
+    cmp al, OP_FUTURE_56
+    je .op_future_56
+    cmp al, OP_FUTURE_57
+    je .op_future_57
+    cmp al, OP_FUTURE_58
+    je .op_future_58
+    cmp al, OP_FUTURE_59
+    je .op_future_59
+    cmp al, OP_FUTURE_5A
+    je .op_future_5A
+    cmp al, OP_FUTURE_5B
+    je .op_future_5B
+    cmp al, OP_FUTURE_5C
+    je .op_future_5C
+    cmp al, OP_FUTURE_5D
+    je .op_future_5D
+    cmp al, OP_FUTURE_5F
+    je .op_future_5F
+    cmp al, OP_FUTURE_61
+    je .op_future_61
+    cmp al, OP_FUTURE_62
+    je .op_future_62
+    cmp al, OP_FUTURE_63
+    je .op_future_63
+    cmp al, OP_FUTURE_65
+    je .op_future_65
+    cmp al, OP_FUTURE_66
+    je .op_future_66
+    cmp al, OP_FUTURE_67
+    je .op_future_67
+    cmp al, OP_FUTURE_69
+    je .op_future_69
+    cmp al, OP_FUTURE_6A
+    je .op_future_6A
+    cmp al, OP_FUTURE_6B
+    je .op_future_6B
+    cmp al, OP_FUTURE_6C
+    je .op_future_6C
+    cmp al, OP_FUTURE_6D
+    je .op_future_6D
+    cmp al, OP_FUTURE_6E
+    je .op_future_6E
+    cmp al, OP_FUTURE_6F
+    je .op_future_6F
+    cmp al, OP_FUTURE_70
+    je .op_future_70
+    cmp al, OP_FUTURE_72
+    je .op_future_72
+    cmp al, OP_FUTURE_73
+    je .op_future_73
+    cmp al, OP_FUTURE_74
+    je .op_future_74
+    cmp al, OP_FUTURE_75
+    je .op_future_75
+    cmp al, OP_FUTURE_76
+    je .op_future_76
+    cmp al, OP_FUTURE_77
+    je .op_future_77
+    cmp al, OP_FUTURE_7A
+    je .op_future_7A
+    cmp al, OP_FUTURE_7B
+    je .op_future_7B
+    cmp al, OP_FUTURE_7C
+    je .op_future_7C
+    cmp al, OP_FUTURE_7D
+    je .op_future_7D
+    cmp al, OP_FUTURE_7E
+    je .op_future_7E
+    cmp al, OP_FUTURE_7F
+    je .op_future_7F
+    cmp al, OP_FUTURE_81
+    je .op_future_81
+    cmp al, OP_FUTURE_82
+    je .op_future_82
+    cmp al, OP_FUTURE_83
+    je .op_future_83
+    cmp al, OP_FUTURE_84
+    je .op_future_84
+    cmp al, OP_FUTURE_85
+    je .op_future_85
+    cmp al, OP_FUTURE_86
+    je .op_future_86
+    cmp al, OP_FUTURE_87
+    je .op_future_87
+    cmp al, OP_FUTURE_88
+    je .op_future_88
+    cmp al, OP_FUTURE_89
+    je .op_future_89
+    cmp al, OP_FUTURE_8B
+    je .op_future_8B
+    cmp al, OP_FUTURE_8C
+    je .op_future_8C
+    cmp al, OP_FUTURE_8D
+    je .op_future_8D
+    cmp al, OP_FUTURE_8F
+    je .op_future_8F
+    cmp al, OP_FUTURE_90
+    je .op_future_90
+    cmp al, OP_FUTURE_91
+    je .op_future_91
+    cmp al, OP_FUTURE_92
+    je .op_future_92
+    cmp al, OP_FUTURE_93
+    je .op_future_93
+    cmp al, OP_FUTURE_94
+    je .op_future_94
+    cmp al, OP_FUTURE_95
+    je .op_future_95
+    cmp al, OP_FUTURE_96
+    je .op_future_96
+    cmp al, OP_FUTURE_97
+    je .op_future_97
+    cmp al, OP_FUTURE_98
+    je .op_future_98
+    cmp al, OP_FUTURE_99
+    je .op_future_99
+    cmp al, OP_FUTURE_9A
+    je .op_future_9A
+    cmp al, OP_FUTURE_9C
+    je .op_future_9C
+    cmp al, OP_FUTURE_9D
+    je .op_future_9D
+    cmp al, OP_FUTURE_9E
+    je .op_future_9E
+    cmp al, OP_FUTURE_9F
+    je .op_future_9F
+    cmp al, OP_FUTURE_A0
+    je .op_future_A0
+    cmp al, OP_FUTURE_A2
+    je .op_future_A2
+    cmp al, OP_FUTURE_A4
+    je .op_future_A4
+    cmp al, OP_FUTURE_A5
+    je .op_future_A5
+    cmp al, OP_FUTURE_A6
+    je .op_future_A6
+    cmp al, OP_FUTURE_A7
+    je .op_future_A7
+    cmp al, OP_FUTURE_A8
+    je .op_future_A8
+    cmp al, OP_FUTURE_AA
+    je .op_future_AA
+    cmp al, OP_FUTURE_AE
+    je .op_future_AE
+    cmp al, OP_FUTURE_AF
+    je .op_future_AF
+    cmp al, OP_FUTURE_B0
+    je .op_future_B0
+    cmp al, OP_FUTURE_B1
+    je .op_future_B1
+    cmp al, OP_FUTURE_B2
+    je .op_future_B2
+    cmp al, OP_FUTURE_B3
+    je .op_future_B3
+    cmp al, OP_FUTURE_B4
+    je .op_future_B4
+    cmp al, OP_FUTURE_B5
+    je .op_future_B5
+    cmp al, OP_FUTURE_B6
+    je .op_future_B6
+    cmp al, OP_FUTURE_B7
+    je .op_future_B7
+    cmp al, OP_FUTURE_B9
+    je .op_future_B9
+    cmp al, OP_FUTURE_BA
+    je .op_future_BA
+    cmp al, OP_FUTURE_BB
+    je .op_future_BB
+    cmp al, OP_FUTURE_BC
+    je .op_future_BC
+    cmp al, OP_FUTURE_BF
+    je .op_future_BF
+    cmp al, OP_FUTURE_C0
+    je .op_future_C0
+    cmp al, OP_FUTURE_C1
+    je .op_future_C1
+    cmp al, OP_FUTURE_C2
+    je .op_future_C2
+    cmp al, OP_FUTURE_C3
+    je .op_future_C3
+    cmp al, OP_FUTURE_C4
+    je .op_future_C4
+    cmp al, OP_FUTURE_C5
+    je .op_future_C5
+    cmp al, OP_FUTURE_C6
+    je .op_future_C6
+    cmp al, OP_FUTURE_C7
+    je .op_future_C7
+    cmp al, OP_FUTURE_C8
+    je .op_future_C8
+    cmp al, OP_FUTURE_CA
+    je .op_future_CA
+    cmp al, OP_FUTURE_CB
+    je .op_future_CB
+    cmp al, OP_FUTURE_CC
+    je .op_future_CC
+    cmp al, OP_FUTURE_CD
+    je .op_future_CD
+    cmp al, OP_FUTURE_CE
+    je .op_future_CE
+    cmp al, OP_FUTURE_CF
+    je .op_future_CF
+    cmp al, OP_FUTURE_D0
+    je .op_future_D0
+    cmp al, OP_FUTURE_D2
+    je .op_future_D2
+    cmp al, OP_FUTURE_D3
+    je .op_future_D3
+    cmp al, OP_FUTURE_D4
+    je .op_future_D4
+    cmp al, OP_FUTURE_D5
+    je .op_future_D5
+    cmp al, OP_FUTURE_D6
+    je .op_future_D6
+    cmp al, OP_FUTURE_D7
+    je .op_future_D7
+    cmp al, OP_FUTURE_D8
+    je .op_future_D8
+    cmp al, OP_FUTURE_D9
+    je .op_future_D9
+    cmp al, OP_FUTURE_DA
+    je .op_future_DA
+    cmp al, OP_FUTURE_DB
+    je .op_future_DB
+    cmp al, OP_FUTURE_DC
+    je .op_future_DC
+    cmp al, OP_FUTURE_DD
+    je .op_future_DD
+    cmp al, OP_FUTURE_DE
+    je .op_future_DE
+    cmp al, OP_FUTURE_DF
+    je .op_future_DF
+    cmp al, OP_FUTURE_E0
+    je .op_future_E0
+    cmp al, OP_FUTURE_E2
+    je .op_future_E2
+    cmp al, OP_FUTURE_E3
+    je .op_future_E3
+    cmp al, OP_FUTURE_E4
+    je .op_future_E4
+    cmp al, OP_FUTURE_E5
+    je .op_future_E5
+    cmp al, OP_FUTURE_E6
+    je .op_future_E6
+    cmp al, OP_FUTURE_E7
+    je .op_future_E7
+    cmp al, OP_FUTURE_E8
+    je .op_future_E8
+    cmp al, OP_FUTURE_E9
+    je .op_future_E9
+    cmp al, OP_FUTURE_EA
+    je .op_future_EA
+    cmp al, OP_FUTURE_EB
+    je .op_future_EB
+    cmp al, OP_FUTURE_EC
+    je .op_future_EC
+    cmp al, OP_FUTURE_ED
+    je .op_future_ED
+    cmp al, OP_FUTURE_EE
+    je .op_future_EE
+    cmp al, OP_FUTURE_EF
+    je .op_future_EF
+    cmp al, OP_FUTURE_F0
+    je .op_future_F0
+    cmp al, OP_FUTURE_F1
+    je .op_future_F1
+
     ; Unknown opcode
     lea rsi, [msg_error]
     call print_string
@@ -4493,6 +5236,2308 @@ execute_instruction:
     xor rdi, rdi                    ; Exit code 0
     mov rax, 60
     syscall
+
+; === AUTO-GENERATED FUTURE OPCODE IMPLEMENTATIONS (184 opcodes) ===
+; === AUTO-GENERATED OPCODE IMPLEMENTATIONS ===
+; Category-based logic for 184 unknown opcodes
+
+.op_future_00:
+    ; OP_FUTURE_00 (HALT_SINGULARITY) - Category: CONTROL_FLOW
+    lea rsi, [msg_future_00]
+    call print_string
+    ; Conditional skip based on measurement
+    mov rax, [measured_values + r14*8]
+    test rax, rax
+    jnz .skip_00
+    jmp .exec_ret
+.skip_00:
+    mov rax, 2  ; Signal skip
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_02:
+    ; OP_FUTURE_02 (OP_FUTURE_02) - Category: VERIFICATION
+    lea rsi, [msg_future_02]
+    call print_string
+    ; State verification
+    mov rax, [state_vectors + r14*8]
+    test rax, rax
+    jz .vfail_02
+    mov rax, 1
+    jmp .exec_ret
+.vfail_02:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_03:
+    ; OP_FUTURE_03 (OP_FUTURE_03) - Category: CONTROL_FLOW
+    lea rsi, [msg_future_03]
+    call print_string
+    ; Conditional skip based on measurement
+    mov rax, [measured_values + r14*8]
+    test rax, rax
+    jnz .skip_03
+    jmp .exec_ret
+.skip_03:
+    mov rax, 2  ; Signal skip
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_05:
+    ; OP_FUTURE_05 (OP_FUTURE_05) - Category: GENERAL
+    lea rsi, [msg_future_05]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_06:
+    ; OP_FUTURE_06 (OP_FUTURE_06) - Category: VOID_OPS
+    lea rsi, [msg_future_06]
+    call print_string
+    ; Void injection
+    mov rax, [measured_values + 0xFFFF*8]
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_07:
+    ; OP_FUTURE_07 (OP_FUTURE_07) - Category: GENERAL
+    lea rsi, [msg_future_07]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_08:
+    ; OP_FUTURE_08 (DIVINE_TRUTH) - Category: TEMPORAL
+    lea rsi, [msg_future_08]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_08
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_08:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_0C:
+    ; OP_FUTURE_0C (OP_FUTURE_0C) - Category: VERIFICATION
+    lea rsi, [msg_future_0C]
+    call print_string
+    ; State verification
+    mov rax, [state_vectors + r14*8]
+    test rax, rax
+    jz .vfail_0C
+    mov rax, 1
+    jmp .exec_ret
+.vfail_0C:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_0D:
+    ; OP_FUTURE_0D (OP_FUTURE_0D) - Category: CONTROL_FLOW
+    lea rsi, [msg_future_0D]
+    call print_string
+    ; Conditional skip based on measurement
+    mov rax, [measured_values + r14*8]
+    test rax, rax
+    jnz .skip_0D
+    jmp .exec_ret
+.skip_0D:
+    mov rax, 2  ; Signal skip
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_0F:
+    ; OP_FUTURE_0F (COLLAPSE_TRUTH) - Category: CONTROL_FLOW
+    lea rsi, [msg_future_0F]
+    call print_string
+    ; Conditional skip based on measurement
+    mov rax, [measured_values + r14*8]
+    test rax, rax
+    jnz .skip_0F
+    jmp .exec_ret
+.skip_0F:
+    mov rax, 2  ; Signal skip
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_11:
+    ; OP_FUTURE_11 (OP_FUTURE_11) - Category: ASCENSION
+    lea rsi, [msg_future_11]
+    call print_string
+    ; Pre-ascension braid
+    mov rdi, r14
+    mov rsi, rbx
+    call braid_chunks_minimal
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_12:
+    ; OP_FUTURE_12 (OP_FUTURE_12) - Category: ASCENSION
+    lea rsi, [msg_future_12]
+    call print_string
+    ; Pre-ascension braid
+    mov rdi, r14
+    mov rsi, rbx
+    call braid_chunks_minimal
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_16:
+    ; OP_FUTURE_16 (OP_FUTURE_16) - Category: CONTROL_FLOW
+    lea rsi, [msg_future_16]
+    call print_string
+    ; Conditional skip based on measurement
+    mov rax, [measured_values + r14*8]
+    test rax, rax
+    jnz .skip_16
+    jmp .exec_ret
+.skip_16:
+    mov rax, 2  ; Signal skip
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_17:
+    ; OP_FUTURE_17 (OP_FUTURE_17) - Category: TEMPORAL
+    lea rsi, [msg_future_17]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_17
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_17:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_18:
+    ; OP_FUTURE_18 (OP_FUTURE_18) - Category: VERIFICATION
+    lea rsi, [msg_future_18]
+    call print_string
+    ; State verification
+    mov rax, [state_vectors + r14*8]
+    test rax, rax
+    jz .vfail_18
+    mov rax, 1
+    jmp .exec_ret
+.vfail_18:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_1A:
+    ; OP_FUTURE_1A (OP_FUTURE_1A) - Category: GENERAL
+    lea rsi, [msg_future_1A]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_1B:
+    ; OP_FUTURE_1B (OP_FUTURE_1B) - Category: TEMPORAL
+    lea rsi, [msg_future_1B]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_1B
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_1B:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_1C:
+    ; OP_FUTURE_1C (OP_FUTURE_1C) - Category: GENERAL
+    lea rsi, [msg_future_1C]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_1F:
+    ; OP_FUTURE_1F (OP_FUTURE_1F) - Category: TEMPORAL
+    lea rsi, [msg_future_1F]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_1F
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_1F:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_23:
+    ; OP_FUTURE_23 (OP_FUTURE_23) - Category: TEMPORAL
+    lea rsi, [msg_future_23]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_23
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_23:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_25:
+    ; OP_FUTURE_25 (OP_FUTURE_25) - Category: GENERAL
+    lea rsi, [msg_future_25]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_26:
+    ; OP_FUTURE_26 (OP_FUTURE_26) - Category: GENERAL
+    lea rsi, [msg_future_26]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_27:
+    ; OP_FUTURE_27 (OP_FUTURE_27) - Category: GENERAL
+    lea rsi, [msg_future_27]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_28:
+    ; OP_FUTURE_28 (ECHO_ORIGIN) - Category: RESONANCE
+    lea rsi, [msg_future_28]
+    call print_string
+    ; Resonance pulse
+    movsd xmm0, [pi]
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .rdone_28
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.rdone_28:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_2A:
+    ; OP_FUTURE_2A (OP_FUTURE_2A) - Category: GENERAL
+    lea rsi, [msg_future_2A]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_2B:
+    ; OP_FUTURE_2B (OP_FUTURE_2B) - Category: VOID_OPS
+    lea rsi, [msg_future_2B]
+    call print_string
+    ; Void injection
+    mov rax, [measured_values + 0xFFFF*8]
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_2D:
+    ; OP_FUTURE_2D (OP_FUTURE_2D) - Category: RESONANCE
+    lea rsi, [msg_future_2D]
+    call print_string
+    ; Resonance pulse
+    movsd xmm0, [pi]
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .rdone_2D
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.rdone_2D:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_2F:
+    ; OP_FUTURE_2F (OP_FUTURE_2F) - Category: VERIFICATION
+    lea rsi, [msg_future_2F]
+    call print_string
+    ; State verification
+    mov rax, [state_vectors + r14*8]
+    test rax, rax
+    jz .vfail_2F
+    mov rax, 1
+    jmp .exec_ret
+.vfail_2F:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_34:
+    ; OP_FUTURE_34 (OP_FUTURE_34) - Category: ASCENSION
+    lea rsi, [msg_future_34]
+    call print_string
+    ; Pre-ascension braid
+    mov rdi, r14
+    mov rsi, rbx
+    call braid_chunks_minimal
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_35:
+    ; OP_FUTURE_35 (OP_FUTURE_35) - Category: ASCENSION
+    lea rsi, [msg_future_35]
+    call print_string
+    ; Pre-ascension braid
+    mov rdi, r14
+    mov rsi, rbx
+    call braid_chunks_minimal
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_36:
+    ; OP_FUTURE_36 (OP_FUTURE_36) - Category: TEMPORAL
+    lea rsi, [msg_future_36]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_36
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_36:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_38:
+    ; OP_FUTURE_38 (OP_FUTURE_38) - Category: GENERAL
+    lea rsi, [msg_future_38]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_3A:
+    ; OP_FUTURE_3A (OP_FUTURE_3A) - Category: VOID_OPS
+    lea rsi, [msg_future_3A]
+    call print_string
+    ; Void injection
+    mov rax, [measured_values + 0xFFFF*8]
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_3C:
+    ; OP_FUTURE_3C (SHIFT_REALITY) - Category: CONTROL_FLOW
+    lea rsi, [msg_future_3C]
+    call print_string
+    ; Conditional skip based on measurement
+    mov rax, [measured_values + r14*8]
+    test rax, rax
+    jnz .skip_3C
+    jmp .exec_ret
+.skip_3C:
+    mov rax, 2  ; Signal skip
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_3E:
+    ; OP_FUTURE_3E (OP_FUTURE_3E) - Category: ASCENSION
+    lea rsi, [msg_future_3E]
+    call print_string
+    ; Pre-ascension braid
+    mov rdi, r14
+    mov rsi, rbx
+    call braid_chunks_minimal
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_3F:
+    ; OP_FUTURE_3F (OP_FUTURE_3F) - Category: GENERAL
+    lea rsi, [msg_future_3F]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_40:
+    ; OP_FUTURE_40 (OP_FUTURE_40) - Category: RESONANCE
+    lea rsi, [msg_future_40]
+    call print_string
+    ; Resonance pulse
+    movsd xmm0, [pi]
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .rdone_40
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.rdone_40:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_42:
+    ; OP_FUTURE_42 (REPAIR_CAUSALITY) - Category: TEMPORAL
+    lea rsi, [msg_future_42]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_42
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_42:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_44:
+    ; OP_FUTURE_44 (OP_FUTURE_44) - Category: TEMPORAL
+    lea rsi, [msg_future_44]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_44
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_44:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_45:
+    ; OP_FUTURE_45 (OP_FUTURE_45) - Category: TEMPORAL
+    lea rsi, [msg_future_45]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_45
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_45:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_48:
+    ; OP_FUTURE_48 (PULSE_CHRONOS) - Category: TEMPORAL
+    lea rsi, [msg_future_48]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_48
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_48:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_4A:
+    ; OP_FUTURE_4A (OP_FUTURE_4A) - Category: TEMPORAL
+    lea rsi, [msg_future_4A]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_4A
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_4A:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_4B:
+    ; OP_FUTURE_4B (OP_FUTURE_4B) - Category: VERIFICATION
+    lea rsi, [msg_future_4B]
+    call print_string
+    ; State verification
+    mov rax, [state_vectors + r14*8]
+    test rax, rax
+    jz .vfail_4B
+    mov rax, 1
+    jmp .exec_ret
+.vfail_4B:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_4C:
+    ; OP_FUTURE_4C (MAP_VORTEX) - Category: GENERAL
+    lea rsi, [msg_future_4C]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_4E:
+    ; OP_FUTURE_4E (OP_FUTURE_4E) - Category: TEMPORAL
+    lea rsi, [msg_future_4E]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_4E
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_4E:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_4F:
+    ; OP_FUTURE_4F (OP_FUTURE_4F) - Category: VERIFICATION
+    lea rsi, [msg_future_4F]
+    call print_string
+    ; State verification
+    mov rax, [state_vectors + r14*8]
+    test rax, rax
+    jz .vfail_4F
+    mov rax, 1
+    jmp .exec_ret
+.vfail_4F:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_50:
+    ; OP_FUTURE_50 (ASCEND_QUBIT) - Category: GENERAL
+    lea rsi, [msg_future_50]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_52:
+    ; OP_FUTURE_52 (OP_FUTURE_52) - Category: GENERAL
+    lea rsi, [msg_future_52]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_53:
+    ; OP_FUTURE_53 (OP_FUTURE_53) - Category: TEMPORAL
+    lea rsi, [msg_future_53]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_53
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_53:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_54:
+    ; OP_FUTURE_54 (OP_FUTURE_54) - Category: VERIFICATION
+    lea rsi, [msg_future_54]
+    call print_string
+    ; State verification
+    mov rax, [state_vectors + r14*8]
+    test rax, rax
+    jz .vfail_54
+    mov rax, 1
+    jmp .exec_ret
+.vfail_54:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_55:
+    ; OP_FUTURE_55 (OP_FUTURE_55) - Category: TEMPORAL
+    lea rsi, [msg_future_55]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_55
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_55:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_56:
+    ; OP_FUTURE_56 (OP_FUTURE_56) - Category: GENERAL
+    lea rsi, [msg_future_56]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_57:
+    ; OP_FUTURE_57 (OP_FUTURE_57) - Category: GENERAL
+    lea rsi, [msg_future_57]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_58:
+    ; OP_FUTURE_58 (OP_FUTURE_58) - Category: GENERAL
+    lea rsi, [msg_future_58]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_59:
+    ; OP_FUTURE_59 (OP_FUTURE_59) - Category: VERIFICATION
+    lea rsi, [msg_future_59]
+    call print_string
+    ; State verification
+    mov rax, [state_vectors + r14*8]
+    test rax, rax
+    jz .vfail_59
+    mov rax, 1
+    jmp .exec_ret
+.vfail_59:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_5A:
+    ; OP_FUTURE_5A (OP_FUTURE_5A) - Category: GENERAL
+    lea rsi, [msg_future_5A]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_5B:
+    ; OP_FUTURE_5B (OP_FUTURE_5B) - Category: GENERAL
+    lea rsi, [msg_future_5B]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_5C:
+    ; OP_FUTURE_5C (OP_FUTURE_5C) - Category: GENERAL
+    lea rsi, [msg_future_5C]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_5D:
+    ; OP_FUTURE_5D (OP_FUTURE_5D) - Category: TEMPORAL
+    lea rsi, [msg_future_5D]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_5D
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_5D:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_5F:
+    ; OP_FUTURE_5F (OP_FUTURE_5F) - Category: GENERAL
+    lea rsi, [msg_future_5F]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_61:
+    ; OP_FUTURE_61 (OP_FUTURE_61) - Category: GENERAL
+    lea rsi, [msg_future_61]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_62:
+    ; OP_FUTURE_62 (OP_FUTURE_62) - Category: ASCENSION
+    lea rsi, [msg_future_62]
+    call print_string
+    ; Pre-ascension braid
+    mov rdi, r14
+    mov rsi, rbx
+    call braid_chunks_minimal
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_63:
+    ; OP_FUTURE_63 (OP_FUTURE_63) - Category: VERIFICATION
+    lea rsi, [msg_future_63]
+    call print_string
+    ; State verification
+    mov rax, [state_vectors + r14*8]
+    test rax, rax
+    jz .vfail_63
+    mov rax, 1
+    jmp .exec_ret
+.vfail_63:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_65:
+    ; OP_FUTURE_65 (OP_FUTURE_65) - Category: GENERAL
+    lea rsi, [msg_future_65]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_66:
+    ; OP_FUTURE_66 (OP_FUTURE_66) - Category: RESONANCE
+    lea rsi, [msg_future_66]
+    call print_string
+    ; Resonance pulse
+    movsd xmm0, [pi]
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .rdone_66
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.rdone_66:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_67:
+    ; OP_FUTURE_67 (OP_FUTURE_67) - Category: GENERAL
+    lea rsi, [msg_future_67]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_69:
+    ; OP_FUTURE_69 (OP_FUTURE_69) - Category: TEMPORAL
+    lea rsi, [msg_future_69]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_69
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_69:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_6A:
+    ; OP_FUTURE_6A (OP_FUTURE_6A) - Category: GENERAL
+    lea rsi, [msg_future_6A]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_6B:
+    ; OP_FUTURE_6B (OP_FUTURE_6B) - Category: CONTROL_FLOW
+    lea rsi, [msg_future_6B]
+    call print_string
+    ; Conditional skip based on measurement
+    mov rax, [measured_values + r14*8]
+    test rax, rax
+    jnz .skip_6B
+    jmp .exec_ret
+.skip_6B:
+    mov rax, 2  ; Signal skip
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_6C:
+    ; OP_FUTURE_6C (OP_FUTURE_6C) - Category: VERIFICATION
+    lea rsi, [msg_future_6C]
+    call print_string
+    ; State verification
+    mov rax, [state_vectors + r14*8]
+    test rax, rax
+    jz .vfail_6C
+    mov rax, 1
+    jmp .exec_ret
+.vfail_6C:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_6D:
+    ; OP_FUTURE_6D (OP_FUTURE_6D) - Category: GENERAL
+    lea rsi, [msg_future_6D]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_6E:
+    ; OP_FUTURE_6E (OP_FUTURE_6E) - Category: RESONANCE
+    lea rsi, [msg_future_6E]
+    call print_string
+    ; Resonance pulse
+    movsd xmm0, [pi]
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .rdone_6E
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.rdone_6E:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_6F:
+    ; OP_FUTURE_6F (OP_FUTURE_6F) - Category: VOID_OPS
+    lea rsi, [msg_future_6F]
+    call print_string
+    ; Void injection
+    mov rax, [measured_values + 0xFFFF*8]
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_70:
+    ; OP_FUTURE_70 (OP_FUTURE_70) - Category: GENERAL
+    lea rsi, [msg_future_70]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_72:
+    ; OP_FUTURE_72 (OP_FUTURE_72) - Category: RESONANCE
+    lea rsi, [msg_future_72]
+    call print_string
+    ; Resonance pulse
+    movsd xmm0, [pi]
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .rdone_72
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.rdone_72:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_73:
+    ; OP_FUTURE_73 (OP_FUTURE_73) - Category: VOID_OPS
+    lea rsi, [msg_future_73]
+    call print_string
+    ; Void injection
+    mov rax, [measured_values + 0xFFFF*8]
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_74:
+    ; OP_FUTURE_74 (OP_FUTURE_74) - Category: ASCENSION
+    lea rsi, [msg_future_74]
+    call print_string
+    ; Pre-ascension braid
+    mov rdi, r14
+    mov rsi, rbx
+    call braid_chunks_minimal
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_75:
+    ; OP_FUTURE_75 (OP_FUTURE_75) - Category: RESONANCE
+    lea rsi, [msg_future_75]
+    call print_string
+    ; Resonance pulse
+    movsd xmm0, [pi]
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .rdone_75
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.rdone_75:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_76:
+    ; OP_FUTURE_76 (OP_FUTURE_76) - Category: TEMPORAL
+    lea rsi, [msg_future_76]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_76
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_76:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_77:
+    ; OP_FUTURE_77 (OP_FUTURE_77) - Category: GENERAL
+    lea rsi, [msg_future_77]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_7A:
+    ; OP_FUTURE_7A (OP_FUTURE_7A) - Category: GENERAL
+    lea rsi, [msg_future_7A]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_7B:
+    ; OP_FUTURE_7B (OP_FUTURE_7B) - Category: VERIFICATION
+    lea rsi, [msg_future_7B]
+    call print_string
+    ; State verification
+    mov rax, [state_vectors + r14*8]
+    test rax, rax
+    jz .vfail_7B
+    mov rax, 1
+    jmp .exec_ret
+.vfail_7B:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_7C:
+    ; OP_FUTURE_7C (OP_FUTURE_7C) - Category: TEMPORAL
+    lea rsi, [msg_future_7C]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_7C
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_7C:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_7D:
+    ; OP_FUTURE_7D (OP_FUTURE_7D) - Category: ASCENSION
+    lea rsi, [msg_future_7D]
+    call print_string
+    ; Pre-ascension braid
+    mov rdi, r14
+    mov rsi, rbx
+    call braid_chunks_minimal
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_7E:
+    ; OP_FUTURE_7E (OP_FUTURE_7E) - Category: GENERAL
+    lea rsi, [msg_future_7E]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_7F:
+    ; OP_FUTURE_7F (OP_FUTURE_7F) - Category: GENERAL
+    lea rsi, [msg_future_7F]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_81:
+    ; OP_FUTURE_81 (OP_FUTURE_81) - Category: ASCENSION
+    lea rsi, [msg_future_81]
+    call print_string
+    ; Pre-ascension braid
+    mov rdi, r14
+    mov rsi, rbx
+    call braid_chunks_minimal
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_82:
+    ; OP_FUTURE_82 (OP_FUTURE_82) - Category: TEMPORAL
+    lea rsi, [msg_future_82]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_82
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_82:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_83:
+    ; OP_FUTURE_83 (OP_FUTURE_83) - Category: TEMPORAL
+    lea rsi, [msg_future_83]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_83
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_83:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_84:
+    ; OP_FUTURE_84 (OP_FUTURE_84) - Category: GENERAL
+    lea rsi, [msg_future_84]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_85:
+    ; OP_FUTURE_85 (OP_FUTURE_85) - Category: TEMPORAL
+    lea rsi, [msg_future_85]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_85
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_85:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_86:
+    ; OP_FUTURE_86 (OP_FUTURE_86) - Category: TEMPORAL
+    lea rsi, [msg_future_86]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_86
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_86:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_87:
+    ; OP_FUTURE_87 (OP_FUTURE_87) - Category: GENERAL
+    lea rsi, [msg_future_87]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_88:
+    ; OP_FUTURE_88 (OP_FUTURE_88) - Category: GENERAL
+    lea rsi, [msg_future_88]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_89:
+    ; OP_FUTURE_89 (OP_FUTURE_89) - Category: GENERAL
+    lea rsi, [msg_future_89]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_8B:
+    ; OP_FUTURE_8B (OP_FUTURE_8B) - Category: GENERAL
+    lea rsi, [msg_future_8B]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_8C:
+    ; OP_FUTURE_8C (OP_FUTURE_8C) - Category: VOID_OPS
+    lea rsi, [msg_future_8C]
+    call print_string
+    ; Void injection
+    mov rax, [measured_values + 0xFFFF*8]
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_8D:
+    ; OP_FUTURE_8D (OP_FUTURE_8D) - Category: ASCENSION
+    lea rsi, [msg_future_8D]
+    call print_string
+    ; Pre-ascension braid
+    mov rdi, r14
+    mov rsi, rbx
+    call braid_chunks_minimal
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_8F:
+    ; OP_FUTURE_8F (OP_FUTURE_8F) - Category: VERIFICATION
+    lea rsi, [msg_future_8F]
+    call print_string
+    ; State verification
+    mov rax, [state_vectors + r14*8]
+    test rax, rax
+    jz .vfail_8F
+    mov rax, 1
+    jmp .exec_ret
+.vfail_8F:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_90:
+    ; OP_FUTURE_90 (OP_FUTURE_90) - Category: TEMPORAL
+    lea rsi, [msg_future_90]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_90
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_90:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_91:
+    ; OP_FUTURE_91 (OP_FUTURE_91) - Category: TEMPORAL
+    lea rsi, [msg_future_91]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_91
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_91:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_92:
+    ; OP_FUTURE_92 (OP_FUTURE_92) - Category: GENERAL
+    lea rsi, [msg_future_92]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_93:
+    ; OP_FUTURE_93 (OP_FUTURE_93) - Category: CONTROL_FLOW
+    lea rsi, [msg_future_93]
+    call print_string
+    ; Conditional skip based on measurement
+    mov rax, [measured_values + r14*8]
+    test rax, rax
+    jnz .skip_93
+    jmp .exec_ret
+.skip_93:
+    mov rax, 2  ; Signal skip
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_94:
+    ; OP_FUTURE_94 (OP_FUTURE_94) - Category: ASCENSION
+    lea rsi, [msg_future_94]
+    call print_string
+    ; Pre-ascension braid
+    mov rdi, r14
+    mov rsi, rbx
+    call braid_chunks_minimal
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_95:
+    ; OP_FUTURE_95 (OP_FUTURE_95) - Category: ASCENSION
+    lea rsi, [msg_future_95]
+    call print_string
+    ; Pre-ascension braid
+    mov rdi, r14
+    mov rsi, rbx
+    call braid_chunks_minimal
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_96:
+    ; OP_FUTURE_96 (OP_FUTURE_96) - Category: TEMPORAL
+    lea rsi, [msg_future_96]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_96
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_96:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_97:
+    ; OP_FUTURE_97 (OP_FUTURE_97) - Category: GENERAL
+    lea rsi, [msg_future_97]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_98:
+    ; OP_FUTURE_98 (OP_FUTURE_98) - Category: ASCENSION
+    lea rsi, [msg_future_98]
+    call print_string
+    ; Pre-ascension braid
+    mov rdi, r14
+    mov rsi, rbx
+    call braid_chunks_minimal
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_99:
+    ; OP_FUTURE_99 (OP_FUTURE_99) - Category: VERIFICATION
+    lea rsi, [msg_future_99]
+    call print_string
+    ; State verification
+    mov rax, [state_vectors + r14*8]
+    test rax, rax
+    jz .vfail_99
+    mov rax, 1
+    jmp .exec_ret
+.vfail_99:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_9A:
+    ; OP_FUTURE_9A (OP_FUTURE_9A) - Category: TEMPORAL
+    lea rsi, [msg_future_9A]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_9A
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_9A:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_9C:
+    ; OP_FUTURE_9C (OP_FUTURE_9C) - Category: VERIFICATION
+    lea rsi, [msg_future_9C]
+    call print_string
+    ; State verification
+    mov rax, [state_vectors + r14*8]
+    test rax, rax
+    jz .vfail_9C
+    mov rax, 1
+    jmp .exec_ret
+.vfail_9C:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_9D:
+    ; OP_FUTURE_9D (OP_FUTURE_9D) - Category: GENERAL
+    lea rsi, [msg_future_9D]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_9E:
+    ; OP_FUTURE_9E (OP_FUTURE_9E) - Category: TEMPORAL
+    lea rsi, [msg_future_9E]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_9E
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_9E:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_9F:
+    ; OP_FUTURE_9F (OP_FUTURE_9F) - Category: TEMPORAL
+    lea rsi, [msg_future_9F]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_9F
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_9F:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_A0:
+    ; OP_FUTURE_A0 (OP_FUTURE_A0) - Category: GENERAL
+    lea rsi, [msg_future_A0]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_A2:
+    ; OP_FUTURE_A2 (OP_FUTURE_A2) - Category: GENERAL
+    lea rsi, [msg_future_A2]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_A4:
+    ; OP_FUTURE_A4 (OP_FUTURE_A4) - Category: GENERAL
+    lea rsi, [msg_future_A4]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_A5:
+    ; OP_FUTURE_A5 (OP_FUTURE_A5) - Category: GENERAL
+    lea rsi, [msg_future_A5]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_A6:
+    ; OP_FUTURE_A6 (OP_FUTURE_A6) - Category: TEMPORAL
+    lea rsi, [msg_future_A6]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_A6
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_A6:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_A7:
+    ; OP_FUTURE_A7 (OP_FUTURE_A7) - Category: ASCENSION
+    lea rsi, [msg_future_A7]
+    call print_string
+    ; Pre-ascension braid
+    mov rdi, r14
+    mov rsi, rbx
+    call braid_chunks_minimal
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_A8:
+    ; OP_FUTURE_A8 (OP_FUTURE_A8) - Category: GENERAL
+    lea rsi, [msg_future_A8]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_AA:
+    ; OP_FUTURE_AA (OP_FUTURE_AA) - Category: GENERAL
+    lea rsi, [msg_future_AA]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_AE:
+    ; OP_FUTURE_AE (OP_FUTURE_AE) - Category: TEMPORAL
+    lea rsi, [msg_future_AE]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_AE
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_AE:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_AF:
+    ; OP_FUTURE_AF (OP_FUTURE_AF) - Category: GENERAL
+    lea rsi, [msg_future_AF]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_B0:
+    ; OP_FUTURE_B0 (OP_FUTURE_B0) - Category: TEMPORAL
+    lea rsi, [msg_future_B0]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_B0
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_B0:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_B1:
+    ; OP_FUTURE_B1 (OP_FUTURE_B1) - Category: CONTROL_FLOW
+    lea rsi, [msg_future_B1]
+    call print_string
+    ; Conditional skip based on measurement
+    mov rax, [measured_values + r14*8]
+    test rax, rax
+    jnz .skip_B1
+    jmp .exec_ret
+.skip_B1:
+    mov rax, 2  ; Signal skip
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_B2:
+    ; OP_FUTURE_B2 (OP_FUTURE_B2) - Category: GENERAL
+    lea rsi, [msg_future_B2]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_B3:
+    ; OP_FUTURE_B3 (OP_FUTURE_B3) - Category: GENERAL
+    lea rsi, [msg_future_B3]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_B4:
+    ; OP_FUTURE_B4 (OP_FUTURE_B4) - Category: TEMPORAL
+    lea rsi, [msg_future_B4]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_B4
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_B4:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_B5:
+    ; OP_FUTURE_B5 (OP_FUTURE_B5) - Category: GENERAL
+    lea rsi, [msg_future_B5]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_B6:
+    ; OP_FUTURE_B6 (OP_FUTURE_B6) - Category: GENERAL
+    lea rsi, [msg_future_B6]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_B7:
+    ; OP_FUTURE_B7 (OP_FUTURE_B7) - Category: CONTROL_FLOW
+    lea rsi, [msg_future_B7]
+    call print_string
+    ; Conditional skip based on measurement
+    mov rax, [measured_values + r14*8]
+    test rax, rax
+    jnz .skip_B7
+    jmp .exec_ret
+.skip_B7:
+    mov rax, 2  ; Signal skip
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_B9:
+    ; OP_FUTURE_B9 (OP_FUTURE_B9) - Category: VOID_OPS
+    lea rsi, [msg_future_B9]
+    call print_string
+    ; Void injection
+    mov rax, [measured_values + 0xFFFF*8]
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_BA:
+    ; OP_FUTURE_BA (OP_FUTURE_BA) - Category: ASCENSION
+    lea rsi, [msg_future_BA]
+    call print_string
+    ; Pre-ascension braid
+    mov rdi, r14
+    mov rsi, rbx
+    call braid_chunks_minimal
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_BB:
+    ; OP_FUTURE_BB (OP_FUTURE_BB) - Category: GENERAL
+    lea rsi, [msg_future_BB]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_BC:
+    ; OP_FUTURE_BC (OP_FUTURE_BC) - Category: TEMPORAL
+    lea rsi, [msg_future_BC]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_BC
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_BC:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_BF:
+    ; OP_FUTURE_BF (OP_FUTURE_BF) - Category: ASCENSION
+    lea rsi, [msg_future_BF]
+    call print_string
+    ; Pre-ascension braid
+    mov rdi, r14
+    mov rsi, rbx
+    call braid_chunks_minimal
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_C0:
+    ; OP_FUTURE_C0 (OP_FUTURE_C0) - Category: GENERAL
+    lea rsi, [msg_future_C0]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_C1:
+    ; OP_FUTURE_C1 (OP_FUTURE_C1) - Category: TEMPORAL
+    lea rsi, [msg_future_C1]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_C1
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_C1:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_C2:
+    ; OP_FUTURE_C2 (OP_FUTURE_C2) - Category: GENERAL
+    lea rsi, [msg_future_C2]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_C3:
+    ; OP_FUTURE_C3 (OP_FUTURE_C3) - Category: GENERAL
+    lea rsi, [msg_future_C3]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_C4:
+    ; OP_FUTURE_C4 (OP_FUTURE_C4) - Category: ASCENSION
+    lea rsi, [msg_future_C4]
+    call print_string
+    ; Pre-ascension braid
+    mov rdi, r14
+    mov rsi, rbx
+    call braid_chunks_minimal
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_C5:
+    ; OP_FUTURE_C5 (OP_FUTURE_C5) - Category: VOID_OPS
+    lea rsi, [msg_future_C5]
+    call print_string
+    ; Void injection
+    mov rax, [measured_values + 0xFFFF*8]
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_C6:
+    ; OP_FUTURE_C6 (OP_FUTURE_C6) - Category: GENERAL
+    lea rsi, [msg_future_C6]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_C7:
+    ; OP_FUTURE_C7 (OP_FUTURE_C7) - Category: VERIFICATION
+    lea rsi, [msg_future_C7]
+    call print_string
+    ; State verification
+    mov rax, [state_vectors + r14*8]
+    test rax, rax
+    jz .vfail_C7
+    mov rax, 1
+    jmp .exec_ret
+.vfail_C7:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_C8:
+    ; OP_FUTURE_C8 (OP_FUTURE_C8) - Category: VOID_OPS
+    lea rsi, [msg_future_C8]
+    call print_string
+    ; Void injection
+    mov rax, [measured_values + 0xFFFF*8]
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_CA:
+    ; OP_FUTURE_CA (OP_FUTURE_CA) - Category: ASCENSION
+    lea rsi, [msg_future_CA]
+    call print_string
+    ; Pre-ascension braid
+    mov rdi, r14
+    mov rsi, rbx
+    call braid_chunks_minimal
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_CB:
+    ; OP_FUTURE_CB (OP_FUTURE_CB) - Category: ASCENSION
+    lea rsi, [msg_future_CB]
+    call print_string
+    ; Pre-ascension braid
+    mov rdi, r14
+    mov rsi, rbx
+    call braid_chunks_minimal
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_CC:
+    ; OP_FUTURE_CC (OP_FUTURE_CC) - Category: TEMPORAL
+    lea rsi, [msg_future_CC]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_CC
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_CC:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_CD:
+    ; OP_FUTURE_CD (OP_FUTURE_CD) - Category: RESONANCE
+    lea rsi, [msg_future_CD]
+    call print_string
+    ; Resonance pulse
+    movsd xmm0, [pi]
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .rdone_CD
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.rdone_CD:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_CE:
+    ; OP_FUTURE_CE (OP_FUTURE_CE) - Category: TEMPORAL
+    lea rsi, [msg_future_CE]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_CE
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_CE:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_CF:
+    ; OP_FUTURE_CF (OP_FUTURE_CF) - Category: TEMPORAL
+    lea rsi, [msg_future_CF]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_CF
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_CF:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_D0:
+    ; OP_FUTURE_D0 (OP_FUTURE_D0) - Category: GENERAL
+    lea rsi, [msg_future_D0]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_D2:
+    ; OP_FUTURE_D2 (OP_FUTURE_D2) - Category: TEMPORAL
+    lea rsi, [msg_future_D2]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_D2
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_D2:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_D3:
+    ; OP_FUTURE_D3 (OP_FUTURE_D3) - Category: VERIFICATION
+    lea rsi, [msg_future_D3]
+    call print_string
+    ; State verification
+    mov rax, [state_vectors + r14*8]
+    test rax, rax
+    jz .vfail_D3
+    mov rax, 1
+    jmp .exec_ret
+.vfail_D3:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_D4:
+    ; OP_FUTURE_D4 (OP_FUTURE_D4) - Category: GENERAL
+    lea rsi, [msg_future_D4]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_D5:
+    ; OP_FUTURE_D5 (OP_FUTURE_D5) - Category: CONTROL_FLOW
+    lea rsi, [msg_future_D5]
+    call print_string
+    ; Conditional skip based on measurement
+    mov rax, [measured_values + r14*8]
+    test rax, rax
+    jnz .skip_D5
+    jmp .exec_ret
+.skip_D5:
+    mov rax, 2  ; Signal skip
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_D6:
+    ; OP_FUTURE_D6 (OP_FUTURE_D6) - Category: GENERAL
+    lea rsi, [msg_future_D6]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_D7:
+    ; OP_FUTURE_D7 (OP_FUTURE_D7) - Category: TEMPORAL
+    lea rsi, [msg_future_D7]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_D7
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_D7:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_D8:
+    ; OP_FUTURE_D8 (OP_FUTURE_D8) - Category: GENERAL
+    lea rsi, [msg_future_D8]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_D9:
+    ; OP_FUTURE_D9 (OP_FUTURE_D9) - Category: TEMPORAL
+    lea rsi, [msg_future_D9]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_D9
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_D9:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_DA:
+    ; OP_FUTURE_DA (OP_FUTURE_DA) - Category: GENERAL
+    lea rsi, [msg_future_DA]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_DB:
+    ; OP_FUTURE_DB (OP_FUTURE_DB) - Category: TEMPORAL
+    lea rsi, [msg_future_DB]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_DB
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_DB:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_DC:
+    ; OP_FUTURE_DC (OP_FUTURE_DC) - Category: ASCENSION
+    lea rsi, [msg_future_DC]
+    call print_string
+    ; Pre-ascension braid
+    mov rdi, r14
+    mov rsi, rbx
+    call braid_chunks_minimal
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_DD:
+    ; OP_FUTURE_DD (OP_FUTURE_DD) - Category: GENERAL
+    lea rsi, [msg_future_DD]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_DE:
+    ; OP_FUTURE_DE (OP_FUTURE_DE) - Category: GENERAL
+    lea rsi, [msg_future_DE]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_DF:
+    ; OP_FUTURE_DF (OP_FUTURE_DF) - Category: GENERAL
+    lea rsi, [msg_future_DF]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_E0:
+    ; OP_FUTURE_E0 (OP_FUTURE_E0) - Category: ASCENSION
+    lea rsi, [msg_future_E0]
+    call print_string
+    ; Pre-ascension braid
+    mov rdi, r14
+    mov rsi, rbx
+    call braid_chunks_minimal
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_E2:
+    ; OP_FUTURE_E2 (OP_FUTURE_E2) - Category: ASCENSION
+    lea rsi, [msg_future_E2]
+    call print_string
+    ; Pre-ascension braid
+    mov rdi, r14
+    mov rsi, rbx
+    call braid_chunks_minimal
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_E3:
+    ; OP_FUTURE_E3 (OP_FUTURE_E3) - Category: ASCENSION
+    lea rsi, [msg_future_E3]
+    call print_string
+    ; Pre-ascension braid
+    mov rdi, r14
+    mov rsi, rbx
+    call braid_chunks_minimal
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_E4:
+    ; OP_FUTURE_E4 (OP_FUTURE_E4) - Category: RESONANCE
+    lea rsi, [msg_future_E4]
+    call print_string
+    ; Resonance pulse
+    movsd xmm0, [pi]
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .rdone_E4
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.rdone_E4:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_E5:
+    ; OP_FUTURE_E5 (OP_FUTURE_E5) - Category: VERIFICATION
+    lea rsi, [msg_future_E5]
+    call print_string
+    ; State verification
+    mov rax, [state_vectors + r14*8]
+    test rax, rax
+    jz .vfail_E5
+    mov rax, 1
+    jmp .exec_ret
+.vfail_E5:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_E6:
+    ; OP_FUTURE_E6 (OP_FUTURE_E6) - Category: GENERAL
+    lea rsi, [msg_future_E6]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_E7:
+    ; OP_FUTURE_E7 (OP_FUTURE_E7) - Category: VERIFICATION
+    lea rsi, [msg_future_E7]
+    call print_string
+    ; State verification
+    mov rax, [state_vectors + r14*8]
+    test rax, rax
+    jz .vfail_E7
+    mov rax, 1
+    jmp .exec_ret
+.vfail_E7:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_E8:
+    ; OP_FUTURE_E8 (OP_FUTURE_E8) - Category: ASCENSION
+    lea rsi, [msg_future_E8]
+    call print_string
+    ; Pre-ascension braid
+    mov rdi, r14
+    mov rsi, rbx
+    call braid_chunks_minimal
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_E9:
+    ; OP_FUTURE_E9 (OP_FUTURE_E9) - Category: TEMPORAL
+    lea rsi, [msg_future_E9]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_E9
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_E9:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_EA:
+    ; OP_FUTURE_EA (OP_FUTURE_EA) - Category: GENERAL
+    lea rsi, [msg_future_EA]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_EB:
+    ; OP_FUTURE_EB (OP_FUTURE_EB) - Category: GENERAL
+    lea rsi, [msg_future_EB]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_EC:
+    ; OP_FUTURE_EC (OP_FUTURE_EC) - Category: TEMPORAL
+    lea rsi, [msg_future_EC]
+    call print_string
+    ; Temporal phase modulation
+    rdtsc
+    xor rax, [prng_state]
+    and rax, 0xFF
+    cvtsi2sd xmm0, rax
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .done_EC
+    mov rsi, [chunk_states + r14*8]
+    call apply_phase_rotation_internal
+.done_EC:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_ED:
+    ; OP_FUTURE_ED (OP_FUTURE_ED) - Category: ASCENSION
+    lea rsi, [msg_future_ED]
+    call print_string
+    ; Pre-ascension braid
+    mov rdi, r14
+    mov rsi, rbx
+    call braid_chunks_minimal
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_EE:
+    ; OP_FUTURE_EE (OP_FUTURE_EE) - Category: GENERAL
+    lea rsi, [msg_future_EE]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_EF:
+    ; OP_FUTURE_EF (OP_FUTURE_EF) - Category: GENERAL
+    lea rsi, [msg_future_EF]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_F0:
+    ; OP_FUTURE_F0 (OP_FUTURE_F0) - Category: VERIFICATION
+    lea rsi, [msg_future_F0]
+    call print_string
+    ; State verification
+    mov rax, [state_vectors + r14*8]
+    test rax, rax
+    jz .vfail_F0
+    mov rax, 1
+    jmp .exec_ret
+.vfail_F0:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_future_F1:
+    ; OP_FUTURE_F1 (OP_FUTURE_F1) - Category: GENERAL
+    lea rsi, [msg_future_F1]
+    call print_string
+    ; General unknown operation
+    nop
+    xor rax, rax
+    jmp .exec_ret
+
 
 .op_halt:
     lea rsi, [msg_halt]
