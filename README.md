@@ -159,6 +159,17 @@ Verification shows that `VOID_ECHO (0xA1)` creates a resonance link with chunk *
 
 ---
 
+### 🔄 The Manifold Treadmill (Infinite Scaling)
+The engine supports scaling beyond the 16.7M limit through **Temporal Rotation**. By siphoning the state of the horizon back into the origin, the simulation can "leap" forward into new epochs.
+
+#### The Law of Temporal Alternation
+During the 5-cycle benchmark, we discovered the **Soul-Body Swap Paradox**:
+*   Because `VOID_TRANSMISSION` is a **swap**, the physical "Body" (chunk size/metadata) and the "Soul" (quantum state pointer) alternate between the Anchor and the Horizon.
+*   **Implication**: Every odd cycle siphons the "Future" into the "Past," while every even cycle siphons the "Past's Body" back into the "Future." 
+*   **Optimal Protocol**: To achieve a stable treadmill, a "Body Manifestation" instruction (`OP_INIT`) must be called on the *destination* before every siphon.
+
+---
+
 ## 🏗 Usage
 
 ### Running the Engine
