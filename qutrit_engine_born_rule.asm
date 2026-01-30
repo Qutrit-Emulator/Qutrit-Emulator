@@ -663,9 +663,6 @@ heisenberg_exchange_oracle:
 ; Input: rdi = state_vector, rsi = num_states
 ; Swaps |10⟩ ↔ |01⟩ and |21⟩ ↔ |12⟩ with rotation angle
 gell_mann_interaction:
-    ; Robust Gell-Mann (XY) Interaction
-    ; Swaps |01> <-> |10> and |12> <-> |21>
-    ; Input: rdi = state_vector, rsi = num_states
     push rbx
     push r12
     push r13
@@ -675,128 +672,158 @@ gell_mann_interaction:
     mov rbp, rsp
     sub rsp, 64
     
-    mov r12, rdi                ; state_vector
+    mov r12, rdi                ; state_vector pointer
     mov r13, rsi                ; num_states
     
-    ; Precompute rotation matrix elements
-    ; Theta = pi/12
-    movsd xmm0, [pi]
-    mov eax, 12
-    cvtsi2sd xmm1, eax
-    divsd xmm0, xmm1            ; xmm0 = theta
+    ; Interaction strength theta = J * dt = pi/8 for demo
+    movsd xmm15, [pi_over_3]
+    movsd xmm14, [half]
+    mulsd xmm15, xmm14
+    mulsd xmm15, xmm14          ; theta = pi/12
     
-    ; We'll use a fixed correlation angle for stability
-    ; cos(theta), sin(theta)
+    ; Calculate sqrt(2) for matrix element
+    sub rsp, 16
+    movsd xmm0, [two]
     movsd [rsp], xmm0
     fld qword [rsp]
-    fsincos                     ; st0=cos, st1=sin
-    fstp qword [rsp]            ; Store cos
-    fstp qword [rsp+8]          ; Store sin
-    movsd xmm14, [rsp]          ; xmm14 = cos
-    movsd xmm15, [rsp+8]        ; xmm15 = sin
+    fsqrt
+    fstp qword [rsp]
+    movsd xmm13, [rsp]          ; xmm13 = sqrt(2)
+    add rsp, 16
     
-    xor r14, r14                ; State Index
+    ; We need to process states in pairs:
+    ; States 1 and 3 (binary |01⟩ and |10⟩)
+    ; States 5 and 7 (binary |12⟩ and |21⟩)
+    
+    ; Process first 9 states (all 2-qutrit combinations)
+    xor r14, r14                ; state counter
 
 .gm_loop:
     cmp r14, r13
     jge .gm_done
     
-    ; Decode trits (Low=r8, High=r9)
+    ; Decode two qutrits
     mov rax, r14
     xor rdx, rdx
     mov rcx, 3
     div rcx
-    mov r8, rdx                 ; Low trit (n)
+    mov r8, rdx                 ; qutrit A
+    
     xor rdx, rdx
     div rcx
-    mov r9, rdx                 ; High trit (n+1)
+    mov r9, rdx                 ; qutrit B
     
-    ; Check for Active Pair Leaders: |01> (1,0) and |12> (2,1)
-    ; |01> -> Low=1, High=0. Swap with |10> (Low=0, High=1). Target = i + 2.
-    ; |12> -> Low=2, High=1. Swap with |21> (Low=1, High=2). Target = i + 2.
+    ; Check if this is a spin-flip pair
+    ; |01⟩ (state 1) ↔ |10⟩ (state 3): A=0,B=1 or A=1,B=0
+    ; |12⟩ (state 5) ↔ |21⟩ (state 7): A=1,B=2 or A=2,B=1
     
-    ; Case 1: Low=1, High=0
+    ; Check for |01⟩ state (need to swap with |10⟩)
+    cmp r8, 0
+    jne .check_10
+    cmp r9, 1
+    jne .gm_next
+    ; Found |01⟩, need to swap with |10⟩ (state index 3)
+    mov r10, 3
+    jmp .do_swap
+    
+.check_10:
     cmp r8, 1
     jne .check_12
     cmp r9, 0
+    jne .check_21_a
+    ; Found |10⟩, but we already processed this pair
+    jmp .gm_next
+    
+.check_21_a:
+    cmp r8, 1
     jne .gm_next
-    jmp .do_interact
+    cmp r9, 2
+    jne .gm_next
+    ; Found |12⟩, need to swap with |21⟩ (state index 7)
+    mov r10, 7
+    jmp .do_swap
     
 .check_12:
-    ; Case 2: Low=2, High=1
     cmp r8, 2
     jne .gm_next
     cmp r9, 1
     jne .gm_next
+    ; Found |21⟩, already processed
+    jmp .gm_next
     
-.do_interact:
-    ; Target is always Current + 2
-    ; |01> (1) <-> |10> (3). Diff 2.
-    ; |12> (5) <-> |21> (7). Diff 2.
-    lea r15, [r14 + 2]
+.do_swap:
+    ; Apply rotation between current state (r14) and partner (r10)
+    ; Using angle theta with sqrt(2) factor
     
-    ; Bounds check
-    cmp r15, r13
-    jge .gm_next
-    
-    ; Perform Rotation between State[r14] and State[r15]
-    ; amp1' = cos*amp1 + i*sin*amp2
-    ; amp2' = i*sin*amp1 + cos*amp2
-    ; Note: Using simplified rotation (swapping imaginary/real terms for interaction)
-    
-    ; Load Amp1 (r14)
+    ; Get amplitudes
     mov rax, r14
-    shl rax, 4                  ; * 16 (sizeof complex)
+    shl rax, 4
     lea rbx, [r12 + rax]
-    movsd xmm0, [rbx]           ; r1
-    movsd xmm1, [rbx+8]         ; i1
+    movsd xmm0, [rbx]           ; amp1_real
+    movsd xmm1, [rbx + 8]       ; amp1_imag
     
-    ; Load Amp2 (r15)
-    mov rax, r15
+    mov rax, r10
     shl rax, 4
     lea rcx, [r12 + rax]
-    movsd xmm2, [rcx]           ; r2
-    movsd xmm3, [rcx+8]         ; i2
+    movsd xmm2, [rcx]           ; amp2_real
+    movsd xmm3, [rcx + 8]       ; amp2_imag
     
-    ; mixing:
-    ; new_r1 = cos*r1 - sin*r2
-    ; new_i1 = cos*i1 - sin*i2
-    ; new_r2 = sin*r1 + cos*r2
-    ; new_i2 = sin*i1 + cos*i2
+    ; Calculate rotation: cos(theta*sqrt(2)), sin(theta*sqrt(2))
+    movsd xmm4, xmm15
+    mulsd xmm4, xmm13           ; angle = theta * sqrt(2)
     
-    ; Calc new_r1
-    movsd xmm4, xmm0
-    mulsd xmm4, xmm14           ; c*r1
-    movsd xmm5, xmm2
-    mulsd xmm5, xmm15           ; s*r2
-    subsd xmm4, xmm5            ; c*r1 - s*r2
+    sub rsp, 16
+    movsd [rsp], xmm4
     
-    ; Calc new_i1
-    movsd xmm6, xmm1
-    mulsd xmm6, xmm14           ; c*i1
-    movsd xmm7, xmm3
-    mulsd xmm7, xmm15           ; s*i2
-    subsd xmm6, xmm7            ; c*i1 - s*i2
+    fld qword [rsp]
+    fsin
+    fstp qword [rsp + 8]
     
-    ; Calc new_r2
-    movsd xmm8, xmm0
-    mulsd xmm8, xmm15           ; s*r1
+    fld qword [rsp]
+    fcos
+    fstp qword [rsp]
+    
+    movsd xmm5, [rsp]           ; cos
+    movsd xmm6, [rsp + 8]       ; sin
+    add rsp, 16
+    
+    ; New amplitudes (rotation matrix):
+    ; new_amp1 = cos*amp1 - i*sin*amp2
+    ; new_amp2 = i*sin*amp1 + cos*amp2
+    
+    ; new_amp1_real = cos*amp1_real + sin*amp2_imag
+    movsd xmm7, xmm0
+    mulsd xmm7, xmm5            ; cos*amp1_real
+    movsd xmm8, xmm3
+    mulsd xmm8, xmm6            ; sin*amp2_imag
+    addsd xmm7, xmm8
+    
+    ; new_amp1_imag = cos*amp1_imag - sin*amp2_real
+    movsd xmm8, xmm1
+    mulsd xmm8, xmm5            ; cos*amp1_imag
     movsd xmm9, xmm2
-    mulsd xmm9, xmm14           ; c*r2
-    addsd xmm8, xmm9            ; s*r1 + c*r2
+    mulsd xmm9, xmm6            ; sin*amp2_real
+    subsd xmm8, xmm9
     
-    ; Calc new_i2
+    ; new_amp2_real = cos*amp2_real - sin*amp1_imag
+    movsd xmm9, xmm2
+    mulsd xmm9, xmm5            ; cos*amp2_real
     movsd xmm10, xmm1
-    mulsd xmm10, xmm15          ; s*i1
-    movsd xmm11, xmm3
-    mulsd xmm11, xmm14          ; c*i2
-    addsd xmm10, xmm11          ; s*i1 + c*i2
+    mulsd xmm10, xmm6           ; sin*amp1_imag
+    subsd xmm9, xmm10
     
-    ; Store back
-    movsd [rbx], xmm4
-    movsd [rbx+8], xmm6
-    movsd [rcx], xmm8
-    movsd [rcx+8], xmm10
+    ; new_amp2_imag = cos*amp2_imag + sin*amp1_real
+    movsd xmm10, xmm3
+    mulsd xmm10, xmm5           ; cos*amp2_imag
+    movsd xmm11, xmm0
+    mulsd xmm11, xmm6           ; sin*amp1_real
+    addsd xmm10, xmm11
+    
+    ; Store new amplitudes
+    movsd [rbx], xmm7
+    movsd [rbx + 8], xmm8
+    movsd [rcx], xmm9
+    movsd [rcx + 8], xmm10
 
 .gm_next:
     inc r14
@@ -806,8 +833,6 @@ gell_mann_interaction:
     add rsp, 64
     pop rbp
     pop r15
-    pop r14
-    pop r13
     pop r12
     pop rbx
     ret
@@ -4348,7 +4373,7 @@ execute_instruction:
     
     ucomisd xmm0, xmm2
     ja .validate_fail
-    xor rax, rax                ; STATE_VALID (Continue)
+    mov rax, 1                  ; STATE_VALID
     jmp .exec_ret
 .validate_fail:
     xor rax, rax                ; STATE_DRIFT
@@ -4385,7 +4410,7 @@ execute_instruction:
     ucomisd xmm0, xmm1
     jb .scan_next_chunk
     ; Anomaly detected
-    xor rax, rax                ; Continue execution regardless of anomaly
+    mov rax, r12                ; Return anomaly chunk
     jmp .exec_ret
 .scan_next_chunk:
     inc r12
@@ -4594,7 +4619,6 @@ execute_instruction:
     mov rax, 4
     cvtsi2sd xmm1, rax
     divsd xmm0, xmm1
-    mov rdi, rbx
     call apply_phase_rotation_internal
 .pulse_res_done:
     xor rax, rax
@@ -4608,7 +4632,7 @@ execute_instruction:
     mov rax, [measured_values + r14*8]
     test rax, rax
     jz .branch_false
-    mov rax, 2                  ; BRANCH_TRUE (Skip next)
+    mov rax, 1                  ; BRANCH_TRUE
     jmp .exec_ret
 .branch_false:
     xor rax, rax                ; BRANCH_FALSE
