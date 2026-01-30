@@ -169,10 +169,10 @@
 ; CONTROL_FLOW - Operations that control execution flow
 %define OP_GATE_SINGULARITY    0xF0
 %define OP_GATE_BRANCH         0xF1
-%define OP_GATE_FORK           0xF2
+%define OP_GATE_FORK           0xF6        ; Moved from F2 to avoid OP_FINAL_ASCENSION
 %define OP_GATE_SPLIT          0xF3
-%define OP_GATE_MERGE          0xF4
-%define OP_GATE_DIVERGE        0xF5
+%define OP_GATE_MERGE          0xF7
+%define OP_GATE_DIVERGE        0xF8
 
 ; ASCENSION - Operations that prepare for dimensional ascension
 %define OP_ASCEND_PREP         0x90
@@ -663,25 +663,152 @@ heisenberg_exchange_oracle:
 ; Input: rdi = state_vector, rsi = num_states
 ; Swaps |10⟩ ↔ |01⟩ and |21⟩ ↔ |12⟩ with rotation angle
 gell_mann_interaction:
-    ; Simplified robust version for benchmark stability
+    ; Robust Gell-Mann (XY) Interaction
+    ; Swaps |01> <-> |10> and |12> <-> |21>
     ; Input: rdi = state_vector, rsi = num_states
     push rbx
-    push rdi
-    push rsi
-    mov rbx, rdi
-    mov rcx, rsi
-    test rbx, rbx
-    jz .gm_done
+    push r12
+    push r13
+    push r14
+    push r15
+    push rbp
+    mov rbp, rsp
+    sub rsp, 64
+    
+    mov r12, rdi                ; state_vector
+    mov r13, rsi                ; num_states
+    
+    ; Precompute rotation matrix elements
+    ; Theta = pi/12
     movsd xmm0, [pi]
+    mov eax, 12
+    cvtsi2sd xmm1, eax
+    divsd xmm0, xmm1            ; xmm0 = theta
+    
+    ; We'll use a fixed correlation angle for stability
+    ; cos(theta), sin(theta)
+    movsd [rsp], xmm0
+    fld qword [rsp]
+    fsincos                     ; st0=cos, st1=sin
+    fstp qword [rsp]            ; Store cos
+    fstp qword [rsp+8]          ; Store sin
+    movsd xmm14, [rsp]          ; xmm14 = cos
+    movsd xmm15, [rsp+8]        ; xmm15 = sin
+    
+    xor r14, r14                ; State Index
+
 .gm_loop:
-    test rcx, rcx
-    jz .gm_done
-    call apply_phase_rotation_internal
-    dec rcx
-    jmp .gm_done ; Only rotate once to avoid N^2 performance issues
+    cmp r14, r13
+    jge .gm_done
+    
+    ; Decode trits (Low=r8, High=r9)
+    mov rax, r14
+    xor rdx, rdx
+    mov rcx, 3
+    div rcx
+    mov r8, rdx                 ; Low trit (n)
+    xor rdx, rdx
+    div rcx
+    mov r9, rdx                 ; High trit (n+1)
+    
+    ; Check for Active Pair Leaders: |01> (1,0) and |12> (2,1)
+    ; |01> -> Low=1, High=0. Swap with |10> (Low=0, High=1). Target = i + 2.
+    ; |12> -> Low=2, High=1. Swap with |21> (Low=1, High=2). Target = i + 2.
+    
+    ; Case 1: Low=1, High=0
+    cmp r8, 1
+    jne .check_12
+    cmp r9, 0
+    jne .gm_next
+    jmp .do_interact
+    
+.check_12:
+    ; Case 2: Low=2, High=1
+    cmp r8, 2
+    jne .gm_next
+    cmp r9, 1
+    jne .gm_next
+    
+.do_interact:
+    ; Target is always Current + 2
+    ; |01> (1) <-> |10> (3). Diff 2.
+    ; |12> (5) <-> |21> (7). Diff 2.
+    lea r15, [r14 + 2]
+    
+    ; Bounds check
+    cmp r15, r13
+    jge .gm_next
+    
+    ; Perform Rotation between State[r14] and State[r15]
+    ; amp1' = cos*amp1 + i*sin*amp2
+    ; amp2' = i*sin*amp1 + cos*amp2
+    ; Note: Using simplified rotation (swapping imaginary/real terms for interaction)
+    
+    ; Load Amp1 (r14)
+    mov rax, r14
+    shl rax, 4                  ; * 16 (sizeof complex)
+    lea rbx, [r12 + rax]
+    movsd xmm0, [rbx]           ; r1
+    movsd xmm1, [rbx+8]         ; i1
+    
+    ; Load Amp2 (r15)
+    mov rax, r15
+    shl rax, 4
+    lea rcx, [r12 + rax]
+    movsd xmm2, [rcx]           ; r2
+    movsd xmm3, [rcx+8]         ; i2
+    
+    ; mixing:
+    ; new_r1 = cos*r1 - sin*r2
+    ; new_i1 = cos*i1 - sin*i2
+    ; new_r2 = sin*r1 + cos*r2
+    ; new_i2 = sin*i1 + cos*i2
+    
+    ; Calc new_r1
+    movsd xmm4, xmm0
+    mulsd xmm4, xmm14           ; c*r1
+    movsd xmm5, xmm2
+    mulsd xmm5, xmm15           ; s*r2
+    subsd xmm4, xmm5            ; c*r1 - s*r2
+    
+    ; Calc new_i1
+    movsd xmm6, xmm1
+    mulsd xmm6, xmm14           ; c*i1
+    movsd xmm7, xmm3
+    mulsd xmm7, xmm15           ; s*i2
+    subsd xmm6, xmm7            ; c*i1 - s*i2
+    
+    ; Calc new_r2
+    movsd xmm8, xmm0
+    mulsd xmm8, xmm15           ; s*r1
+    movsd xmm9, xmm2
+    mulsd xmm9, xmm14           ; c*r2
+    addsd xmm8, xmm9            ; s*r1 + c*r2
+    
+    ; Calc new_i2
+    movsd xmm10, xmm1
+    mulsd xmm10, xmm15          ; s*i1
+    movsd xmm11, xmm3
+    mulsd xmm11, xmm14          ; c*i2
+    addsd xmm10, xmm11          ; s*i1 + c*i2
+    
+    ; Store back
+    movsd [rbx], xmm4
+    movsd [rbx+8], xmm6
+    movsd [rcx], xmm8
+    movsd [rcx+8], xmm10
+
+.gm_next:
+    inc r14
+    jmp .gm_loop
+
 .gm_done:
-    pop rsi
-    pop rdi
+    add rsp, 64
+    pop rbp
+    pop r15
+    pop r14
+    pop r13
+    pop r12
     pop rbx
     ret
 
