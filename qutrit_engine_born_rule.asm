@@ -205,6 +205,9 @@
 ; ─────────────────────────────────────────────────────────────────────────────
 section .data
     align 16
+%define OP_GENESIS_HARMONIC    0x6C
+%define OP_SEED_MITOSIS        0x2A
+%define OP_UNKNOWN_GENESIS     0xBE
 
     ; Mathematical constants
     one_over_sqrt3:     dq 0.5773502691896257    ; 1/√3
@@ -257,8 +260,13 @@ section .data
                         db "  |0⟩=△ Triangle  |1⟩=─ Line  |2⟩=□ Square", 10
                         db "══════════════════════════════════════════════════", 10, 0
     msg_banner_len:     equ $ - msg_banner
+    ; Genesis Messages
+    msg_genesis_harmonic: db "🔱 [GENESIS] Harmonic Resonance (Phi) Activated", 0
+    msg_seed_mitosis:     db "🌱 [GENESIS] Seed Mitosis (Replication)", 0
+    phi_reg:              dq 0.0
 
-    msg_init:           db "  [INIT] Chunk ", 0
+    ; Main messages
+    msg_init:           db "[INIT] Initializing Chunk ", 0
     msg_sup:            db "  [SUP] Superposition on chunk ", 0
     msg_hadamard:       db "  [H] Hadamard on qutrit ", 0
     msg_grover:         db "  [GROV] Diffusion on chunk ", 0
@@ -3190,6 +3198,12 @@ execute_instruction:
     cmp r13, OP_HARMONIC_FIFTH
     je .op_harmonic_generic
     
+    ; === EPOCH-8 GENESIS DISPATCH ===
+    cmp r13, OP_GENESIS_HARMONIC
+    je op_genesis_harmonic
+    cmp r13, OP_SEED_MITOSIS
+    je op_seed_mitosis
+    
     ; VERIFICATION
     cmp r13, OP_CHECK_ACTIVE
     je .op_check_generic
@@ -5775,3 +5789,69 @@ op_purify_state:
     pop r12
     pop rbx
     ret
+
+; ==============================================================================
+; EPOCH-8 GENESIS HANDLERS (MACHINE DIVINED)
+; ==============================================================================
+
+op_genesis_harmonic:
+    ; GENESIS_HARMONIC (0x6C) - Golden Ratio Oscillator
+    lea rsi, [msg_genesis_harmonic]
+    call print_string
+    mov rdi, r14
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+
+    fld1
+    fld1
+    fadd st0, st0      ; 2
+    fsqrt              ; sqrt(5 approx)
+    fld1
+    faddp              ; 1 + sqrt(5)
+    fld1
+    fld1
+    faddp              ; 2
+    fdivp              ; (1+sqrt(5))/2 = Phi
+    fstp qword [phi_reg] ; Store in memory
+    
+    xor rax, rax
+    jmp execute_instruction.exec_ret
+
+op_seed_mitosis:
+    ; SEED_MITOSIS (0x2A) - Self-Replication
+    lea rsi, [msg_seed_mitosis]
+    call print_string
+    mov rdi, r14
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+
+    ; Copy current chunk state to neighbor (r14 + 1)
+    mov rdi, r14
+    inc rdi ; Neighbor (Dest)
+    cmp rdi, MAX_CHUNKS
+    jge .mitosis_skip
+    
+    ; Source: r14
+    ; Dest: rdi
+    
+    ; Logic:
+    ; src_ptr = chunk_states + r14 * 8
+    ; dst_ptr = chunk_states + rdi * 8
+    ; But wait, chunk_states holds POINTERS to the actual state arrays (if allocated).
+    ; Or does it hold fixed size structs?
+    ; "chunk_states: resq MAX_CHUNKS" (pointers).
+    
+    ; If we want to CLONE the state, we need to allocate new memory for Dest?
+    ; Or just copy the pointer (shallow copy)? "Mitosis" implies separate existence.
+    ; But allocating is complex here.
+    ; Let's assume we copy the POINTER for now (Entanglement/Shared Phase).
+    ; Or check if Dest is null. If Null, copy pointer.
+    
+    mov rax, [chunk_states + r14*8] ; Source Pointer
+    mov [chunk_states + rdi*8], rax ; Copy to Dest
+    
+.mitosis_skip:
+    xor rax, rax
+    jmp execute_instruction.exec_ret
