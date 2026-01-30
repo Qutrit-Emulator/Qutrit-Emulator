@@ -3376,379 +3376,377 @@ execute_instruction:
     cmp r13, OP_HALT
     je .op_halt
 
-    ; Check for addon opcode (0x80+)
-    cmp r13, 0x80
-    jge .op_addon
+    ; High opcodes (>=0x80) now handled by Future ISA dispatch below
 
 
     ; === AUTO-GENERATED FUTURE OPCODE DISPATCH (184 opcodes) ===
-    cmp al, OP_FUTURE_00
+    cmp r13b, OP_FUTURE_00
     je .op_future_00
-    cmp al, OP_FUTURE_02
+    cmp r13b, OP_FUTURE_02
     je .op_future_02
-    cmp al, OP_FUTURE_03
+    cmp r13b, OP_FUTURE_03
     je .op_future_03
-    cmp al, OP_FUTURE_05
+    cmp r13b, OP_FUTURE_05
     je .op_future_05
-    cmp al, OP_FUTURE_06
+    cmp r13b, OP_FUTURE_06
     je .op_future_06
-    cmp al, OP_FUTURE_07
+    cmp r13b, OP_FUTURE_07
     je .op_future_07
-    cmp al, OP_FUTURE_08
+    cmp r13b, OP_FUTURE_08
     je .op_future_08
-    cmp al, OP_FUTURE_0C
+    cmp r13b, OP_FUTURE_0C
     je .op_future_0C
-    cmp al, OP_FUTURE_0D
+    cmp r13b, OP_FUTURE_0D
     je .op_future_0D
-    cmp al, OP_FUTURE_0F
+    cmp r13b, OP_FUTURE_0F
     je .op_future_0F
-    cmp al, OP_FUTURE_11
+    cmp r13b, OP_FUTURE_11
     je .op_future_11
-    cmp al, OP_FUTURE_12
+    cmp r13b, OP_FUTURE_12
     je .op_future_12
-    cmp al, OP_FUTURE_16
+    cmp r13b, OP_FUTURE_16
     je .op_future_16
-    cmp al, OP_FUTURE_17
+    cmp r13b, OP_FUTURE_17
     je .op_future_17
-    cmp al, OP_FUTURE_18
+    cmp r13b, OP_FUTURE_18
     je .op_future_18
-    cmp al, OP_FUTURE_1A
+    cmp r13b, OP_FUTURE_1A
     je .op_future_1A
-    cmp al, OP_FUTURE_1B
+    cmp r13b, OP_FUTURE_1B
     je .op_future_1B
-    cmp al, OP_FUTURE_1C
+    cmp r13b, OP_FUTURE_1C
     je .op_future_1C
-    cmp al, OP_FUTURE_1F
+    cmp r13b, OP_FUTURE_1F
     je .op_future_1F
-    cmp al, OP_FUTURE_23
+    cmp r13b, OP_FUTURE_23
     je .op_future_23
-    cmp al, OP_FUTURE_25
+    cmp r13b, OP_FUTURE_25
     je .op_future_25
-    cmp al, OP_FUTURE_26
+    cmp r13b, OP_FUTURE_26
     je .op_future_26
-    cmp al, OP_FUTURE_27
+    cmp r13b, OP_FUTURE_27
     je .op_future_27
-    cmp al, OP_FUTURE_28
+    cmp r13b, OP_FUTURE_28
     je .op_future_28
-    cmp al, OP_FUTURE_2A
+    cmp r13b, OP_FUTURE_2A
     je .op_future_2A
-    cmp al, OP_FUTURE_2B
+    cmp r13b, OP_FUTURE_2B
     je .op_future_2B
-    cmp al, OP_FUTURE_2D
+    cmp r13b, OP_FUTURE_2D
     je .op_future_2D
-    cmp al, OP_FUTURE_2F
+    cmp r13b, OP_FUTURE_2F
     je .op_future_2F
-    cmp al, OP_FUTURE_34
+    cmp r13b, OP_FUTURE_34
     je .op_future_34
-    cmp al, OP_FUTURE_35
+    cmp r13b, OP_FUTURE_35
     je .op_future_35
-    cmp al, OP_FUTURE_36
+    cmp r13b, OP_FUTURE_36
     je .op_future_36
-    cmp al, OP_FUTURE_38
+    cmp r13b, OP_FUTURE_38
     je .op_future_38
-    cmp al, OP_FUTURE_3A
+    cmp r13b, OP_FUTURE_3A
     je .op_future_3A
-    cmp al, OP_FUTURE_3C
+    cmp r13b, OP_FUTURE_3C
     je .op_future_3C
-    cmp al, OP_FUTURE_3E
+    cmp r13b, OP_FUTURE_3E
     je .op_future_3E
-    cmp al, OP_FUTURE_3F
+    cmp r13b, OP_FUTURE_3F
     je .op_future_3F
-    cmp al, OP_FUTURE_40
+    cmp r13b, OP_FUTURE_40
     je .op_future_40
-    cmp al, OP_FUTURE_42
+    cmp r13b, OP_FUTURE_42
     je .op_future_42
-    cmp al, OP_FUTURE_44
+    cmp r13b, OP_FUTURE_44
     je .op_future_44
-    cmp al, OP_FUTURE_45
+    cmp r13b, OP_FUTURE_45
     je .op_future_45
-    cmp al, OP_FUTURE_48
+    cmp r13b, OP_FUTURE_48
     je .op_future_48
-    cmp al, OP_FUTURE_4A
+    cmp r13b, OP_FUTURE_4A
     je .op_future_4A
-    cmp al, OP_FUTURE_4B
+    cmp r13b, OP_FUTURE_4B
     je .op_future_4B
-    cmp al, OP_FUTURE_4C
+    cmp r13b, OP_FUTURE_4C
     je .op_future_4C
-    cmp al, OP_FUTURE_4E
+    cmp r13b, OP_FUTURE_4E
     je .op_future_4E
-    cmp al, OP_FUTURE_4F
+    cmp r13b, OP_FUTURE_4F
     je .op_future_4F
-    cmp al, OP_FUTURE_50
+    cmp r13b, OP_FUTURE_50
     je .op_future_50
-    cmp al, OP_FUTURE_52
+    cmp r13b, OP_FUTURE_52
     je .op_future_52
-    cmp al, OP_FUTURE_53
+    cmp r13b, OP_FUTURE_53
     je .op_future_53
-    cmp al, OP_FUTURE_54
+    cmp r13b, OP_FUTURE_54
     je .op_future_54
-    cmp al, OP_FUTURE_55
+    cmp r13b, OP_FUTURE_55
     je .op_future_55
-    cmp al, OP_FUTURE_56
+    cmp r13b, OP_FUTURE_56
     je .op_future_56
-    cmp al, OP_FUTURE_57
+    cmp r13b, OP_FUTURE_57
     je .op_future_57
-    cmp al, OP_FUTURE_58
+    cmp r13b, OP_FUTURE_58
     je .op_future_58
-    cmp al, OP_FUTURE_59
+    cmp r13b, OP_FUTURE_59
     je .op_future_59
-    cmp al, OP_FUTURE_5A
+    cmp r13b, OP_FUTURE_5A
     je .op_future_5A
-    cmp al, OP_FUTURE_5B
+    cmp r13b, OP_FUTURE_5B
     je .op_future_5B
-    cmp al, OP_FUTURE_5C
+    cmp r13b, OP_FUTURE_5C
     je .op_future_5C
-    cmp al, OP_FUTURE_5D
+    cmp r13b, OP_FUTURE_5D
     je .op_future_5D
-    cmp al, OP_FUTURE_5F
+    cmp r13b, OP_FUTURE_5F
     je .op_future_5F
-    cmp al, OP_FUTURE_61
+    cmp r13b, OP_FUTURE_61
     je .op_future_61
-    cmp al, OP_FUTURE_62
+    cmp r13b, OP_FUTURE_62
     je .op_future_62
-    cmp al, OP_FUTURE_63
+    cmp r13b, OP_FUTURE_63
     je .op_future_63
-    cmp al, OP_FUTURE_65
+    cmp r13b, OP_FUTURE_65
     je .op_future_65
-    cmp al, OP_FUTURE_66
+    cmp r13b, OP_FUTURE_66
     je .op_future_66
-    cmp al, OP_FUTURE_67
+    cmp r13b, OP_FUTURE_67
     je .op_future_67
-    cmp al, OP_FUTURE_69
+    cmp r13b, OP_FUTURE_69
     je .op_future_69
-    cmp al, OP_FUTURE_6A
+    cmp r13b, OP_FUTURE_6A
     je .op_future_6A
-    cmp al, OP_FUTURE_6B
+    cmp r13b, OP_FUTURE_6B
     je .op_future_6B
-    cmp al, OP_FUTURE_6C
+    cmp r13b, OP_FUTURE_6C
     je .op_future_6C
-    cmp al, OP_FUTURE_6D
+    cmp r13b, OP_FUTURE_6D
     je .op_future_6D
-    cmp al, OP_FUTURE_6E
+    cmp r13b, OP_FUTURE_6E
     je .op_future_6E
-    cmp al, OP_FUTURE_6F
+    cmp r13b, OP_FUTURE_6F
     je .op_future_6F
-    cmp al, OP_FUTURE_70
+    cmp r13b, OP_FUTURE_70
     je .op_future_70
-    cmp al, OP_FUTURE_72
+    cmp r13b, OP_FUTURE_72
     je .op_future_72
-    cmp al, OP_FUTURE_73
+    cmp r13b, OP_FUTURE_73
     je .op_future_73
-    cmp al, OP_FUTURE_74
+    cmp r13b, OP_FUTURE_74
     je .op_future_74
-    cmp al, OP_FUTURE_75
+    cmp r13b, OP_FUTURE_75
     je .op_future_75
-    cmp al, OP_FUTURE_76
+    cmp r13b, OP_FUTURE_76
     je .op_future_76
-    cmp al, OP_FUTURE_77
+    cmp r13b, OP_FUTURE_77
     je .op_future_77
-    cmp al, OP_FUTURE_7A
+    cmp r13b, OP_FUTURE_7A
     je .op_future_7A
-    cmp al, OP_FUTURE_7B
+    cmp r13b, OP_FUTURE_7B
     je .op_future_7B
-    cmp al, OP_FUTURE_7C
+    cmp r13b, OP_FUTURE_7C
     je .op_future_7C
-    cmp al, OP_FUTURE_7D
+    cmp r13b, OP_FUTURE_7D
     je .op_future_7D
-    cmp al, OP_FUTURE_7E
+    cmp r13b, OP_FUTURE_7E
     je .op_future_7E
-    cmp al, OP_FUTURE_7F
+    cmp r13b, OP_FUTURE_7F
     je .op_future_7F
-    cmp al, OP_FUTURE_81
+    cmp r13b, OP_FUTURE_81
     je .op_future_81
-    cmp al, OP_FUTURE_82
+    cmp r13b, OP_FUTURE_82
     je .op_future_82
-    cmp al, OP_FUTURE_83
+    cmp r13b, OP_FUTURE_83
     je .op_future_83
-    cmp al, OP_FUTURE_84
+    cmp r13b, OP_FUTURE_84
     je .op_future_84
-    cmp al, OP_FUTURE_85
+    cmp r13b, OP_FUTURE_85
     je .op_future_85
-    cmp al, OP_FUTURE_86
+    cmp r13b, OP_FUTURE_86
     je .op_future_86
-    cmp al, OP_FUTURE_87
+    cmp r13b, OP_FUTURE_87
     je .op_future_87
-    cmp al, OP_FUTURE_88
+    cmp r13b, OP_FUTURE_88
     je .op_future_88
-    cmp al, OP_FUTURE_89
+    cmp r13b, OP_FUTURE_89
     je .op_future_89
-    cmp al, OP_FUTURE_8B
+    cmp r13b, OP_FUTURE_8B
     je .op_future_8B
-    cmp al, OP_FUTURE_8C
+    cmp r13b, OP_FUTURE_8C
     je .op_future_8C
-    cmp al, OP_FUTURE_8D
+    cmp r13b, OP_FUTURE_8D
     je .op_future_8D
-    cmp al, OP_FUTURE_8F
+    cmp r13b, OP_FUTURE_8F
     je .op_future_8F
-    cmp al, OP_FUTURE_90
+    cmp r13b, OP_FUTURE_90
     je .op_future_90
-    cmp al, OP_FUTURE_91
+    cmp r13b, OP_FUTURE_91
     je .op_future_91
-    cmp al, OP_FUTURE_92
+    cmp r13b, OP_FUTURE_92
     je .op_future_92
-    cmp al, OP_FUTURE_93
+    cmp r13b, OP_FUTURE_93
     je .op_future_93
-    cmp al, OP_FUTURE_94
+    cmp r13b, OP_FUTURE_94
     je .op_future_94
-    cmp al, OP_FUTURE_95
+    cmp r13b, OP_FUTURE_95
     je .op_future_95
-    cmp al, OP_FUTURE_96
+    cmp r13b, OP_FUTURE_96
     je .op_future_96
-    cmp al, OP_FUTURE_97
+    cmp r13b, OP_FUTURE_97
     je .op_future_97
-    cmp al, OP_FUTURE_98
+    cmp r13b, OP_FUTURE_98
     je .op_future_98
-    cmp al, OP_FUTURE_99
+    cmp r13b, OP_FUTURE_99
     je .op_future_99
-    cmp al, OP_FUTURE_9A
+    cmp r13b, OP_FUTURE_9A
     je .op_future_9A
-    cmp al, OP_FUTURE_9C
+    cmp r13b, OP_FUTURE_9C
     je .op_future_9C
-    cmp al, OP_FUTURE_9D
+    cmp r13b, OP_FUTURE_9D
     je .op_future_9D
-    cmp al, OP_FUTURE_9E
+    cmp r13b, OP_FUTURE_9E
     je .op_future_9E
-    cmp al, OP_FUTURE_9F
+    cmp r13b, OP_FUTURE_9F
     je .op_future_9F
-    cmp al, OP_FUTURE_A0
+    cmp r13b, OP_FUTURE_A0
     je .op_future_A0
-    cmp al, OP_FUTURE_A2
+    cmp r13b, OP_FUTURE_A2
     je .op_future_A2
-    cmp al, OP_FUTURE_A4
+    cmp r13b, OP_FUTURE_A4
     je .op_future_A4
-    cmp al, OP_FUTURE_A5
+    cmp r13b, OP_FUTURE_A5
     je .op_future_A5
-    cmp al, OP_FUTURE_A6
+    cmp r13b, OP_FUTURE_A6
     je .op_future_A6
-    cmp al, OP_FUTURE_A7
+    cmp r13b, OP_FUTURE_A7
     je .op_future_A7
-    cmp al, OP_FUTURE_A8
+    cmp r13b, OP_FUTURE_A8
     je .op_future_A8
-    cmp al, OP_FUTURE_AA
+    cmp r13b, OP_FUTURE_AA
     je .op_future_AA
-    cmp al, OP_FUTURE_AE
+    cmp r13b, OP_FUTURE_AE
     je .op_future_AE
-    cmp al, OP_FUTURE_AF
+    cmp r13b, OP_FUTURE_AF
     je .op_future_AF
-    cmp al, OP_FUTURE_B0
+    cmp r13b, OP_FUTURE_B0
     je .op_future_B0
-    cmp al, OP_FUTURE_B1
+    cmp r13b, OP_FUTURE_B1
     je .op_future_B1
-    cmp al, OP_FUTURE_B2
+    cmp r13b, OP_FUTURE_B2
     je .op_future_B2
-    cmp al, OP_FUTURE_B3
+    cmp r13b, OP_FUTURE_B3
     je .op_future_B3
-    cmp al, OP_FUTURE_B4
+    cmp r13b, OP_FUTURE_B4
     je .op_future_B4
-    cmp al, OP_FUTURE_B5
+    cmp r13b, OP_FUTURE_B5
     je .op_future_B5
-    cmp al, OP_FUTURE_B6
+    cmp r13b, OP_FUTURE_B6
     je .op_future_B6
-    cmp al, OP_FUTURE_B7
+    cmp r13b, OP_FUTURE_B7
     je .op_future_B7
-    cmp al, OP_FUTURE_B9
+    cmp r13b, OP_FUTURE_B9
     je .op_future_B9
-    cmp al, OP_FUTURE_BA
+    cmp r13b, OP_FUTURE_BA
     je .op_future_BA
-    cmp al, OP_FUTURE_BB
+    cmp r13b, OP_FUTURE_BB
     je .op_future_BB
-    cmp al, OP_FUTURE_BC
+    cmp r13b, OP_FUTURE_BC
     je .op_future_BC
-    cmp al, OP_FUTURE_BF
+    cmp r13b, OP_FUTURE_BF
     je .op_future_BF
-    cmp al, OP_FUTURE_C0
+    cmp r13b, OP_FUTURE_C0
     je .op_future_C0
-    cmp al, OP_FUTURE_C1
+    cmp r13b, OP_FUTURE_C1
     je .op_future_C1
-    cmp al, OP_FUTURE_C2
+    cmp r13b, OP_FUTURE_C2
     je .op_future_C2
-    cmp al, OP_FUTURE_C3
+    cmp r13b, OP_FUTURE_C3
     je .op_future_C3
-    cmp al, OP_FUTURE_C4
+    cmp r13b, OP_FUTURE_C4
     je .op_future_C4
-    cmp al, OP_FUTURE_C5
+    cmp r13b, OP_FUTURE_C5
     je .op_future_C5
-    cmp al, OP_FUTURE_C6
+    cmp r13b, OP_FUTURE_C6
     je .op_future_C6
-    cmp al, OP_FUTURE_C7
+    cmp r13b, OP_FUTURE_C7
     je .op_future_C7
-    cmp al, OP_FUTURE_C8
+    cmp r13b, OP_FUTURE_C8
     je .op_future_C8
-    cmp al, OP_FUTURE_CA
+    cmp r13b, OP_FUTURE_CA
     je .op_future_CA
-    cmp al, OP_FUTURE_CB
+    cmp r13b, OP_FUTURE_CB
     je .op_future_CB
-    cmp al, OP_FUTURE_CC
+    cmp r13b, OP_FUTURE_CC
     je .op_future_CC
-    cmp al, OP_FUTURE_CD
+    cmp r13b, OP_FUTURE_CD
     je .op_future_CD
-    cmp al, OP_FUTURE_CE
+    cmp r13b, OP_FUTURE_CE
     je .op_future_CE
-    cmp al, OP_FUTURE_CF
+    cmp r13b, OP_FUTURE_CF
     je .op_future_CF
-    cmp al, OP_FUTURE_D0
+    cmp r13b, OP_FUTURE_D0
     je .op_future_D0
-    cmp al, OP_FUTURE_D2
+    cmp r13b, OP_FUTURE_D2
     je .op_future_D2
-    cmp al, OP_FUTURE_D3
+    cmp r13b, OP_FUTURE_D3
     je .op_future_D3
-    cmp al, OP_FUTURE_D4
+    cmp r13b, OP_FUTURE_D4
     je .op_future_D4
-    cmp al, OP_FUTURE_D5
+    cmp r13b, OP_FUTURE_D5
     je .op_future_D5
-    cmp al, OP_FUTURE_D6
+    cmp r13b, OP_FUTURE_D6
     je .op_future_D6
-    cmp al, OP_FUTURE_D7
+    cmp r13b, OP_FUTURE_D7
     je .op_future_D7
-    cmp al, OP_FUTURE_D8
+    cmp r13b, OP_FUTURE_D8
     je .op_future_D8
-    cmp al, OP_FUTURE_D9
+    cmp r13b, OP_FUTURE_D9
     je .op_future_D9
-    cmp al, OP_FUTURE_DA
+    cmp r13b, OP_FUTURE_DA
     je .op_future_DA
-    cmp al, OP_FUTURE_DB
+    cmp r13b, OP_FUTURE_DB
     je .op_future_DB
-    cmp al, OP_FUTURE_DC
+    cmp r13b, OP_FUTURE_DC
     je .op_future_DC
-    cmp al, OP_FUTURE_DD
+    cmp r13b, OP_FUTURE_DD
     je .op_future_DD
-    cmp al, OP_FUTURE_DE
+    cmp r13b, OP_FUTURE_DE
     je .op_future_DE
-    cmp al, OP_FUTURE_DF
+    cmp r13b, OP_FUTURE_DF
     je .op_future_DF
-    cmp al, OP_FUTURE_E0
+    cmp r13b, OP_FUTURE_E0
     je .op_future_E0
-    cmp al, OP_FUTURE_E2
+    cmp r13b, OP_FUTURE_E2
     je .op_future_E2
-    cmp al, OP_FUTURE_E3
+    cmp r13b, OP_FUTURE_E3
     je .op_future_E3
-    cmp al, OP_FUTURE_E4
+    cmp r13b, OP_FUTURE_E4
     je .op_future_E4
-    cmp al, OP_FUTURE_E5
+    cmp r13b, OP_FUTURE_E5
     je .op_future_E5
-    cmp al, OP_FUTURE_E6
+    cmp r13b, OP_FUTURE_E6
     je .op_future_E6
-    cmp al, OP_FUTURE_E7
+    cmp r13b, OP_FUTURE_E7
     je .op_future_E7
-    cmp al, OP_FUTURE_E8
+    cmp r13b, OP_FUTURE_E8
     je .op_future_E8
-    cmp al, OP_FUTURE_E9
+    cmp r13b, OP_FUTURE_E9
     je .op_future_E9
-    cmp al, OP_FUTURE_EA
+    cmp r13b, OP_FUTURE_EA
     je .op_future_EA
-    cmp al, OP_FUTURE_EB
+    cmp r13b, OP_FUTURE_EB
     je .op_future_EB
-    cmp al, OP_FUTURE_EC
+    cmp r13b, OP_FUTURE_EC
     je .op_future_EC
-    cmp al, OP_FUTURE_ED
+    cmp r13b, OP_FUTURE_ED
     je .op_future_ED
-    cmp al, OP_FUTURE_EE
+    cmp r13b, OP_FUTURE_EE
     je .op_future_EE
-    cmp al, OP_FUTURE_EF
+    cmp r13b, OP_FUTURE_EF
     je .op_future_EF
-    cmp al, OP_FUTURE_F0
+    cmp r13b, OP_FUTURE_F0
     je .op_future_F0
-    cmp al, OP_FUTURE_F1
+    cmp r13b, OP_FUTURE_F1
     je .op_future_F1
 
     ; Unknown opcode
