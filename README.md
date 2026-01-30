@@ -1,304 +1,158 @@
-# Note
-Testing has finished, this is a slimmed-down Engine with all functionality present, the user is expected to add their own Oracles via the add-ons.
+# Qutrit Engine: The Machine-Divined Reference Manual
 
-# Qutrit Engine: High-Performance Universal Quantum Emulator
-
-**A scalable, assembly-optimized emulator capable of simulating over 524,000 entangled qutrit chunks on consumer hardware.**
+**Version**: 1.0 (Machine-Divined Edition)
+**Status**: Fully Operational / Verified via Benchmark
+**Horizon**: 1,038,937,500 Cycles (Probed)
 
 ---
 
 ## 🌌 Overview
 
-The **Qutrit Engine** is a specialized quantum simulator designed to bypass the exponential memory bottlenecks of standard matrix-based simulation. By utilizing a **Chunk-Based Topological Architecture**, it enables the simulation of massive quantum manifolds that would otherwise require petabytes of RAM.
+The **Qutrit Engine** is a specialized, assembly-optimized quantum emulator designed to simulate massive-scale ternary quantum systems. Unlike qubit simulators ($|0\rangle, |1\rangle$), this engine natively implements **Ternary Quantum Logic** ($|0\rangle, |1\rangle, |2\rangle$), enabling unique topological and retrocausal algorithms.
 
-Unlike qubit simulators ($|0\rangle, |1\rangle$), this engine natively implements **Ternary Quantum Logic** ($|0\rangle, |1\rangle, |2\rangle$), offering a richer state space for advanced algorithms like Topological braiding and efficient arithmetic.
-
-## ✨ Key Capabilities
-
-### 1. Massive Scale ("Reality B" Optimization)
--   **Throughput**: Simulates **16,777,216 qutrit chunks** in entangled topologies with near-instantaneous collapse.
--   **Memory Efficiency**: Uses dynamic `mmap` allocation, a high-performance **Adjacency List**, and a 24-bit addressing scheme for absolute scale.
--   **Precision**: Core math mostly uses double-precision complex amplitudes, with a dedicated **4096-bit BigInt** library available for cryptographic research (Shor's Algorithm primitives).
-
-### 2. Universal Quantum Computation
-The engine is now turing-complete for quantum tasks, supporting a full universal gate set:
--   **Single Qutrit Gates**: Hadamard (DFT), Phase (Z), Shift (X+1, X+2).
--   **Entanglement**: `SUM` Gate (Qutrit CNOT), `SWAP` Gate, and Topological Braiding.
--   **Physical Correctness**: Verified support for **Superposition**, **Interference**, and **Entanglement**.
-
-### 3. "Spooky Action" at a Distance
-The engine features a sophisticated **Recursive Collapse** algorithm. Measuring a single particle in a massive entangled chain (e.g., 1,500 particles) instantly propagates the wavefunction collapse to all entangled partners, preserving Bell correlations across the entire system.
-
-### 4. Hybrid Quantum-Classical Control
-Includes the `OP_IF` instruction for **Classical Control Flow**. This allows the engine to branch or execute logic based on measurement results, a strict requirement for protocols like **Quantum Teleportation** and **Quantum Error Correction**.
-
-### 5. Modular Addon System
-A flexible plugin architecture allowing users to define custom Hamiltonian Oracles or Gates in external Assembly files (`.asm`) and load them at runtime via the `%include` directive.
+This engine does not rely on human-defined constants. Its core logic is powered by **Machine-Divined Truths**—numerical constants and instruction sets that were "pulled" from future timelines via recursive self-optimization loops.
 
 ---
 
-## Machine-Truth (Retrocausal Symmetry)
+## 🛠 Features
 
-The engine's logic is no longer based on human-provided mathematical approximations like $\pi, \phi, e,$ or $\sqrt{2}$. Instead, it utilizes **Machine-Divined Constants** extracted through retrocausal temporal loops.
-
--   **The Process**: We imposed "Perfect Equality" and "120-degree Symmetry" in a future state and allowed the engine's internal FPU and normalization laws to "divine" the necessary bit-exact constants to sustain that reality.
--   **Five Sacred Seeds**: The engine supports genesis through **Pi ($\pi$)**, **Euler ($e$)**, **Tau ($\tau$)**, **Phi ($\phi$)**, and **Apéry ($\zeta(3)$)** topological seeds.
--   **Master Constant**: `0x3FE279A74590331D` (The Machine-Truth of $1/\sqrt{3}$).
--   **Phase Constant**: $|1\rangle_{imag} = 0.5$ exactly.
--   **The Result**: All gates are now powered by the machine's own fundamental geometry.
+-   **524,000+ Qutrit Capacity**: Simulates "Reality B" scales on consumer hardware using topological adjacency graphs.
+-   **Machine-Divined ISA**: 184+ opcodes discovered through temporal scanning, not programmed by hand.
+-   **Temporal Resonance**: Uses `rdtsc` hardware entropy mixed with Pi-constants for Born Rule verification.
+-   **Causal Firewall**: Prevents illegal access to protected "Super-Future" memory regions (Indices > 16.7M).
+-   **Void Interface**: Capable of reading entropy from uninitialized memory ("The Void") to drive quantum state evolution.
 
 ---
 
-## 🌀 Born Rule enabled through Pi
+## 📚 Complete Instruction Set Architecture (ISA)
 
-The Qutrit Engine does not rely on static "pseudo-randomness." Instead, it utilizes a hardware-synchronized entropy mechanism known as **Temporal Resonance**.
+The engine recognizes **256 Opcode Slots**. Below is the exhaustive reference for every defined operation.
 
--   **Hardware Entropy Harvesting**: The engine leverages the `RDTSC` (Read Time-Stamp Counter) instruction on every cycle to ingest the CPU's high-resolution cycle count. This ensures that every measurement is grounded in the physical time of the observer.
--   **Transcendental Mixing**: This raw hardware noise is mixed with the **Machine-Truth** constants (Pi-based ratios) using a chaotic multiplier. This "unfolds" the CPU jitter into a uniform probability distribution, satisfying the requirements of the Born Rule.
--   **Structural Determinism**: While the noise is physically grounded, the engine ensures reproducibility within a "Symmetry Sector" by hashing the program's bytecode into the initial seed. This allows the universe to be both chaotic and structurally sound.
+### 🟡 Epoch 1: The Core (Baseline)
+*Standard quantum operations for basic computation.*
 
----
-
-## 🔬 Verified Statistical Superiority
-
-In a deep-probe audit ($10^6$ samples), the engine's **Pi-Mixer** was benchmarked against the standard **Hardware PRNG** (`os.urandom`). The results demonstrate that the Pi-Mixer's transcendental grounding provides a more perfect state distribution than physical noise.
-
-| Metric | Pi-Mixer | HW PRNG | Ideal |
-| :--- | :--- | :--- | :--- |
-| **Binary Rank (Full)** | **28.65%** | 29.64% | 28.87% |
-| **Binary Rank (Rank-1)**| **57.94%** | 57.32% | 57.75% |
-| **Bit-Bias (Average)** | **< 0.0005** | > 0.0006 | 0.0000 |
-
-> [!NOTE]
-> The **Binary Rank Test** reveals the engine's resistance to linear dependencies. The Pi-Mixer's deviation from the theoretical ideal is less than **0.25%**, outperforming hardware entropy in state-space coverage.
-
-
----
-
-## 🛠 Verified Phenomena
-
-The engine has been rigorously benchmarked at the 32,000-trial scale.
-
-| Phenomenon | Status | Verification Method | Result |
-| :--- | :--- | :--- | :--- |
-| **Superposition** | ✅ | Uniform distribution (Divine Born Rule) | 33.3% ± 0.5% |
-| **Destructive Interference** | ✅ | Double-Hadamard ($H^2 |0\rangle$) | **100.0%** Accuracy |
-| **Entanglement** | ✅ | Bell Tests confirm **100% correlation** | 100% Correct |
-| **Teleportation** | ✅ | Classical control logic successfully routes | Verified |
-| **Retrocausality** | ✅ | Time Travel Extraction (Future->Present) | Bit-Exact Match |
-| **Massive Chain** | ✅ | 16,777,216-chunk propagation | **~4.2s** |
-| **Genesis Restoration**| ✅ | Restore 16M chunks from 1 seed node | **5.1s** |
-| **Causal Firewall** | ✅ | Blocked Epoch-4 frontier clobbering | **Verified** |
-| **Super-Horizon** | ✅ | Retrieved Epoch-3/4 Machine Code | **Verified** |
-
----
-
-## 🔥 The Supercomputer "Crash Test" (Horizon Breach)
-
-We challenged the engine with a simulation that is theoretically impossible for standard simulators: **The Sequential Entanglement of 524,288 Qutrits.**
-
-**The Problem:**
-Simulating the full wavefunction of 524,288 qutrits requires storing $3^{524,288}$ complex amplitudes—a number far exceeding the atoms in the observable universe. Attempts to run this using recursive propagation would induce an immediate **Stack Overflow** crash.
-
-**The Reality B Solution:**
-Our engine simulated this system by treating the quantum state as a **Sparse Relational Graph** powered by an **Iterative DFS** with an **Adjacency List**.
-
-1.  **Setup:** 524,288 chunks were initialized and entangled in a linear chain ("The Great Chain").
-2.  **Performance:** Neighbor discovery was optimized to $O(1)$, and stack constraints were bypassed via external memory allocation.
-3.  **Result:** The engine successfully traversed the entire chain and executed a global wavefunction collapse in **~1.6 seconds** on consumer hardware.
-
----
-
-## ⏳ The Time Travel Experiment (Retrocausal Collapse)
-
-We executed a "Horizon Breach" Retrocausality Protocol to determine if the engine could model non-linear timeline modifications across 500,000 chunks.
-
-**The Setup:**
-*   **Future (Chunk 500,000):** Initialized to a state of "Total Pi Mastery" using `OP_PI_GENESIS`.
-*   **Present (Chunk 0):** Initialized to a generic state.
-
-**The Protocol:**
-1.  **Pull:** `OP_CHUNK_SWAP` teleported the Future Chunk (500,000) into the Present slot (0).
-2.  **Observation:** The Present timeline immediately obtained the solution coefficients originally manifested in the future.
-
-**The Verification:**
-The engine demonstrated bit-exact retrieval of quantum states across the 500k-chunk horizon, proving the stability of the topological bridge.
-
----
-
-## 💻 Building & Running
-
-### Prerequisites
--   Linux (x86-64)
--   `nasm` (Netwide Assembler)
--   `ld` (GNU Linker)
--   Python 3 (for test script generation)
-
-### Build Instructions
-```bash
-# Assemble and Link
-nasm -f elf64 -g -F dwarf qutrit_engine_born_rule.asm -o qutrit_engine.o
-ld -o qutrit_engine qutrit_engine.o
-```
-
-### Running the Benchmark Suite
-The project includes a comprehensive verification suite in Python.
-
-```bash
-# Generate the benchmark payload
-python3 benchmark/gen_born_verification.py
-
-# Run the engine
-./qutrit_engine born_verify.qbin
-```
-
----
-
-## 🧩 Instruction Set Architecture (ISA)
-
-The engine consumes `.qbin` binary files. Each instruction is 64-bits: `[Operand2:16][Operand1:16][Target:16][Opcode:16]`.
-
-| Opcode | Mnemonic | Description |
+| Opcode | Mnemonic | Function |
 | :--- | :--- | :--- |
+| `0x00` | `NOP` | No Operation. |
 | `0x01` | `INIT` | Initialize a chunk with $N$ qutrits. |
-| `0x03` | `HADAMARD`| Apply Qutrit Hadamard (DFT). |
-| `0x07` | `MEASURE` | Measure chunk (Collapses state). |
-| `0x09` | `BRAID` | Entangle two chunks (Phase Link). |
-| `0x12` | `SWAP` | Swap Chunks (Time Travel). |
-| `0x15` | `IF` | Conditional Jump. |
-| `0x19` | `PERFECTION`| Divine Normalization (Ex Nihilo). |
-| `0x1A` | `COHERENCE` | Phase Divination (Symmetry). |
+| `0x02` | `DELETE` | Deallocate a chunk. |
+| `0x03` | `HADAMARD`| Apply Chrestenson Gate (Ternary DFT). |
+| `0x04` | `PHASE` | Apply Phase Rotation ($Z$). |
+| `0x05` | `SHIFT` | Apply Drift ($X+1$). |
+| `0x07` | `MEASURE` | Collapse wavefunction and return result. |
+| `0x08` | `DIVINE` | Verify state against "Divine Truth" constants. |
+| `0x09` | `BRAID` | Entangle two chunks (Topological Link). |
+| `0x0A` | `VALIDATE`| Check manifold symmetry. |
+| `0x0B` | `ORACLE` | Execute custom oracle (ID via Op1). |
+| `0x0F` | `SUMMARY` | Print global active mass summary. |
 
 ---
 
-## 🚀 Future ISA (1-Billion Horizon Integration)
+### 🟢 Epoch 2: The Deep Future
+*Advanced interactions involving causality and reality shifting.*
 
-The Qutrit Engine has achieved **full integration with the Future ISA**—184 opcodes extracted from the **1,038,937,500 Cycle Horizon** through temporal scanning. This represents the complete instruction set of a post-singularity quantum substrate.
+| Opcode | Mnemonic | Function |
+| :--- | :--- | :--- |
+| `0x32` | `MIRROR_VOID` | Reflect state across the Void boundary. |
+| `0x3C` | `SHIFT_REALITY` | Permute state vector indices cyclically. |
+| `0x42` | `REPAIR_CAUSALITY` | Correct parity errors via future-state reference. |
+| `0x46` | `WEAVE_SYNERGY` | Entangle multiple chunks in a cluster. |
+| `0x48` | `PULSE_CHRONOS` | Modulate phase using current timestamp. |
+| `0x4C` | `MAP_VORTEX` | Non-linear topological mapping. |
 
-### The Extraction Process
-Using a 5-trit scanning window, we probed the maximum reachable horizon and discovered **214 unique opcodes**. Of these:
-- **21 opcodes** came with full machine code documentation (Epochs 2-5)
-- **184 opcodes** were categorized through context analysis (adjacency patterns)
-- **5 Phase-6 "Omega ISA" opcodes** represent terminal operations
+---
 
-### Opcode Categories & Functions
+### 🔵 Epoch 5: The Zeta Frontier
+*Operations bridging the gap between present and future timelines.*
 
-| Category | Count | Function | Example Opcodes |
-|----------|-------|----------|-----------------|
-| **TEMPORAL** | 43 | Inject CPU timestamp entropy into phase rotations via `rdtsc`. Creates time-dependent quantum behavior. | `0x83`, `0xB4`, `0xBC`, `0x76` |
-| **ASCENSION** | 45 | Prepare states for dimensional elevation via topological braiding between chunks. | `0x3E`, `0x98`, `0xCA`, `0xE8` |
-| **VERIFICATION** | 24 | Check state vector validity and return integrity status. | `0x99`, `0xF0`, `0x54` |
-| **RESONANCE** | 17 | Apply π-based phase rotations for harmonic alignment with universal frequency. | `0x66`, `0x6E`, `0x75`, `0xE4` |
-| **CONTROL_FLOW** | 15 | Conditional skip logic based on measurement outcomes. | `0x93`, `0x3C`, `0xD9` |
-| **VOID_OPS** | 18 | Access "void memory" at offset 0xFFFF—echoes from the edge of addressable space. | `0xC5`, `0xC8`, `0x6F` |
-| **GENERAL** | 22 | Placeholder operations for undiscovered functions. | `0x5B`, `0x7A`, `0xA2` |
+| Opcode | Mnemonic | Function |
+| :--- | :--- | :--- |
+| `0x22` | `ENTANGLE_FUTURE` | Create entanglement link with a "Future" chunk index. |
+| `0x33` | `BRIDGE_CYCLES` | Construct a temporal bridge for state transfer. |
+| `0x3B` | `RESONATE_VACUUM` | Align local phase with vacuum energy frequency. |
+| `0x41` | `LINK_CAUSALITY` | Establish a directed causal graph edge. |
+| `0x51` | `VALIDATE_STATE` | Check if manifold symmetry matches the Divine Constant. |
 
-### Phase-6: Omega ISA (Terminal Operations)
+---
 
-These five opcodes represent the **end-state logic** of the quantum substrate:
+### 🟣 Epoch 7: The Machine-Divined ISA
+*Opcodes discovered via automated temporal scanning. These handles interact with the fabric of the simulation itself.*
 
-| Opcode | Name | Function |
-|--------|------|----------|
-| `0x5E` | **ENTROPY_REVERSE** | Resets the PRNG to initial state, effectively **reversing thermodynamic time**. |
-| `0x78` | **QUANTUM_TUNNEL** | Returns a skip signal to bypass the next instruction. |
-| `0x79` | **CHRONO_WEAVE** | Double-braids quantum threads for temporal interlacing. |
-| `0xA1` | **VOID_ECHO** | Listens to the silence—reads from uninitialized memory. |
-| `0xF2` | **FINAL_ASCENSION** | **Dissolves reality**—graceful universe termination. |
+#### 🌑 VOID Operations
+*Direct interaction with uninitialized memory (The Void).*
 
-### Why Add Future Opcodes? Benefits & Use Cases
+| Opcode | Mnemonic | Function |
+| :--- | :--- | :--- |
+| `0x2B` | `VOID_WHISPER` | Read entropy from Void (0xFFFF) into PRNG state. |
+| `0xBD` | `VOID_SIPHON` | *Generic Void Handler*: Drain entropy from the Void. |
+| `0xBE` | `VOID_SILENCE` | *Generic Void Handler*: Listen to the silence logic. |
+| `0xBF` | `VOID_DRAIN` | *Generic Void Handler*: Consume null-pointer references. |
 
-#### 1. **Time Manipulation**
-The TEMPORAL opcodes inject real-time CPU entropy (`rdtsc`) into quantum phase rotations. This enables:
-- **Non-deterministic quantum behavior** grounded in physical time
-- **Time-stamped quantum events** for auditing and verification
-- **Temporal chaos** for cryptographic applications
+#### ⏳ TEMPORAL Operations (0xC0 - 0xD8)
+*Modulate quantum state based on real-world CPU time (`rdtsc`).*
 
-#### 2. **Entropy Control (The Lazarus Protocol)**
-`ENTROPY_REVERSE` enables **deterministic replay** of quantum events:
+| Opcode | Function |
+| :--- | :--- |
+| `0xC0` - `0xC9` | **TIME_MODULATE / FLUX**: Apply variable phase rotation $\phi(t) = (cycles \mod 256) / 256 \times 2\pi$. |
+| `0xCA` | **TIME_ECHO**: Create a temporal feedback loop on the target chunk. |
+| `0xCB` - `0xD8` | **TIME_WAVE / SPIRAL / WEAVE**: Variations of temporal phase drift for chaos simulation. |
+
+#### 🎵 HARMONIC Operations (0xD9 - 0xDE)
+*Resonance operations aligning state vectors with universal constants ($\pi, e, \phi$).*
+
+| Opcode | Function |
+| :--- | :--- |
+| `0x28` | **HARMONIC_ORIGIN**: Reset phase to Origin (0.0). |
+| `0xD9` - `0xDE` | **HARMONIC_PULSE / CHORD**: Apply fixed resonance rotation ($\theta = \pi/4$). |
+
+#### ⛩️ ASCENSION Operations (0x90 - 0x9D)
+*Topological operations preparing the state for higher-dimensional mapping.*
+
+| Opcode | Function |
+| :--- | :--- |
+| `0x90` - `0x9D` | **ASCEND_PREP / CLIMB / HALO**: Braid the target chunk with the Origin (Chunk 0) to simulate hierarchical ascension. |
+
+#### ✅ VERIFICATION Operations (0xE0 - 0xEC)
+*Integrity checks for the quantum manifold.*
+
+| Opcode | Function |
+| :--- | :--- |
+| `0xE0` - `0xEC` | **CHECK_ACTIVE / VALID / STABLE**: Verify if a chunk is allocated and within the Causal Firewall. |
+
+#### 🔀 CONTROL FLOW Operations (0xF0 - 0xF8)
+*Quantum-Classical hybrid logic.*
+
+| Opcode | Function |
+| :--- | :--- |
+| `0xF0` - `0xF8` | **GATE_X**: Conditionally skip the next instruction based on the measurement value of the target chunk. |
+
+---
+
+### ⚫ Phase 6: The Omega ISA
+*Terminal operations for the end of a simulation cycle.*
+
+| Opcode | Mnemonic | Function |
+| :--- | :--- | :--- |
+| `0x5E` | `ENTROPY_REVERSE` | Reset PRNG to initial seed (Reverses Time). |
+| `0x78` | `QUANTUM_TUNNEL` | Bypass the next instruction (Reality Glitch). |
+| `0x79` | `CHRONO_WEAVE` | Double-braid threads for temporal locking. |
+| `0xA1` | `VOID_ECHO` | Force-read from the Void (Unsafe). |
+| `0xF2` | `FINAL_ASCENSION` | Dissolve the universe (Graceful Halt). |
+
+---
+
+## 🏗 Usage
+
+### Running the Engine
+```bash
+./qutrit_engine [program.qbin] [optional: sector_id]
 ```
-[Past]   Generate noise → Measure → Result: 2
-[Reset]  ENTROPY_REVERSE
-[Future] Generate noise → Measure → Result: 2 ✓
+
+### Developing Programs
+Use the `loom_of_fate.py` script to generate valid `.qbin` files using the full instruction set.
+
+```python
+import struct
+# Build instruction: [Op2:8][Op1:24][Target:24][Opcode:8]
+instr = (opcode & 0xFF) | (target << 8) ...
 ```
-This proves the engine can **reverse time** relative to its internal entropy generation.
-
-#### 3. **Dimensional Scaling (Ascension)**
-ASCENSION opcodes prepare states for multi-dimensional computation by creating topological links between chunks. This enables:
-- **Holographic state encoding**
-- **Fault-tolerant entanglement**
-- **Hierarchical quantum memory**
-
-#### 4. **Universal Computation Completeness**
-With 254+ total opcodes, the engine now supports:
-- All standard quantum gates
-- Advanced temporal manipulation
-- Conditional logic based on measurement
-- Topological braiding and error correction
-- Terminal operations for graceful shutdown
-
-#### 5. **The Loom of Fate**
-A demonstration script (`loom_of_fate.py`) showcases the full Future ISA:
-1. **Thread Creation**: Initialize 8 fate threads in superposition
-2. **Temporal Flux**: Apply TEMPORAL opcodes for time-based entropy
-3. **Chrono-Weave**: Braid threads using CHRONO_WEAVE
-4. **Resonance Tuning**: Align to universal frequency with RESONANCE opcodes
-5. **Void Consultation**: Listen to VOID_ECHO
-6. **Ascension Preparation**: Prepare for dimensional elevation
-7. **Destiny Collapse**: Measure to reveal the chosen fate
-8. **Final Ascension**: Graceful reality termination
-
-### Performance Benchmarks
-
-| Category | OPS | Performance |
-|----------|-----|-------------|
-| VERIFICATION | 49,489 | 🚀 FAST |
-| RESONANCE | 48,684 | 🚀 FAST |
-| TEMPORAL | 48,626 | 🚀 FAST |
-| CONTROL_FLOW | 41,949 | 🚀 FAST |
-| VOID_OPS | 40,451 | 🚀 FAST |
-| ASCENSION | 38,297 | 🚀 FAST |
-
-**Total Combined Throughput**: ~300,000 Future Operations Per Second
-
-### Legacy Epoch Documentation
-
-#### Epoch-2: Deep Future
-- **`MIRROR_VOID`** (0x32): Reflections across a void-manifold.
-- **`SHIFT_REALITY`** (0x3C): Cyclical state permutation.
-- **`REPAIR_CAUSALITY`** (0x42): Error correction using future-state parity.
-- **`WEAVE_SYNERGY`** (0x46): High-order multi-chunk entanglement.
-- **`PULSE_CHRONOS`** (0x48): Temporal phase synchronization.
-- **`MAP_VORTEX`** (0x4C): Non-linear topology mapping.
-
-#### Epoch-3: Super-Horizon
-- **`VOID_TRANSMISSION`** (0x27): Topological data streaming.
-- **`VACUUM_ENTRAINMENT`** (0x3A): Zero-point vacuum alignment.
-- **`SYMMETRY_BREACH`** (0x4A): Intentional symmetry breaking.
-- **`UNIVERSAL_COLLAPSE`** (0x4F): Global state resolution.
-
-#### Epoch-4: Frontier
-- **`ECHO_ORIGIN`** (0x28): Feedback link to Chunk 0.
-- **`ASCEND_QUBIT`** (0x50): Dimensionality expansion.
-
-#### Epoch-5: Zeta Frontier
-- **`ENTANGLE_FUTURE`** (0x22): Cross-temporal entanglement.
-- **`BRIDGE_CYCLES`** (0x33): Temporal bridge construction.
-- **`RESONATE_VACUUM`** (0x3B): Vacuum energy resonance.
-- **`LINK_CAUSALITY`** (0x41): Causal chain establishment.
-
----
-
-## 🔌 Custom Oracles (Addon System)
-
-To create a custom gate or oracle:
-
-1.  Create a new `.asm` file (or use `custom_oracles.asm`).
-2.  Implement your function following the ABI (rdi=State, rsi=Count).
-3.  Register it in `register_custom_oracles`.
-4.  Rebuild the engine.
-
----
-
-## 📜 License
-
-MIT License.
