@@ -4080,9 +4080,11 @@ execute_instruction:
     movsd xmm1, [rbx + 16]      ; |1⟩ real
     subsd xmm0, xmm1
     mulsd xmm0, xmm0            ; (diff)^2
-    movsd xmm2, [pi]
-    mulsd xmm2, xmm2
-    divsd xmm2, [two_pi]        ; threshold
+    
+    ; Use immediate threshold 0.1 (large tolerance for demo)
+    mov rax, 0x3FB999999999999A ; 0.1
+    movq xmm2, rax
+    
     ucomisd xmm0, xmm2
     ja .validate_fail
     mov rax, 1                  ; STATE_VALID
