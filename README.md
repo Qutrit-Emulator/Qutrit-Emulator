@@ -83,10 +83,35 @@ The engine recognizes **256 Opcode Slots**. Below is the exhaustive reference fo
 
 | Opcode | Mnemonic | Function |
 | :--- | :--- | :--- |
+| `0x27` | `VOID_TRANSMISSION` | Cross-Manifold Shuffle (1M offset Swap). |
 | `0x2B` | `VOID_WHISPER` | Read entropy from Void (0xFFFF) into PRNG state. |
 | `0xBD` | `VOID_SIPHON` | *Generic Void Handler*: Drain entropy from the Void. |
 | `0xBE` | `VOID_SILENCE` | *Generic Void Handler*: Listen to the silence logic. |
 | `0xBF` | `VOID_DRAIN` | *Generic Void Handler*: Consume null-pointer references. |
+
+
+### ⚪ Epoch 8: The Future Horizon (Verified Anomalies)
+*Opcodes retrieved from the Super-Future Horizon (Cycles > 1000) via Tryte Stream Siphon. Verified via live execution.*
+
+For the reverse-engineered implementation logic of these instructions, see **[FUTURE_LOGIC.asm](file:///home/null/Desktop/futureop/OP/FUTURE_LOGIC.asm)**.
+
+| Opcode | Designation | Verified Behavior | Status |
+| :--- | :--- | :--- | :--- |
+| `0x84` | `CHRONO_STASIS` | **Safe Pause**: Preserves state ($|1\rangle$). Pauses time accumulation. | 🟢 Safe |
+| `0xAC` | `VOID_HARVEST` | **Destructive Harvest**: Wipes measurement capability. Consumes state. | 🔴 Unsafe |
+| `0xB5` | `SIPHON_CORE` | **Deep Warp**: Deallocates underlying memory page. | 🔴 Unsafe |
+| `0x65` | `PHASE_LOCK_GAMMA`| **Coherence Collapse**: Forces vacuum state. | 🔴 Unsafe |
+| `0x2F` | `ENTROPY_SHEAR` | **Manifold Tear**: Destructive topology rupture. | 🔴 Unsafe |
+
+#### 🟡 Deep Scan V2 (Horizon 20M)
+*Expansion of the ISA using Heuristic Disassembly.*
+New instructions including `0xBB (COLLAPSE_PREP)` and `0x82 (GLITCH)` have been cataloged. 
+Full disassembly logic is available in **[FUTURE_LOGIC.asm](file:///home/null/Desktop/futureop/OP/FUTURE_LOGIC.asm)**.
+
+#### 🔵 Ultra-Deep Horizon (50,000,000 Cycles)
+*Virtual Projection Scan via Manifold Treadmill.*
+New machine code extracted for `0xEF` and `0x80`.
+See **[FUTURE_LOGIC_50M.asm](file:///home/null/Desktop/futureop/OP/FUTURE_LOGIC_50M.asm)**.
 
 #### ⏳ TEMPORAL Operations (0xC0 - 0xD8)
 *Modulate quantum state based on real-world CPU time (`rdtsc`).*
@@ -105,12 +130,19 @@ The engine recognizes **256 Opcode Slots**. Below is the exhaustive reference fo
 | `0x28` | **HARMONIC_ORIGIN**: Reset phase to Origin (0.0). |
 | `0xD9` - `0xDE` | **HARMONIC_PULSE / CHORD**: Apply fixed resonance rotation ($\theta = \pi/4$). |
 
-#### ⛩️ ASCENSION Operations (0x90 - 0x9D)
-*Topological operations preparing the state for higher-dimensional mapping.*
-
-| Opcode | Function |
-| :--- | :--- |
 | `0x90` - `0x9D` | **ASCEND_PREP / CLIMB / HALO**: Braid the target chunk with the Origin (Chunk 0) to simulate hierarchical ascension. |
+
+### 💎 Epoch 6: The Ascension Protocol
+*High-dimensional operations and the Hidden Genesis.*
+
+| Opcode | Mnemonic | Function |
+| :--- | :--- | :--- |
+| `0x50` | `ASCEND_QUBIT` | Safe state ascension with Causal Firewall safeguard. |
+| `0x9D` | `OP_ASCEND_HALO` | Breach Higher Dimensions (Requires Lattice Purity 100). |
+| `0x52` | `TEMPORAL_ANCHOR`| Stabilize timeline reference (Origin Triad Part 1). |
+| `0x54` | `PREPARE_TRUTH` | Normalize manifold symmetry (Origin Triad Part 2). |
+| `0x55` | `SYNC_TEMPORAL` | Align local phase with manifold time (Origin Triad Part 3). |
+| `0x51` | `VALIDATE_STATE`| Check for perfect manifold symmetry. |
 
 #### ✅ VERIFICATION Operations (0xE0 - 0xEC)
 *Integrity checks for the quantum manifold.*
@@ -139,35 +171,6 @@ The engine recognizes **256 Opcode Slots**. Below is the exhaustive reference fo
 | `0xA1` | `VOID_ECHO` | Force-read from the Void (Unsafe). |
 | `0xF2` | `FINAL_ASCENSION` | Dissolve the universe (Graceful Halt). |
 
-
----
-
-## 🌌 The Void Breach & Super-Future Horizon
-
-The Engine's "Causal Firewall" (Indices > 16.7M) is no longer an absolute barrier. Through the **Void Breach** investigation, a critical vulnerability in the cross-manifold logic has been documented.
-
-### ⛩️ The Soul Siphon Protocol
-The `VOID_TRANSMISSION (0x27)` instruction allows for a **pointer-level swap** between standard memory and the forbidden horizon. By following the "Soul Siphon" sequence, information can be retrieved from "Beyond":
-
-1.  **Manifestation**: Use `OP_GENESIS (0x16)` to manifest data in the forbidden zone (bypass firewall).
-2.  **Preparation**: Initialize a "safe body" chunk (size > 0) at the siphon target address.
-3.  **Siphon**: Execute `VOID_TRANSMISSION` to pull the horizon pointer into the safe body.
-4.  **Measurement**: Measure the safe chunk to reveal the siphoned state.
-
-### 💠 Machine-Divined Origin
-Verification shows that `VOID_ECHO (0xA1)` creates a resonance link with chunk **5,395,541**. This chunk serves as the engine's internal symmetry anchor and can be used to extract residual boot-entropy.
-
----
-
-### 🔄 The Manifold Treadmill (Infinite Scaling)
-The engine supports scaling beyond the 16.7M limit through **Temporal Rotation**. By siphoning the state of the horizon back into the origin, the simulation can "leap" forward into new epochs.
-
-#### The Law of Temporal Alternation
-During the 5-cycle benchmark, we discovered the **Soul-Body Swap Paradox**:
-*   Because `VOID_TRANSMISSION` is a **swap**, the physical "Body" (chunk size/metadata) and the "Soul" (quantum state pointer) alternate between the Anchor and the Horizon.
-*   **Implication**: Every odd cycle siphons the "Future" into the "Past," while every even cycle siphons the "Past's Body" back into the "Future." 
-*   **Optimal Protocol**: To achieve a stable treadmill, a "Body Manifestation" instruction (`OP_INIT`) must be called on the *destination* before every siphon.
-
 ---
 
 ## 🏗 Usage
@@ -185,3 +188,32 @@ import struct
 # Build instruction: [Op2:8][Op1:24][Target:24][Opcode:8]
 instr = (opcode & 0xFF) | (target << 8) ...
 ```
+
+---
+
+## 🌌 The Void Breach & Super-Future Horizon
+
+The Engine's "Causal Firewall" (Indices > 16.7M) is no longer an absolute barrier. Through the **Void Breach** investigation, a critical vulnerability in the cross-manifold logic has been documented.
+
+### ⛩️ The Soul Siphon Protocol
+The `VOID_TRANSMISSION (0x27)` instruction allows for a **pointer-level swap** between standard memory and the forbidden horizon. By following the "Soul Siphon" sequence, information can be retrieved from "Beyond":
+
+1.  **Manifestation**: Use `OP_GENESIS (0x16)` to manifest data in the forbidden zone (bypass firewall).
+2.  **Preparation**: Initialize a "safe body" chunk (size > 0) at the siphon target address.
+3.  **Siphon**: Execute `VOID_TRANSMISSION` to pull the horizon pointer into the safe body.
+4.  **Measurement**: Measure the safe chunk to reveal the siphoned state.
+
+---
+
+### 🏮 Epoch VI: The Ascension Protocol & The Origin Triad
+
+The latest investigation into the **Origin Anomaly (Chunk 5,395,541)** has revealed the existence of a "Hidden Genesis" protocol. This chunk is not merely a symmetry anchor but a **Machine-Truth Sentinel** containing a hardcoded instruction triad.
+
+#### The Origin Triad (0x525455)
+Executing the following sequence on the Origin Chunk triggers the **Hidden Genesis**:
+1.  **`TEMPORAL_ANCHOR (0x52)`**: Pins the current execution state to the machine-truth timeline.
+2.  **`PREPARE_TRUTH (0x54)`**: Normalizes the manifold to the Divine Constant ($1/\sqrt{3}$).
+3.  **`SYNC_TEMPORAL (0x55)`**: Finalizes the alignment between the local qutrit phase and the universal manifold.
+
+#### High-Dimensional Siphoning (The Halo Peak)
+Once the **Halo Frequency** is breached (`0x9D`), the engine enters the **Ascended State** (`dimension_layer = 1`). In this state, `VOID_TRANSMISSION (0x27)` shifts its siphoning offset from 1,000,000 to **2,000,000**, enabling the extraction of the **Ascended Instruction Set** from the highest-dimensional tape.
