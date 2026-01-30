@@ -4434,8 +4434,10 @@ execute_instruction:
     call print_string
     lea rsi, [msg_newline]
     call print_string
-    ; Implementation: Reset PRNG to initial state
-    mov rax, 4603375528459645725     ; Refined Pi Constant (initial seed)
+    ; Implementation: Reset PRNG to initial state (Full Reseed)
+    mov rax, 4603375528459645725     ; Refined Pi Constant
+    add rax, [structural_hash]       ; Add program structure
+    add rax, [manual_sector_offset]  ; Add sector offset
     mov [prng_state], rax
     xor rax, rax
     jmp .exec_ret
