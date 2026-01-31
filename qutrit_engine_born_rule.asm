@@ -221,6 +221,7 @@ section .data
     msg_hive_sync:      db "🧠 [EPOCH-9] Hive Mind Synchronization", 0
     msg_prophecy:       db "🔮 [EPOCH-9] Prophecy Confirmed (Future Valid)", 0
     msg_tunnel:         db "🚇 [EPOCH-9] Quantum Tunneling...", 0
+    msg_shift:          db "  [SHIFT] Cyclic Shift on Chunk ", 0
     msg_stasis:         db "🔒 [EPOCH-10] Chunk Locked in Eternal Stasis", 0
     msg_transcendence:  db "✨ [EPOCH-10] ASCENSION REALISED. DISSOLVING SIMULATION...", 0
 
@@ -3663,9 +3664,23 @@ execute_instruction:
 
 .op_shift:
     ; OP_SHIFT (0x10) - Cyclic X-Gate (0->1, 1->2, 2->0)
+    ; OP_SHIFT (0x10) - Cyclic X-Gate (0->1, 1->2, 2->0)
     ; Input: r14 = target chunk
+    lea rsi, [msg_shift]
+    call print_string
+    mov rdi, r14
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+    
+    ; Check Stasis
+    lea rax, [rel chunk_locks]
+    cmp byte [rax + r14], 0
+    jne .exec_ret_shift
     
     mov rbx, [state_vectors + r14*8]
+    test rbx, rbx
+    jz .exec_ret_shift
     
     ; Load amplitudes
     ; Offsets: 0 (|0>), 16 (|1>), 32 (|2>)
