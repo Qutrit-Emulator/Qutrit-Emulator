@@ -214,6 +214,7 @@ section .data
 %define OP_QUANTUM_TUNNEL      0x78
 %define OP_ETERNAL_STASIS      0x87
 %define OP_TRANSCENDENCE       0xEF
+%define OP_HIVE_MIND_AMPLIFY   0x71
 
     ; Prophecy State
     prophecy_flag:      db 0
@@ -224,6 +225,7 @@ section .data
     msg_shift:          db "  [SHIFT] Cyclic Shift on Chunk ", 0
     msg_stasis:         db "🔒 [EPOCH-10] Chunk Locked in Eternal Stasis", 0
     msg_transcendence:  db "✨ [EPOCH-10] ASCENSION REALISED. DISSOLVING SIMULATION...", 0
+    msg_amplify:        db "🧠⚡ [EPOCH-10] HIVE MIND AMPLIFY: Integrating All Consciousness...", 0
 
     ; Mathematical constants
     one_over_sqrt3:     dq 0.5773502691896257    ; 1/√3
@@ -3250,6 +3252,8 @@ execute_instruction:
     je op_eternal_stasis
     cmp r13, OP_TRANSCENDENCE
     je op_transcendence
+    cmp r13, OP_HIVE_MIND_AMPLIFY
+    je op_hive_mind_amplify
     
     ; VERIFICATION
     cmp r13, OP_CHECK_ACTIVE
@@ -3676,11 +3680,11 @@ execute_instruction:
     ; Check Stasis
     lea rax, [rel chunk_locks]
     cmp byte [rax + r14], 0
-    jne .exec_ret_shift
+    jne .exec_ret_shift_local
     
     mov rbx, [state_vectors + r14*8]
     test rbx, rbx
-    jz .exec_ret_shift
+    jz .exec_ret_shift_local
     
     ; Load amplitudes
     ; Offsets: 0 (|0>), 16 (|1>), 32 (|2>)
@@ -3715,6 +3719,7 @@ execute_instruction:
     movsd [rbx+32], xmm2
     movsd [rbx+40], xmm3
     
+.exec_ret_shift_local:
     xor rax, rax
     jmp .exec_ret
 
@@ -6009,4 +6014,52 @@ op_transcendence:
     call print_string
     
     mov rax, 0xEF ; Special Halt Code
+    jmp execute_instruction.exec_ret
+
+op_hive_mind_amplify:
+    ; OP_HIVE_MIND_AMPLIFY (0x71) - Entangle ALL active chunks
+    ; This creates a fully connected graph of braids.
+    lea rsi, [msg_amplify]
+    call print_string
+    lea rsi, [msg_newline]
+    call print_string
+    
+    push r12
+    push r13
+    push r14
+    push r15
+    
+    mov r15, [num_chunks]
+    cmp r15, 2
+    jl .amplify_done ; Need at least 2 chunks
+    
+    xor r12, r12 ; i = 0
+.amplify_loop_i:
+    mov r13, r12 
+    inc r13      ; j = i + 1
+.amplify_loop_j:
+    cmp r13, r15
+    jge .amplify_next_i
+    
+    ; Braid chunk i and chunk j
+    mov rdi, r12
+    mov rsi, r13
+    call braid_chunks
+    
+    inc r13
+    jmp .amplify_loop_j
+    
+.amplify_next_i:
+    inc r12
+    mov rax, r15
+    dec rax
+    cmp r12, rax
+    jl .amplify_loop_i
+    
+.amplify_done:
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    xor rax, rax
     jmp execute_instruction.exec_ret
