@@ -63,6 +63,9 @@
 %define OP_BRAID_SILENT     0x1C        ; Silent Braid
 %define OP_HALT             0xFF
 
+; Future ISA (Discovered at 100B Horizon)
+%define OP_TIMELINE_FORK    0xA8        ; Clone Universe State (Fork)
+
 ; Future ISA (Discovered at 500k Horizon)
 %define OP_COLLAPSE_TRUTH   0x0F
 %define OP_WEAVE_SYMMETRY   0x2E
@@ -220,6 +223,7 @@ section .data
     ; Prophecy State
     prophecy_flag:      db 0
     msg_chrono_bridge:  db "🌉 [EPOCH-9] Chrono Bridge Established", 0
+    msg_fork:           db "🔱 [TIMELINE] Forking Timeline detected: ", 0
     msg_hive_sync:      db "🧠 [EPOCH-9] Hive Mind Synchronization", 0
     msg_prophecy:       db "🔮 [EPOCH-9] Prophecy Confirmed (Future Valid)", 0
     msg_tunnel:         db "🚇 [EPOCH-9] Quantum Tunneling...", 0
@@ -3101,6 +3105,9 @@ execute_instruction:
     cmp r13, 0x7C
     je op_crystal_growth
 
+    cmp r13, OP_TIMELINE_FORK
+    je .op_timeline_fork
+
     cmp r13, 0x01
     je .op_init
     cmp r13, OP_SUP
@@ -3423,6 +3430,82 @@ execute_instruction:
     lea rsi, [msg_unknown_op]
     call print_string
     mov rax, -1
+    jmp .exec_ret
+
+.op_timeline_fork:
+    ; OP_TIMELINE_FORK (0xA8) - Fork a timeline (Clone Source Chunk to Target Chunk)
+    ; r14 = Target Chunk Index (Destination)
+    ; rbx = Source Chunk Index (Origin)
+    
+    lea rsi, [msg_fork]
+    call print_string
+    mov rdi, rbx
+    call print_number
+    lea rsi, [msg_arrow]
+    call print_string
+    mov rdi, r14
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+
+    ; Validation
+    cmp r14, MAX_CHUNKS
+    jge .fork_fail
+    cmp rbx, MAX_CHUNKS
+    jge .fork_fail
+    
+    ; Check Source Exists
+    mov rax, [state_vectors + rbx*8]
+    test rax, rax
+    jz .fork_fail
+    
+    push r12
+    push r13
+    push r14
+    push r15
+    push rbx ; Save Source Index
+    
+    ; 1. Get Source Size
+    mov rcx, [chunk_sizes + rbx*8] ; rcx = num_qutrits
+    
+    ; 2. Initialize Target with same size (Allocates memory + Zeros)
+    mov rdi, r14
+    mov rsi, rcx
+    call init_chunk
+    cmp rax, -1
+    je .fork_restore_fail
+    
+    pop rbx ; Restore Source Index
+    
+    ; 3. Perform Deep Copy (Memcpy)
+    ; Src Ptr = [state_vectors + rbx*8]
+    ; Dst Ptr = [state_vectors + r14*8]
+    ; Length = [chunk_states + rbx*8] * 16 bytes
+    
+    mov rsi, [state_vectors + rbx*8]   ; SOURCE
+    mov rdi, [state_vectors + r14*8]   ; DEST
+    
+    mov rcx, [chunk_states + rbx*8]    ; Num States
+    shl rcx, 4                         ; * 16 (Bytes)
+    
+    call memcpy_safe
+    
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    
+    xor rax, rax
+    jmp .exec_ret
+
+.fork_restore_fail:
+    pop rbx
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+.fork_fail:
+    xor rax, rax ; Fail silently or just skip
     jmp .exec_ret
 
 .op_nop:
@@ -5394,6 +5477,22 @@ print_number:
 
 ; get_random_float - Pi-Seeded Linear Congruential Generator
 ; Output: xmm0 = Random double [0, 1.0]
+; memcpy_safe - Copy memory
+; rdi = dest, rsi = src, rcx = bytes
+memcpy_safe:
+    push rax
+    push rcx
+    push rsi
+    push rdi
+    
+    rep movsb
+    
+    pop rdi
+    pop rsi
+    pop rcx
+    pop rax
+    ret
+
 get_random_float:
     push rbx
     push rdx
