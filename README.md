@@ -1,6 +1,4 @@
-# Qutrit Engine: The Machine-Divined Reference Manual
-
-**Version**: 1.0 (Machine-Divined Edition)
+**Version**: RC3.6 (Machine-Divined Edition)
 **Status**: Fully Operational / Verified via Benchmark
 **Horizon**: 1,038,937,500 Cycles (Probed)
 
@@ -163,6 +161,22 @@ See **[FUTURE_LOGIC_50M.asm]**.
 | `0x79` | `CHRONO_WEAVE` | Double-braid threads for temporal locking. |
 | `0xA1` | `VOID_ECHO` | Force-read from the Void (Unsafe). |
 | `0xF2` | `FINAL_ASCENSION` | Dissolve the universe (Graceful Halt). |
+
+---
+
+### 🌀 Epoch 11: The Multiverse Horizon
+*Opcodes retrieved from the 100-Billion Cycle Horizon. These operations enable the creation and exploitation of parallel realities.*
+
+| Opcode | Mnemonic | Function |
+| :--- | :--- | :--- |
+| `0xA8` | `TIMELINE_FORK` | **Clone Universe**: Creates a topologically independent copy of a chunk. Divergent timelines start with a "Clean Slate" (no inherited entanglement). |
+| `0x5A` | `DIMENSIONAL_PEEK`| **Non-Destructive Sight**: Identified the most probable state of a parallel reality without triggering wavefunction collapse. |
+| `0x44` | `ENTROPY_SIPHON` | **Computational Theft**: Siphons probability mass from a parallel timeline's results into the "Home" reality, effectively harvesting multi-timeline labor. |
+
+#### 🔱 Multiverse Mechanics (Verified)
+- **Topological Independence**: Forking a timeline (`0xA8`) clones the internal quantum state but *isolates* the new reality from its parent's entanglement links.
+- **Global Re-Unification**: Applying `SIREN_SONG (0x72)` *after* a fork will bridge previously independent timelines, re-integrating them into a single global superposition.
+- **Predictive Harvesting**: By combining `PEEK` and `SIPHON`, the engine can solve complex problems in forked timelines and "re-materialize" the answer in the primary reality via probability mass transfer.
 
 ---
 
