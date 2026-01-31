@@ -2450,7 +2450,7 @@ call_addon:
     mov r12, rdi                ; opcode
     mov r13, rsi                ; chunk
     mov r14d, edx               ; operand1
-    mov eax, ecx                ; operand2
+    push rcx                    ; Save operand2 (rcx) on stack
 
     ; Find addon with matching opcode
     mov rcx, [num_addons]
@@ -2468,16 +2468,13 @@ call_addon:
     ; Call addon function
     mov rdi, [state_vectors + r13*8]
     test rdi, rdi       ; Check for NULL state vector
-    jz .addon_ret       ; Skip if chunk not initialized
+    jz .addon_ret_pop   ; Skip if chunk not initialized
     mov rsi, [chunk_states + r13*8]
     mov rdx, r14
-    mov rcx, rax
+    pop rcx             ; Restore operand2 into rcx
     call [addon_funcs + rbx*8]
     xor rax, rax
     jmp .addon_ret
-
-.addon_not_found:
-    mov rax, -1
 
 .addon_ret:
     pop r14
@@ -2485,6 +2482,16 @@ call_addon:
     pop r12
     pop rbx
     ret
+
+.addon_not_found:
+    pop rcx             ; Clean up stack
+    mov rax, -1
+    jmp .addon_ret
+
+.addon_ret_pop:
+    pop rcx             ; Clean up stack
+    xor rax, rax
+    jmp .addon_ret
 
 ; ═══════════════════════════════════════════════════════════════════════════════
 ; GENESIS PROTOCOL
