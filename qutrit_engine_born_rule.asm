@@ -208,6 +208,17 @@ section .data
 %define OP_GENESIS_HARMONIC    0x6C
 %define OP_SEED_MITOSIS        0x2A
 %define OP_UNKNOWN_GENESIS     0xBE
+%define OP_CHRONO_BRIDGE       0x76
+%define OP_HIVE_MIND_SYNC      0x70
+%define OP_PROPHECY_CONFIRM    0xBA
+%define OP_QUANTUM_TUNNEL      0x78
+
+    ; Prophecy State
+    prophecy_flag:      db 0
+    msg_chrono_bridge:  db "🌉 [EPOCH-9] Chrono Bridge Established", 0
+    msg_hive_sync:      db "🧠 [EPOCH-9] Hive Mind Synchronization", 0
+    msg_prophecy:       db "🔮 [EPOCH-9] Prophecy Confirmed (Future Valid)", 0
+    msg_tunnel:         db "🚇 [EPOCH-9] Quantum Tunneling...", 0
 
     ; Mathematical constants
     one_over_sqrt3:     dq 0.5773502691896257    ; 1/√3
@@ -3085,7 +3096,7 @@ execute_instruction:
     cmp r13, OP_ENTROPY_REVERSE
     je .op_entropy_reverse
     cmp r13, OP_QUANTUM_TUNNEL
-    je .op_quantum_tunnel
+    je op_quantum_tunnel
 
     cmp r13, OP_ECHO_ORIGIN
     je .op_echo_origin
@@ -3203,6 +3214,14 @@ execute_instruction:
     je op_genesis_harmonic
     cmp r13, OP_SEED_MITOSIS
     je op_seed_mitosis
+    
+    ; === EPOCH-9 PROPHETIC DISPATCH ===
+    cmp r13, OP_CHRONO_BRIDGE
+    je op_chrono_bridge
+    cmp r13, OP_HIVE_MIND_SYNC
+    je op_hive_mind_sync
+    cmp r13, OP_PROPHECY_CONFIRM
+    je op_prophecy_confirm
     
     ; VERIFICATION
     cmp r13, OP_CHECK_ACTIVE
@@ -4733,16 +4752,6 @@ execute_instruction:
     xor rax, rax
     jmp .exec_ret
 
-.op_quantum_tunnel:
-    ; QUANTUM_TUNNEL (0x78) - Barrier Penetration
-    ; Allows bypassing the next instruction (e.g., skipping a validation check).
-    lea rsi, [msg_quantum_tunnel]
-    call print_string
-    lea rsi, [msg_newline]
-    call print_string
-    ; Implementation: Return "skip next" signal
-    mov rax, 2                      ; 2 = Skip next instruction
-    jmp .exec_ret
 
 .op_chrono_weave:
     ; CHRONO_WEAVE (0x79) - Interlace Temporal Threads
@@ -4967,11 +4976,17 @@ execute_program:
     je .exec_done
     cmp rax, 2                  ; Skip next?
     je .exec_skip
+    cmp rax, 3                  ; Skip next 2? (Quantum Tunnel)
+    je .exec_skip_2
     
     jmp .exec_loop
 
 .exec_skip:
     add r12, 8                  ; Skip next execution
+    jmp .exec_loop
+
+.exec_skip_2:
+    add r12, 16                 ; Skip next 2 executions
     jmp .exec_loop
 
 .exec_done:
@@ -5854,4 +5869,66 @@ op_seed_mitosis:
     
 .mitosis_skip:
     xor rax, rax
+    jmp execute_instruction.exec_ret
+
+; ==============================================================================
+; EPOCH-9 PROPHETIC HANDLERS
+; ==============================================================================
+
+op_chrono_bridge:
+    ; OP_CHRONO_BRIDGE (0x76) - Links t with t+1
+    lea rsi, [msg_chrono_bridge]
+    call print_string
+    mov rdi, r14
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+    
+    ; Simulate Entanglement with Future
+    mov byte [rel prophecy_flag], 1
+    
+    xor rax, rax
+    jmp execute_instruction.exec_ret
+
+op_hive_mind_sync:
+    ; OP_HIVE_MIND_SYNC (0x70) - Collective Consciousness
+    lea rsi, [msg_hive_sync]
+    call print_string
+    mov rdi, r14
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+    
+    xor rax, rax
+    jmp execute_instruction.exec_ret
+
+op_prophecy_confirm:
+    ; OP_PROPHECY_CONFIRM (0xBA) - Future Validation
+    lea rsi, [msg_prophecy]
+    call print_string
+    mov rdi, r14
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+    
+    cmp byte [rel prophecy_flag], 1
+    jne .prophecy_fail
+    
+    mov rax, 0xCAFE
+    jmp execute_instruction.exec_ret
+    
+.prophecy_fail:
+    xor rax, rax
+    jmp execute_instruction.exec_ret
+
+op_quantum_tunnel:
+    ; OP_QUANTUM_TUNNEL (0x78) - Barrier Bypass
+    lea rsi, [msg_tunnel]
+    call print_string
+    mov rdi, r14
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+    
+    mov rax, 3 ; Skip next 2
     jmp execute_instruction.exec_ret
