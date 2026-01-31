@@ -3856,10 +3856,10 @@ execute_instruction:
 
 .op_oracle:
     ; OP_ORACLE (0x0B) - Call a named oracle (delegates to addon system)
-    ; r14 = chunk, rbx = oracle_id
-    mov rdi, rbx                ; oracle opcode (direct)
+    ; r14 = chunk, rbx = parameter (24-bit), rcx = oracle_id (8-bit)
+    mov rdi, rcx                ; oracle opcode (direct)
     mov rsi, r14                ; chunk
-    mov rdx, rcx                ; Parameter 1 (Operand 2)
+    mov rdx, rbx                ; Parameter 1 (Operand 1)
     xor rcx, rcx                ; Parameter 2 (Zero)
     call call_addon
     xor rax, rax
