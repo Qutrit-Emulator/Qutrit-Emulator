@@ -212,6 +212,8 @@ section .data
 %define OP_HIVE_MIND_SYNC      0x70
 %define OP_PROPHECY_CONFIRM    0xBA
 %define OP_QUANTUM_TUNNEL      0x78
+%define OP_ETERNAL_STASIS      0x87
+%define OP_TRANSCENDENCE       0xEF
 
     ; Prophecy State
     prophecy_flag:      db 0
@@ -219,6 +221,8 @@ section .data
     msg_hive_sync:      db "🧠 [EPOCH-9] Hive Mind Synchronization", 0
     msg_prophecy:       db "🔮 [EPOCH-9] Prophecy Confirmed (Future Valid)", 0
     msg_tunnel:         db "🚇 [EPOCH-9] Quantum Tunneling...", 0
+    msg_stasis:         db "🔒 [EPOCH-10] Chunk Locked in Eternal Stasis", 0
+    msg_transcendence:  db "✨ [EPOCH-10] ASCENSION REALISED. DISSOLVING SIMULATION...", 0
 
     ; Mathematical constants
     one_over_sqrt3:     dq 0.5773502691896257    ; 1/√3
@@ -394,6 +398,7 @@ section .bss
     state_vectors:      resq MAX_CHUNKS         ; Pointer per chunk
     chunk_sizes:        resq MAX_CHUNKS         ; Qutrits per chunk
     chunk_states:       resq MAX_CHUNKS         ; 3^size states per chunk
+    chunk_locks:        resb MAX_CHUNKS         ; 1 = Locked/Immutable (Epoch-10)
     num_chunks:         resq 1                  ; Active chunks
 
     ; Braid links for entanglement preservation
@@ -1107,6 +1112,12 @@ grover_diffusion:
 ; The qutrit Hadamard matrix is H = (1/√3) * [[1,1,1],[1,ω,ω²],[1,ω²,ω]]
 ; where ω = exp(2πi/3)
 apply_hadamard:
+    ; Check Stasis Lock
+    check_stasis_rdi:
+    lea rax, [rel chunk_locks]
+    cmp byte [rax + rdi], 0
+    jne .hadamard_ret ; Skip if locked
+    
     push rbx
     push r12
     push r13
@@ -1333,6 +1344,9 @@ apply_hadamard:
     pop r13
     pop r12
     pop rbx
+    ret
+
+.hadamard_ret:
     ret
 
 ; swap_ternary_digits - Swap two digit positions in a ternary number
@@ -1678,7 +1692,14 @@ braid_chunks:
     mov r12, [num_braid_links]
     cmp r12, MAX_BRAID_LINKS
     jge .braid_fail
+    jmp .braid_start
 
+.braid_fail_stasis:
+    pop r12
+    pop rbx
+    ret
+
+.braid_start:
     ; Store braid link
     mov [braid_link_a + r12*8], rdi
     mov [braid_link_b + r12*8], rsi
@@ -3223,6 +3244,12 @@ execute_instruction:
     cmp r13, OP_PROPHECY_CONFIRM
     je op_prophecy_confirm
     
+    ; === EPOCH-10 TRANSCENDENCE DISPATCH ===
+    cmp r13, OP_ETERNAL_STASIS
+    je op_eternal_stasis
+    cmp r13, OP_TRANSCENDENCE
+    je op_transcendence
+    
     ; VERIFICATION
     cmp r13, OP_CHECK_ACTIVE
     je .op_check_generic
@@ -3378,6 +3405,11 @@ execute_instruction:
 .op_phase:
     ; OP_PHASE (0x04) - Apply phase gate to chunk
     ; r14 = chunk, rbx = phase angle scaled (operand1)
+    ; Check Stasis
+    lea rax, [rel chunk_locks]
+    cmp byte [rax + r14], 0
+    jne .phase_skip
+
     mov rdi, [state_vectors + r14*8]
     test rdi, rdi
     jz .phase_skip
@@ -4978,6 +5010,8 @@ execute_program:
     je .exec_skip
     cmp rax, 3                  ; Skip next 2? (Quantum Tunnel)
     je .exec_skip_2
+    cmp rax, 0xEF               ; Transcendence?
+    je .exec_done
     
     jmp .exec_loop
 
@@ -5931,4 +5965,33 @@ op_quantum_tunnel:
     call print_string
     
     mov rax, 3 ; Skip next 2
+    jmp execute_instruction.exec_ret
+
+op_eternal_stasis:
+    ; OP_ETERNAL_STASIS (0x87) - Lock Chunk
+    lea rsi, [msg_stasis]
+    call print_string
+    mov rdi, r14
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+    
+    cmp r14, MAX_CHUNKS
+    jge .stasis_skip
+    
+    lea rax, [rel chunk_locks]
+    mov byte [rax + r14], 1
+    
+.stasis_skip:
+    xor rax, rax
+    jmp execute_instruction.exec_ret
+
+op_transcendence:
+    ; OP_TRANSCENDENCE (0xEF) - End Simulation
+    lea rsi, [msg_transcendence]
+    call print_string
+    lea rsi, [msg_newline]
+    call print_string
+    
+    mov rax, 0xEF ; Special Halt Code
     jmp execute_instruction.exec_ret
