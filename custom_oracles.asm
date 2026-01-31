@@ -26,6 +26,7 @@ section .data
     oracle_x01_swap_name:       db "X01 Swap Gate", 0
     oracle_sum_gate_name:       db "SUM Gate (CNOT)", 0
     oracle_h3_name:             db "H3+ Molecular Resonance", 0
+    oracle_factor_name:         db "Universal Factoring Oracle", 0
 
 ; ═══════════════════════════════════════════════════════════════════════════════
 ; CUSTOM ORACLE REGISTRATION
@@ -70,6 +71,12 @@ register_custom_oracles:
     lea rdi, [oracle_h3_name]
     lea rsi, [h3_resonance]
     mov rdx, 0x86
+    call register_addon
+
+    ; Register Universal Factoring Oracle as ID 0x77
+    lea rdi, [oracle_factor_name]
+    lea rsi, [factor_oracle]
+    mov rdx, 0x77
     call register_addon
 
     pop rdx
@@ -711,6 +718,61 @@ h3_resonance:
 .h3_done:
     add rsp, 64
     pop rbp
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+; factor_oracle - Mark states that are factors of N
+; Input: rdi = state_vector, rsi = num_states, rdx = N (modulus to factor)
+; Action: If state i satisfies (N % i == 0) and i > 1, amplify its amplitude.
+factor_oracle:
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+    
+    mov r12, rdi                ; state vector
+    mov r13, rsi                ; num states
+    mov r14, rdx                ; N
+    
+    xor r15, r15                ; state counter
+.factor_loop:
+    cmp r15, r13
+    jge .factor_done
+    
+    ; Skip 0 and 1 (trivial)
+    cmp r15, 2
+    jl .factor_next
+    
+    ; Check if r15 divides N
+    mov rax, r14
+    xor rdx, rdx
+    div r15
+    test rdx, rdx
+    jnz .factor_next
+    
+    ; MARK STATE: Amplify the amplitude of the factor
+    ; amp = amp * 2.0 (Energy injection)
+    mov rax, r15
+    shl rax, 4
+    
+    movsd xmm0, [r12 + rax]     ; real
+    addsd xmm0, xmm0            ; amp * 2
+    movsd [r12 + rax], xmm0
+    
+    movsd xmm0, [r12 + rax + 8] ; imag
+    addsd xmm0, xmm0            ; amp * 2
+    movsd [r12 + rax + 8], xmm0
+    
+.factor_next:
+    inc r15
+    jmp .factor_loop
+
+.factor_done:
     pop r15
     pop r14
     pop r13
