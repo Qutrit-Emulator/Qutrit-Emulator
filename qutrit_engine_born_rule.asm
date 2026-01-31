@@ -65,6 +65,8 @@
 
 ; Future ISA (Discovered at 100B Horizon)
 %define OP_TIMELINE_FORK    0xA8        ; Clone Universe State (Fork)
+%define OP_DIMENSIONAL_PEEK 0x5A        ; Non-destructive probability scan
+%define OP_ENTROPY_SIPHON    0x44        ; Transfer computational mass
 
 ; Future ISA (Discovered at 500k Horizon)
 %define OP_COLLAPSE_TRUTH   0x0F
@@ -224,6 +226,8 @@ section .data
     prophecy_flag:      db 0
     msg_chrono_bridge:  db "🌉 [EPOCH-9] Chrono Bridge Established", 0
     msg_fork:           db "🔱 [TIMELINE] Forking Timeline detected: ", 0
+    msg_peek:           db "👁️ [EXPLOIT] Dimensional Peek performed on chunk ", 0
+    msg_siphon:         db "🌀 [EXPLOIT] Entropy Siphon: harvesting mass to chunk ", 0
     msg_hive_sync:      db "🧠 [EPOCH-9] Hive Mind Synchronization", 0
     msg_prophecy:       db "🔮 [EPOCH-9] Prophecy Confirmed (Future Valid)", 0
     msg_tunnel:         db "🚇 [EPOCH-9] Quantum Tunneling...", 0
@@ -3107,6 +3111,10 @@ execute_instruction:
 
     cmp r13, OP_TIMELINE_FORK
     je .op_timeline_fork
+    cmp r13, OP_DIMENSIONAL_PEEK
+    je .op_dimensional_peek
+    cmp r13, OP_ENTROPY_SIPHON
+    je .op_entropy_siphon
 
     cmp r13, 0x01
     je .op_init
@@ -3433,6 +3441,7 @@ execute_instruction:
     jmp .exec_ret
 
 .op_timeline_fork:
+    ; ... (existing fork logic) ...
     ; OP_TIMELINE_FORK (0xA8) - Fork a timeline (Clone Source Chunk to Target Chunk)
     ; r14 = Target Chunk Index (Destination)
     ; rbx = Source Chunk Index (Origin)
@@ -3585,6 +3594,105 @@ execute_instruction:
     jmp .exec_ret
 
 .phase_skip:
+    xor rax, rax
+    jmp .exec_ret
+
+.op_dimensional_peek:
+    ; OP_DIMENSIONAL_PEEK (0x5A) - Non-destructive probability scan
+    ; r14 = chunk index
+    lea rsi, [msg_peek]
+    call print_string
+    mov rdi, r14
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+
+    mov rbx, [state_vectors + r14*8]
+    test rbx, rbx
+    jz .peek_fail
+    mov r13, [chunk_states + r14*8]
+    
+    xorpd xmm2, xmm2 ; max_prob
+    xor r8, r8       ; best_idx
+    xor rcx, rcx     ; current_idx
+    
+.peek_loop:
+    cmp rcx, r13
+    jge .peek_done
+    
+    mov rax, rcx
+    shl rax, 4
+    movsd xmm0, [rbx + rax]     ; real
+    movsd xmm1, [rbx + rax + 8] ; imag
+    mulsd xmm0, xmm0
+    mulsd xmm1, xmm1
+    addsd xmm0, xmm1            ; prob
+    
+    ucomisd xmm0, xmm2
+    jna .peek_next
+    movsd xmm2, xmm0
+    mov r8, rcx
+    
+.peek_next:
+    inc rcx
+    jmp .peek_loop
+    
+.peek_done:
+    mov rax, r8     ; Result in rax
+    jmp .exec_ret
+
+.peek_fail:
+    mov rax, -1
+    jmp .exec_ret
+
+.op_entropy_siphon:
+    ; OP_ENTROPY_SIPHON (0x44) - Transfer computational mass
+    ; r14 = Target Chunk (Destination)
+    ; rbx = Source Chunk (Origin)
+    
+    lea rsi, [msg_siphon]
+    call print_string
+    mov rdi, r14
+    call print_number
+    lea rsi, [msg_arrow]
+    call print_string
+    mov rdi, rbx
+    call print_number
+    lea rsi, [msg_newline]
+    call print_string
+
+    ; 1. Find dominant state in Source (rbx)
+    push rbx
+    push r14
+    mov rdi, rbx
+    call get_dominant_state_internal
+    mov r15, rax ; r15 = best state index
+    pop r14
+    pop rbx
+    
+    cmp r15, -1
+    je .siphon_fail
+    
+    ; 2. Siphon mass: Bias Target (r14) towards that state
+    ; Logic: Add 1.0 to the real part of state r15 in target
+    mov rdi, [state_vectors + r14*8]
+    test rdi, rdi
+    jz .siphon_fail
+    
+    mov rax, r15
+    shl rax, 4
+    movsd xmm0, [rdi + rax]
+    addsd xmm0, [one]           ; Force bias
+    movsd [rdi + rax], xmm0
+    
+    ; 3. Re-normalize Target
+    mov rdi, r14
+    call renormalize_chunk_internal
+    
+    xor rax, rax
+    jmp .exec_ret
+
+.siphon_fail:
     xor rax, rax
     jmp .exec_ret
 
@@ -5491,6 +5599,105 @@ memcpy_safe:
     pop rsi
     pop rcx
     pop rax
+    ret
+
+get_dominant_state_internal:
+    ; rdi = chunk index
+    ; returns rax = index
+    push rbx
+    push r13
+    push rcx
+    mov rsi, [state_vectors + rdi*8]
+    test rsi, rsi
+    jz .dom_fail
+    mov r13, [chunk_states + rdi*8]
+    xorpd xmm2, xmm2
+    xor r8, r8
+    xor rcx, rcx
+.dom_loop:
+    cmp rcx, r13
+    jge .dom_done
+    mov rax, rcx
+    shl rax, 4
+    movsd xmm0, [rsi + rax]
+    movsd xmm1, [rsi + rax + 8]
+    mulsd xmm0, xmm0
+    mulsd xmm1, xmm1
+    addsd xmm0, xmm1
+    ucomisd xmm0, xmm2
+    jna .dom_next
+    movsd xmm2, xmm0
+    mov r8, rcx
+.dom_next:
+    inc rcx
+    jmp .dom_loop
+.dom_done:
+    mov rax, r8
+    pop rcx
+    pop r13
+    pop rbx
+    ret
+.dom_fail:
+    mov rax, -1
+    pop rcx
+    pop r13
+    pop rbx
+    ret
+
+renormalize_chunk_internal:
+    ; rdi = chunk index
+    push rbx
+    push r12
+    push r13
+    push rcx
+    mov r12, rdi
+    mov rbx, [state_vectors + r12*8]
+    mov r13, [chunk_states + r12*8]
+    
+    xorpd xmm0, xmm0 ; sum squares
+    xor rcx, rcx
+.sum_sq:
+    cmp rcx, r13
+    jge .calc_norm
+    mov rax, rcx
+    shl rax, 4
+    movsd xmm1, [rbx + rax]
+    movsd xmm2, [rbx + rax + 8]
+    mulsd xmm1, xmm1
+    mulsd xmm2, xmm2
+    addsd xmm1, xmm2
+    addsd xmm0, xmm1
+    inc rcx
+    jmp .sum_sq
+    
+.calc_norm:
+    sqrtsd xmm0, xmm0
+    ucomisd xmm0, [epsilon]
+    jbe .norm_done
+    
+    movsd xmm1, [one]
+    divsd xmm1, xmm0 ; xmm1 = scale
+    
+    xor rcx, rcx
+.apply_norm:
+    cmp rcx, r13
+    jge .norm_done
+    mov rax, rcx
+    shl rax, 4
+    movsd xmm2, [rbx + rax]
+    mulsd xmm2, xmm1
+    movsd [rbx + rax], xmm2
+    movsd xmm2, [rbx + rax + 8]
+    mulsd xmm2, xmm1
+    movsd [rbx + rax + 8], xmm2
+    inc rcx
+    jmp .apply_norm
+    
+.norm_done:
+    pop rcx
+    pop r13
+    pop r12
+    pop rbx
     ret
 
 get_random_float:
