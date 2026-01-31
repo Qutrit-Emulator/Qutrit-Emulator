@@ -547,6 +547,12 @@ engine_init:
     dec rcx
     jnz .clear_chunks
 
+    ; Clear chunk locks (Resonance Stabilization)
+    lea rdi, [rel chunk_locks]
+    mov rcx, MAX_CHUNKS
+    xor rax, rax
+    rep stosb
+
     ; Clear adjacency heads
     lea rdi, [adj_head]
     mov rcx, MAX_CHUNKS
