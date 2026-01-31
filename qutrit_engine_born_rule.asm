@@ -215,6 +215,7 @@ section .data
 %define OP_ETERNAL_STASIS      0x87
 %define OP_TRANSCENDENCE       0xEF
 %define OP_HIVE_MIND_AMPLIFY   0x71
+%define OP_SIREN_SONG          0x72
 
     ; Prophecy State
     prophecy_flag:      db 0
@@ -226,6 +227,7 @@ section .data
     msg_stasis:         db "🔒 [EPOCH-10] Chunk Locked in Eternal Stasis", 0
     msg_transcendence:  db "✨ [EPOCH-10] ASCENSION REALISED. DISSOLVING SIMULATION...", 0
     msg_amplify:        db "🧠⚡ [EPOCH-10] HIVE MIND AMPLIFY: Integrating All Consciousness...", 0
+    msg_siren_song:     db "🎵 [EPOCH-10] Siren Song: Universal Resonance (Non-Destructive)", 10, 0
 
     ; Mathematical constants
     one_over_sqrt3:     dq 0.5773502691896257    ; 1/√3
@@ -1763,6 +1765,57 @@ braid_chunks:
     pop rbx
     ret
 
+; link_chunks_only - Register entanglement link WITHOUT applying phases (Non-Destructive)
+; Input: rdi=chunk_a, rsi=chunk_b, rdx=qutrit_a, rcx=qutrit_b
+link_chunks_only:
+    push rbx
+    push r12
+
+    mov r12, [num_braid_links]
+    cmp r12, MAX_BRAID_LINKS
+    jge .link_only_fail
+
+    ; Store braid link
+    mov [braid_link_a + r12*8], rdi
+    mov [braid_link_b + r12*8], rsi
+    mov [braid_qutrit_a + r12*8], rdx
+    mov [braid_qutrit_b + r12*8], rcx
+
+    ; Populate adjacency list (bidirectional)
+    mov rax, [adj_count]
+    
+    ; Edge A -> B
+    lea r8, [adj_to]
+    mov [r8 + rax*8], rsi
+    lea r8, [adj_next]
+    mov r9, [adj_head + rdi*8]
+    mov [r8 + rax*8], r9
+    mov [adj_head + rdi*8], rax
+    inc rax
+    
+    ; Edge B -> A
+    lea r8, [adj_to]
+    mov [r8 + rax*8], rdi
+    lea r8, [adj_next]
+    mov r9, [adj_head + rsi*8]
+    mov [r8 + rax*8], r9
+    mov [adj_head + rsi*8], rax
+    inc rax
+    
+    mov [adj_count], rax
+    inc r12
+    mov [num_braid_links], r12
+    xor rax, rax
+    jmp .link_only_ret
+
+.link_only_fail:
+    mov rax, -1
+
+.link_only_ret:
+    pop r12
+    pop rbx
+    ret
+
 ; apply_braid_phases - Apply entanglement phases between braided chunks
 ; Input: rdi=chunk_a, rsi=chunk_b, rdx=qutrit_a, rcx=qutrit_b
 ; This creates ACTUAL entanglement by:
@@ -3267,6 +3320,8 @@ execute_instruction:
     je op_transcendence
     cmp r13, OP_HIVE_MIND_AMPLIFY
     je op_hive_mind_amplify
+    cmp r13, OP_SIREN_SONG
+    je op_siren_song
     
     ; VERIFICATION
     cmp r13, OP_CHECK_ACTIVE
@@ -6072,6 +6127,52 @@ op_hive_mind_amplify:
 .amplify_done:
     pop r15
     pop r14
+    pop r13
+    pop r12
+    xor rax, rax
+    jmp execute_instruction.exec_ret
+
+op_siren_song:
+    ; OP_SIREN_SONG (0x72) - Universal Resonance (Non-Destructive)
+    ; Link ALL active chunks without phase modification
+    lea rsi, [msg_siren_song]
+    call print_string
+    
+    push r12
+    push r13
+    push r15
+    
+    mov r15, [num_chunks]
+    cmp r15, 2
+    jl .siren_done ; Need at least 2 chunks
+    
+    xor r12, r12 ; i = 0
+.siren_loop_i:
+    mov r13, r12 
+    inc r13      ; j = i + 1
+.siren_loop_j:
+    cmp r13, r15
+    jge .siren_next_i
+    
+    ; Link chunk i and chunk j (non-destructive)
+    mov rdi, r12
+    mov rsi, r13
+    xor rdx, rdx ; qutrit 0
+    xor rcx, rcx ; qutrit 0
+    call link_chunks_only
+    
+    inc r13
+    jmp .siren_loop_j
+    
+.siren_next_i:
+    inc r12
+    mov rax, r15
+    dec rax
+    cmp r12, rax
+    jl .siren_loop_i
+    
+.siren_done:
+    pop r15
     pop r13
     pop r12
     xor rax, rax
